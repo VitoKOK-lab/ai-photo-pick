@@ -1,5 +1,15 @@
 """settings.py - 全域路徑與設定"""
+import os
 from pathlib import Path
+
+# .env 支援（可選，不強制安裝 python-dotenv）
+_env_file = Path(__file__).resolve().parent.parent / ".env"
+if _env_file.exists():
+    for _line in _env_file.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
 
 # 專案根目錄（自動偵測，跟著 repo 走）
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,3 +48,14 @@ CLIP_PRETRAINED = "laion2b_s34b_b79k"
 
 # 信心分數門檻（低於此值在 UI 標示為「不確定」）
 CONFIDENCE_THRESHOLD = 0.5
+
+# 認證 token（設定後所有頁面需帶 ?token=XXX 或 Authorization: Bearer XXX）
+# 留空 = 本機開發模式（無需驗證）
+AUTH_TOKEN = os.environ.get("JEWELRY_AUTH_TOKEN", "")
+
+# 允許的 CORS origins（逗號分隔，留空 = 全開）
+ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("JEWELRY_ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+] or ["*"]

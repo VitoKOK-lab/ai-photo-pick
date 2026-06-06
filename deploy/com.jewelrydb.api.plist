@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jewelrydb.api</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <!-- 換成你的實際路徑 -->
+        <string>/Users/vito/jewelry-db/venv/bin/uvicorn</string>
+        <string>api.main:app</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>8000</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/vito/jewelry-db</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <!-- 設定 token 後對外才需要驗證；本機留空可免驗 -->
+        <key>JEWELRY_AUTH_TOKEN</key>
+        <string></string>
+        <!-- 對外時改成你的 Cloudflare domain -->
+        <key>JEWELRY_ALLOWED_ORIGINS</key>
+        <string>https://jewelry.yourdomain.com</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/vito/jewelry-db/logs/api.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/vito/jewelry-db/logs/api.err</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- 當機後 5 秒重啟 -->
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+</dict>
+</plist>
