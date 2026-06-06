@@ -234,3 +234,48 @@ body.stats-page {
     font-size: 14px;
     padding: 32px 0;
 }
+
+/* ─── 備份狀態 ──────────────────────────────────────── */
+.backup-row {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.backup-ok   { color: #1a6a1a; }
+.backup-warn { color: #a05000; }
+.backup-running { color: #555; }
+
+.backup-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.backup-actions button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    color: #333;
+}
+
+.backup-actions button:disabled { opacity: 0.5; }
+
+.backup-snapshots {
+    font-size: 12px;
+    color: #888;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.snap-label { color: #555; }
+
+.snap-item {
+    background: #f0f0f0;
+    border-radius: 4px;
+    padding: 2px 8px;
+}

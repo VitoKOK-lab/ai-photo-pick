@@ -196,6 +196,48 @@ async function loadDimension() {
     `).join("");
 }
 
+// ─── 備份狀態 ────────────────────────────────────────────────
+async function loadBackupStatus() {
+    const d = await get("/api/backup/status");
+    const info = document.getElementById("backup-info");
+    const snaps = document.getElementById("backup-snapshots");
+
+    if (d.running) {
+        info.innerHTML = `<span class="backup-running">⏳ 備份進行中...</span>`;
+    } else if (d.last_backup) {
+        const dt = new Date(d.last_backup).toLocaleString("zh-TW");
+        const ok = d.last_results && Object.values(d.last_results).every(v => v !== false);
+        info.innerHTML = `<span class="${ok ? "backup-ok" : "backup-warn"}">
+            ${ok ? "✓" : "⚠"} 上次備份：${dt}
+        </span>`;
+    } else {
+        info.innerHTML = `<span class="backup-warn">尚未執行過備份</span>`;
+    }
+
+    if (d.local_snapshots?.length) {
+        snaps.innerHTML = `<div class="snap-label">本地快照：</div>` +
+            d.local_snapshots.map(s =>
+                `<span class="snap-item">${s.filename.replace("jewelry_","").replace(".sqlite","")} (${s.size_mb}MB)</span>`
+            ).join(" ");
+    }
+}
+
+async function triggerBackup(dbOnly) {
+    const btn = dbOnly ? document.getElementById("backup-db-btn") : document.getElementById("backup-full-btn");
+    btn.disabled = true;
+    btn.textContent = "⏳ 啟動中...";
+    try {
+        await fetch(`/api/backup/trigger?db_only=${dbOnly}`, { method: "POST" });
+        setTimeout(loadBackupStatus, 1500);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = dbOnly ? "💾 僅備份 DB" : "☁ 完整備份";
+    }
+}
+
+document.getElementById("backup-full-btn")?.addEventListener("click", () => triggerBackup(false));
+document.getElementById("backup-db-btn")?.addEventListener("click",   () => triggerBackup(true));
+
 // ─── 初始化 ───────────────────────────────────────────────
 function bindTabs(selector, onChange) {
     document.querySelectorAll(selector).forEach(btn => {
@@ -208,7 +250,7 @@ function bindTabs(selector, onChange) {
 }
 
 async function loadAll() {
-    await Promise.all([loadOverview(), loadDaily(), loadTopPhotos(), loadDimension()]);
+    await Promise.all([loadOverview(), loadDaily(), loadTopPhotos(), loadDimension(), loadBackupStatus()]);
 }
 
 bindTabs(".period-btn", ({ days }) => {

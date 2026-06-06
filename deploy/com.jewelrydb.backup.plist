@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jewelrydb.backup</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/vito/jewelry-db/venv/bin/python</string>
+        <string>-m</string>
+        <string>scripts.backup</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/vito/jewelry-db</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <!-- rclone remote 名稱（rclone config 裡設定的） -->
+        <key>JEWELRY_RCLONE_REMOTE</key>
+        <string>gdrive</string>
+        <!-- Google Drive 上的根目錄 -->
+        <key>JEWELRY_RCLONE_BASE</key>
+        <string>jewelry-db</string>
+        <!-- 本地快照保留天數 -->
+        <key>JEWELRY_BACKUP_KEEP_DAYS</key>
+        <string>7</string>
+    </dict>
+
+    <!-- 每天 02:00 執行 -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/vito/jewelry-db/logs/backup.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/vito/jewelry-db/logs/backup.err</string>
+</dict>
+</plist>
