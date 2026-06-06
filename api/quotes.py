@@ -218,10 +218,10 @@ def _estimate(material: Optional[str], gemstone: Optional[str]) -> Optional[dict
 
 @router.post("/estimate")
 def estimate_price(
-    material: Optional[str] = None,
-    gemstone: Optional[str] = None,
+    material: Optional[str] = Query(None),
+    gemstone: Optional[str] = Query(None),
 ):
-    """根據 material/gemstone 推估價格（不更新資料庫）"""
+    """根據 material/gemstone 推估價格（不更新資料庫）。參數從 query string 傳入。"""
     result = _estimate(material, gemstone)
     if not result:
         return {"estimated": False, "message": "報價資料不足，無法推估"}
@@ -229,7 +229,7 @@ def estimate_price(
 
 
 @router.post("/batch-estimate")
-def batch_estimate(min_samples: int = Query(3, ge=1)):
+def batch_estimate(min_samples: int = Query(3, ge=1, description="最少需要幾筆報價才推估")):
     """
     批次更新所有尚未定價照片的 price_estimate_* 欄位
     只在 price_source IS NULL（從未推估過）時更新
@@ -248,6 +248,12 @@ def batch_estimate(min_samples: int = Query(3, ge=1)):
         result = _estimate(photo["material"], photo["gemstone"])
         if not result or result["sample_count"] < min_samples:
             skipped += 1
+            # material + gemstone 都是 NULL → 永遠無法推估，寫 sentinel 避免重複掃描
+            if not photo["material"] and not photo["gemstone"]:
+                cur.execute(
+                    "UPDATE photos SET price_source = 'no_data' WHERE id = ?",
+                    (photo["id"],)
+                )
             continue
         cur.execute(
             """UPDATE photos

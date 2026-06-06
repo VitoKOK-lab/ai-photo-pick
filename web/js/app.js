@@ -22,7 +22,6 @@ const SORT_OPTIONS = [
     { value: "popular", label: "最熱" },
 ];
 
-const PRICE_BANDS = ["< 1萬","1-3萬","3-6萬","6-10萬","10-15萬","> 15萬"];
 
 // ─── 狀態 ────────────────────────────────────────────────────
 let state = {
@@ -380,9 +379,9 @@ gridHammer.on("swiperight", () => {
 });
 gridHammer.on("swipeup", () => {
     state.similarMode = null;
-    if (state.priceBandIdx < PRICE_BANDS.length - 1) {
+    if (state.priceBandIdx < FILTER_OPTIONS.price_band.length - 1) {
         state.priceBandIdx++;
-        state.filters.price_band = PRICE_BANDS[state.priceBandIdx];
+        state.filters.price_band = FILTER_OPTIONS.price_band[state.priceBandIdx];
         state.page = 1;
         showToast(`價位：${state.filters.price_band}`);
         loadPhotos();
@@ -392,7 +391,7 @@ gridHammer.on("swipedown", () => {
     state.similarMode = null;
     if (state.priceBandIdx > 0) {
         state.priceBandIdx--;
-        state.filters.price_band = PRICE_BANDS[state.priceBandIdx];
+        state.filters.price_band = FILTER_OPTIONS.price_band[state.priceBandIdx];
         state.page = 1;
         showToast(`價位：${state.filters.price_band}`);
         loadPhotos();

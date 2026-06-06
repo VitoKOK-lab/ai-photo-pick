@@ -18,7 +18,10 @@ def _get_collection():
     global _chroma_client, _collection
     if _collection is None:
         _chroma_client = chromadb.PersistentClient(path=str(CHROMA_PATH))
-        _collection = _chroma_client.get_or_create_collection("jewelry_embeddings")
+        _collection = _chroma_client.get_or_create_collection(
+            "jewelry_embeddings",
+            metadata={"hnsw:space": "cosine"},
+        )
     return _collection
 
 def _conn():

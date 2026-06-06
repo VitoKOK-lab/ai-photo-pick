@@ -1,8 +1,11 @@
 """db_writer.py - 把處理 + 分類結果寫入 SQLite + chromadb"""
+import logging
 import sqlite3
 import sys
 from pathlib import Path
 import chromadb
+
+log = logging.getLogger(__name__)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH, CHROMA_PATH
@@ -58,9 +61,8 @@ def insert_photo(metadata: dict, classification: dict, embedding: list) -> int:
     ))
 
     photo_id = cur.lastrowid
-    conn.commit()
+    # 不在這裡 commit — 等 chromadb 寫入成功後才 commit，失敗直接 rollback
 
-    # chromadb 寫入；失敗時刪除剛才的 SQLite 記錄保持一致
     try:
         collection = get_chroma_collection()
         collection.add(
@@ -75,13 +77,12 @@ def insert_photo(metadata: dict, classification: dict, embedding: list) -> int:
                 "gemstone": classification["gemstone"]["label"],
             }]
         )
+        conn.commit()
     except Exception as chroma_err:
-        # rollback：刪除剛插入的 SQLite 行
         try:
-            conn.execute("DELETE FROM photos WHERE id = ?", (photo_id,))
-            conn.commit()
-        except Exception:
-            pass
+            conn.rollback()
+        except Exception as rb_err:
+            log.error("SQLite rollback failed after chromadb error: %s", rb_err)
         conn.close()
         raise RuntimeError(f"chromadb write failed (SQLite rolled back): {chroma_err}") from chroma_err
 

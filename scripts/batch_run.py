@@ -56,12 +56,15 @@ def main(source_dir: Path = UNSORTED_DIR):
         eta     = (total - i) / rate if rate > 0 else 0
 
         if result["status"] == "ok":
-            cls = result["classification"]
-            tag = (
-                f"{cls['category']['label']}/"
-                f"{cls['color']['label']}/"
-                f"{cls['gemstone']['label']}"
-            )
+            try:
+                cls = result["classification"]
+                tag = (
+                    f"{cls['category']['label']}/"
+                    f"{cls['color']['label']}/"
+                    f"{cls['gemstone']['label']}"
+                )
+            except (KeyError, TypeError) as e:
+                tag = f"ok (tag error: {e})"
             # 刪除來源（已備份到 02_original/）
             try:
                 img_path.unlink()

@@ -1,8 +1,8 @@
 """auth.py - 簡易 Bearer / query-param token 驗證"""
 import sys
 from pathlib import Path
-from fastapi import Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import Request
+from fastapi.responses import JSONResponse, HTMLResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -41,12 +41,28 @@ class TokenAuthMiddleware(BaseHTTPMiddleware):
             token = request.query_params.get("token", "")
 
         if token != AUTH_TOKEN:
-            # HTML 請求 → 導到登入提示頁；API 請求 → 回 401
             if request.headers.get("accept", "").startswith("text/html"):
-                return JSONResponse(
+                # 瀏覽器 → 回可顯示的 HTML 登入提示頁
+                return HTMLResponse(
                     status_code=401,
-                    content={"detail": "未授權。請在 URL 加上 ?token=YOUR_TOKEN"},
+                    content=(
+                        "<!doctype html><html><head>"
+                        "<meta charset='utf-8'>"
+                        "<title>需要驗證</title>"
+                        "<style>body{font-family:sans-serif;display:flex;"
+                        "justify-content:center;align-items:center;height:100vh;margin:0}"
+                        ".box{text-align:center;padding:2rem;border:1px solid #ddd;border-radius:8px}"
+                        "input{padding:.5rem;width:260px;margin:.5rem 0}"
+                        "button{padding:.5rem 1.5rem;cursor:pointer}"
+                        "</style></head><body><div class='box'>"
+                        "<h2>🔒 需要驗證</h2>"
+                        "<p>請輸入存取 Token</p>"
+                        "<input id='t' type='password' placeholder='Token'/><br>"
+                        "<button onclick=\"location.href=location.pathname+'?token='+document.getElementById('t').value\">"
+                        "進入</button></div></body></html>"
+                    ),
                 )
+            # API 客戶端 → 標準 401 + WWW-Authenticate
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Unauthorized"},
