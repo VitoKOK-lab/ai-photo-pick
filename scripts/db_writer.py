@@ -10,6 +10,7 @@ from config.settings import SQLITE_PATH, CHROMA_PATH
 _chroma_client = None
 _collection = None
 
+
 def get_chroma_collection():
     global _chroma_client, _collection
     if _collection is None:
@@ -20,10 +21,12 @@ def get_chroma_collection():
         )
     return _collection
 
+
 def insert_photo(metadata: dict, classification: dict, embedding: list) -> int:
     """
-    寫入 SQLite + chromadb
-    回傳：SQLite photo_id
+    寫入 SQLite + chromadb，兩邊保持一致：
+    - SQLite insert 成功但 chromadb 失敗 → rollback SQLite（刪除剛插入的行）
+    - 回傳 SQLite photo_id
     """
     conn = sqlite3.connect(SQLITE_PATH)
     cur = conn.cursor()
@@ -43,35 +46,48 @@ def insert_photo(metadata: dict, classification: dict, embedding: list) -> int:
     """, (
         metadata["filename"], metadata["original_filename"], metadata["original_path"],
         metadata["full_path"], metadata["thumb_path"], metadata["micro_path"],
-        classification["color"]["label"], classification["color"]["confidence"],
-        classification["category"]["label"], classification["category"]["confidence"],
-        classification["material"]["label"], classification["material"]["confidence"],
+        classification["color"]["label"],        classification["color"]["confidence"],
+        classification["category"]["label"],     classification["category"]["confidence"],
+        classification["material"]["label"],     classification["material"]["confidence"],
         classification["diamond_status"]["label"], classification["diamond_status"]["confidence"],
-        classification["gemstone"]["label"], classification["gemstone"]["confidence"],
-        classification.get("style", {}).get("label"), classification.get("style", {}).get("confidence"),
+        classification["gemstone"]["label"],     classification["gemstone"]["confidence"],
+        classification.get("style", {}).get("label"),
+        classification.get("style", {}).get("confidence"),
         metadata["file_hash"], metadata["file_size"],
         metadata["width"], metadata["height"],
     ))
 
     photo_id = cur.lastrowid
     conn.commit()
+
+    # chromadb 寫入；失敗時刪除剛才的 SQLite 記錄保持一致
+    try:
+        collection = get_chroma_collection()
+        collection.add(
+            ids=[f"photo_{photo_id}"],
+            embeddings=[embedding],
+            metadatas=[{
+                "photo_id": photo_id,
+                "filename": metadata["filename"],
+                "color": classification["color"]["label"],
+                "category": classification["category"]["label"],
+                "material": classification["material"]["label"],
+                "gemstone": classification["gemstone"]["label"],
+            }]
+        )
+    except Exception as chroma_err:
+        # rollback：刪除剛插入的 SQLite 行
+        try:
+            conn.execute("DELETE FROM photos WHERE id = ?", (photo_id,))
+            conn.commit()
+        except Exception:
+            pass
+        conn.close()
+        raise RuntimeError(f"chromadb write failed (SQLite rolled back): {chroma_err}") from chroma_err
+
     conn.close()
-
-    collection = get_chroma_collection()
-    collection.add(
-        ids=[f"photo_{photo_id}"],
-        embeddings=[embedding],
-        metadatas=[{
-            "photo_id": photo_id,
-            "filename": metadata["filename"],
-            "color": classification["color"]["label"],
-            "category": classification["category"]["label"],
-            "material": classification["material"]["label"],
-            "gemstone": classification["gemstone"]["label"],
-        }]
-    )
-
     return photo_id
+
 
 def hash_exists(file_hash: str) -> bool:
     """檢查 hash 是否已存在（防重複匯入）"""

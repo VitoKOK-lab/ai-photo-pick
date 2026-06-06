@@ -20,6 +20,7 @@ try:
 except ImportError:
     pass
 
+
 def file_hash(path: Path) -> str:
     """算檔案 SHA256"""
     h = hashlib.sha256()
@@ -28,11 +29,13 @@ def file_hash(path: Path) -> str:
             h.update(chunk)
     return h.hexdigest()
 
+
 def generate_filename(original_name: str) -> str:
     """產生系統檔名：YYYYMMDD_<uuid8>.jpg"""
     date_str = datetime.now().strftime("%Y%m%d")
     uid = uuid.uuid4().hex[:8]
     return f"{date_str}_{uid}.jpg"
+
 
 def crop_square(img: Image.Image) -> Image.Image:
     """裁成正方形（取中心）"""
@@ -41,23 +44,32 @@ def crop_square(img: Image.Image) -> Image.Image:
         return img
     size = min(w, h)
     left = (w - size) // 2
-    top = (h - size) // 2
+    top  = (h - size) // 2
     return img.crop((left, top, left + size, top + size))
 
-def process_one(source_path: Path) -> dict:
+
+def _ensure_dirs():
+    for d in (ORIGINAL_DIR, FULL_DIR, THUMB_DIR, MICRO_DIR):
+        d.mkdir(parents=True, exist_ok=True)
+
+
+def process_one(source_path: Path, precomputed_hash: str | None = None) -> dict:
     """
     處理單張照片：
-    1. 算 hash（用於重複檢測）
-    2. 備份原始檔到 02_original/
-    3. 產生 1200/400/100 三種尺寸到 03_processed/
-    回傳：metadata dict
+    1. 備份原始檔到 02_original/
+    2. 產生 1200/400/100 三種尺寸到 03_processed/
+    回傳：metadata dict（含 file_hash）
+
+    precomputed_hash：若已算過 hash 可傳入，避免重複 I/O
     """
-    h = file_hash(source_path)
-    new_name = generate_filename(source_path.name)
-    base_name = new_name.replace(".jpg", "")
+    _ensure_dirs()
+
+    h = precomputed_hash if precomputed_hash else file_hash(source_path)
+    new_name   = generate_filename(source_path.name)
+    base_name  = new_name.replace(".jpg", "")
 
     # 1. 備份原始檔（保留原副檔名）
-    original_ext = source_path.suffix.lower()
+    original_ext    = source_path.suffix.lower()
     original_target = ORIGINAL_DIR / f"{base_name}{original_ext}"
     shutil.copy2(source_path, original_target)
 
@@ -71,30 +83,31 @@ def process_one(source_path: Path) -> dict:
     img_square = crop_square(img)
 
     # 4. 產生三種尺寸
-    img_full = img_square.resize(FULL_SIZE, Image.LANCZOS)
+    img_full  = img_square.resize(FULL_SIZE,  Image.LANCZOS)
     img_thumb = img_square.resize(THUMB_SIZE, Image.LANCZOS)
     img_micro = img_square.resize(MICRO_SIZE, Image.LANCZOS)
 
-    full_path = FULL_DIR / new_name
+    full_path  = FULL_DIR  / new_name
     thumb_path = THUMB_DIR / new_name
     micro_path = MICRO_DIR / new_name
 
-    img_full.save(full_path, "JPEG", quality=JPEG_QUALITY)
+    img_full.save(full_path,   "JPEG", quality=JPEG_QUALITY)
     img_thumb.save(thumb_path, "JPEG", quality=JPEG_QUALITY)
     img_micro.save(micro_path, "JPEG", quality=JPEG_QUALITY)
 
     return {
-        "filename": new_name,
+        "filename":          new_name,
         "original_filename": source_path.name,
-        "original_path": str(original_target),
-        "full_path": str(full_path),
-        "thumb_path": str(thumb_path),
-        "micro_path": str(micro_path),
-        "file_hash": h,
-        "file_size": source_path.stat().st_size,
-        "width": width,
-        "height": height,
+        "original_path":     str(original_target),
+        "full_path":         str(full_path),
+        "thumb_path":        str(thumb_path),
+        "micro_path":        str(micro_path),
+        "file_hash":         h,
+        "file_size":         source_path.stat().st_size,
+        "width":             width,
+        "height":            height,
     }
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
