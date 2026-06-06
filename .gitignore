@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# Database & data (本機產生，不進 repo)
+db/*.sqlite
+db/chroma/
+!db/.gitkeep
+data/01_unsorted/*
+data/02_original/*
+data/03_processed/full/*
+data/03_processed/thumb/*
+data/03_processed/micro/*
+!data/**/.gitkeep
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Test samples (照片不進 repo)
+tests/test_sample/*
+!tests/test_sample/.gitkeep
+tests/classification_results.csv
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Env
+.env
+.env.local
+
+# Cloudflare Tunnel config (含密鑰)
+cloudflared/
+*.pem

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>珠寶資料庫</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <script src="https://cdn.jsdelivr.net/npm/[email protected]/hammer.min.js"></script>
+</head>
+<body>
+    <div class="header" id="filter-bar">
+        <div class="filter-pill" data-dim="color">顏色 ▾</div>
+        <div class="filter-pill" data-dim="category">品類 ▾</div>
+        <div class="filter-pill" data-dim="price_band">價位 ▾</div>
+        <div class="filter-pill" data-dim="material">材質 ▾</div>
+        <div class="filter-pill" data-dim="gemstone">寶石 ▾</div>
+        <div class="filter-pill" id="clear-filter">✕ 清除</div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="lightbox" id="lightbox">
+        <img id="lightbox-img" src="" alt="">
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="footer">
+        <a href="/favorites.html">❤️ <span id="fav-count">0</span></a>
+        <a href="/locks.html">📌 <span id="lock-count">0</span></a>
+        <button id="filter-btn">⚙️ 篩選</button>
+    </div>
+
+    <script type="module" src="/js/app.js"></script>
+</body>
+</html>
