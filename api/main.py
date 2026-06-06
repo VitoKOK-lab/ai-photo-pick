@@ -35,12 +35,14 @@ from api.similar import router as similar_router
 from api.favorites import router as favorites_router
 from api.locks import router as locks_router
 from api.events import router as events_router
+from api.stats import router as stats_router
 
 app.include_router(photos_router)
 app.include_router(similar_router)
 app.include_router(favorites_router)
 app.include_router(locks_router)
 app.include_router(events_router)
+app.include_router(stats_router)
 
 
 # 前端 HTML（放最後，作為 fallback）
