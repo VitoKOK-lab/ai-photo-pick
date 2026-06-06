@@ -13,7 +13,9 @@ env/
 # Database & data (本機產生，不進 repo)
 db/*.sqlite
 db/chroma/
+db/backups/*.sqlite
 !db/.gitkeep
+!db/backups/.gitkeep
 data/01_unsorted/*
 data/02_original/*
 data/03_processed/full/*
