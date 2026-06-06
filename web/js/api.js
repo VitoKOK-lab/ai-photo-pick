@@ -3,16 +3,18 @@ import { getSessionId } from "./session.js";
 
 const BASE = "";
 
-export async function listPhotos(filters = {}, page = 1) {
+export async function listPhotos(filters = {}, page = 1, sort = "random") {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => {
         if (v) params.set(k, v);
     });
     params.set("page", page);
+    params.set("sort", sort);
     params.set("session_id", getSessionId());
     params.set("exclude_seen", "false");
 
     const res = await fetch(`${BASE}/api/photos?${params}`);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
     return res.json();
 }
 

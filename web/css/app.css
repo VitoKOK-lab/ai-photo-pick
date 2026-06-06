@@ -131,7 +131,94 @@ body {
 }
 .toast.show { opacity: 1; }
 
-/* 鎖定頁專用 */
+/* ─── Skeleton loading ───────────────────────── */
+.tile.skeleton {
+    background: #e8e8e8;
+    overflow: hidden;
+}
+
+.skeleton-shimmer {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        #e8e8e8 0%,
+        #f5f5f5 50%,
+        #e8e8e8 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ─── Empty state ────────────────────────────── */
+.empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    gap: 12px;
+}
+
+.empty-icon { font-size: 48px; }
+
+.empty-state .empty-msg {
+    font-size: 15px;
+    color: #888;
+}
+
+.empty-clear {
+    margin-top: 4px;
+    padding: 10px 24px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    background: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    color: #333;
+}
+
+/* ─── Dropdown ───────────────────────────────── */
+.dropdown-menu {
+    position: fixed;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    z-index: 300;
+    min-width: 160px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 6px 0;
+}
+
+.dropdown-item {
+    padding: 11px 18px;
+    font-size: 15px;
+    cursor: pointer;
+    color: #222;
+    transition: background 0.1s;
+}
+
+.dropdown-item:hover    { background: #f5f5f5; }
+.dropdown-item.selected { font-weight: 600; color: #000; }
+.dropdown-item.selected::after {
+    content: " ✓";
+    color: #555;
+}
+
+.sort-menu {
+    min-width: 100px;
+}
+
+/* ─── 鎖定頁專用 ─────────────────────────────── */
 .lock-tile { position: relative; }
 .lock-tile .lock-number {
     position: absolute;
