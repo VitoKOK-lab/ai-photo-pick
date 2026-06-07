@@ -1,38 +1,1707 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>珠寶資料庫</title>
-    <link rel="stylesheet" href="/css/app.css">
-    <script src="https://cdn.jsdelivr.net/npm/[email protected]/hammer.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>JewelryDB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root {
+      --gold: #C4956A;
+      --gold-deep: #A67A50;
+      --gold-light: #E8D5BC;
+      --gold-ultra: #F5EDE2;
+      --bg: #FAF9F7;
+      --surface: #FFFFFF;
+      --border: rgba(196,149,106,0.2);
+      --text: #2C2C2C;
+      --text-sub: #8A8A8A;
+      --text-light: #BBBBBB;
+      --red: #E05252;
+      --green: #4CAF7D;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.08);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+      --safe-top: env(safe-area-inset-top, 44px);
+      --safe-bottom: env(safe-area-inset-bottom, 20px);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #1C1C1E; }
+    body { font-family: 'Noto Sans TC', sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; overflow: hidden; }
+    #root { height: 100%; display: flex; justify-content: center; align-items: center; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+    input, textarea, select { font-family: inherit; }
+    img { display: block; }
+
+    /* Phone frame */
+    .phone-frame {
+      width: 390px;
+      height: 844px;
+      background: var(--bg);
+      border-radius: 54px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 40px 80px rgba(0,0,0,0.6);
+    }
+    @media (max-height: 900px) {
+      .phone-frame { transform: scale(0.9); transform-origin: center; }
+    }
+    @media (max-height: 800px) {
+      .phone-frame { transform: scale(0.8); transform-origin: center; }
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 126px;
+      height: 36px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 100;
+    }
+
+    /* Status bar */
+    .status-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 54px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 28px 8px;
+      z-index: 99;
+      font-size: 12px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    /* Screen */
+    .screen {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Tab bar */
+    .tab-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 82px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      padding-top: 10px;
+      z-index: 50;
+    }
+    .tab-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 0;
+      color: var(--text-light);
+      font-size: 10px;
+      transition: color 0.2s;
+    }
+    .tab-item.active { color: var(--gold); }
+    .tab-icon { font-size: 22px; line-height: 1; }
+    .tab-label { font-size: 10px; }
+
+    /* Nav bar */
+    .nav-bar {
+      height: 88px;
+      display: flex;
+      align-items: flex-end;
+      padding: 0 20px 12px;
+      flex-shrink: 0;
+    }
+    .nav-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 300;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      flex: 1;
+    }
+    .nav-action {
+      color: var(--gold);
+      font-size: 14px;
+      padding: 6px 12px;
+    }
+
+    /* Scroll content */
+    .scroll-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 82px;
+    }
+    .scroll-content::-webkit-scrollbar { display: none; }
+
+    /* Photo grid */
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      padding: 3px;
+    }
+    .photo-card {
+      position: relative;
+      aspect-ratio: 1;
+      background: var(--gold-ultra);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .photo-num {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: 24px;
+      height: 24px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      border-radius: 50%;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .photo-heart {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      width: 28px;
+      height: 28px;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(4px);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: transform 0.15s;
+    }
+    .photo-heart:active { transform: scale(1.3); }
+    .photo-heart.liked { background: rgba(224,82,82,0.15); }
+
+    /* SVG jewelry placeholder */
+    .jewelry-svg-wrap {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--gold-ultra), var(--gold-light));
+    }
+
+    /* Pill badges */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .pill-gold { background: var(--gold-ultra); color: var(--gold-deep); border: 1px solid var(--gold-light); }
+    .pill-outline { background: transparent; color: var(--text-sub); border: 1px solid var(--border); }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .card + .card { margin-top: 12px; }
+
+    /* List rows */
+    .list-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .list-row:last-child { border-bottom: none; }
+
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+      color: #fff;
+      border-radius: 14px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      box-shadow: 0 4px 16px rgba(196,149,106,0.35);
+      transition: opacity 0.15s;
+    }
+    .btn-primary:active { opacity: 0.85; }
+    .btn-secondary {
+      background: var(--gold-ultra);
+      color: var(--gold-deep);
+      border-radius: 14px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid var(--gold-light);
+    }
+    .btn-ghost {
+      color: var(--gold);
+      font-size: 14px;
+      padding: 8px 16px;
+    }
+    .btn-danger {
+      background: rgba(224,82,82,0.08);
+      color: var(--red);
+      border-radius: 12px;
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+
+    /* Toast */
+    .toast {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(44,44,44,0.92);
+      backdrop-filter: blur(12px);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 13px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 200;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Modal overlay */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 150;
+      display: flex;
+      align-items: flex-end;
+    }
+    .modal-sheet {
+      width: 100%;
+      background: var(--bg);
+      border-radius: 24px 24px 0 0;
+      padding: 12px 20px 40px;
+      max-height: 90%;
+      overflow-y: auto;
+    }
+    .modal-sheet::-webkit-scrollbar { display: none; }
+    .modal-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .modal-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    /* Form */
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 12px; color: var(--text-sub); margin-bottom: 5px; display: block; }
+    .form-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--gold); }
+    textarea.form-input { resize: none; min-height: 72px; }
+
+    /* Staff select screen */
+    .staff-screen {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(160deg, #FAF9F7 0%, #F0E8DC 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 32px;
+    }
+    .staff-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 36px;
+      font-weight: 300;
+      letter-spacing: 0.1em;
+      color: var(--gold-deep);
+      margin-bottom: 4px;
+    }
+    .staff-subtitle {
+      font-size: 12px;
+      color: var(--text-sub);
+      letter-spacing: 0.15em;
+      margin-bottom: 40px;
+    }
+    .staff-list { width: 100%; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .staff-btn {
+      width: 100%;
+      padding: 15px 20px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 15px;
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.15s;
+    }
+    .staff-btn:active { transform: scale(0.98); border-color: var(--gold); }
+    .staff-avatar {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold-ultra));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--gold-deep);
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+    }
+
+    /* Customer card */
+    .customer-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .customer-avatar {
+      width: 46px;
+      height: 46px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold-ultra));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--gold-deep);
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .customer-info { flex: 1; min-width: 0; }
+    .customer-name { font-size: 15px; font-weight: 500; margin-bottom: 3px; }
+    .customer-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+
+    /* Price tier indicator */
+    .tier-indicator {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 20;
+    }
+    .tier-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.4);
+    }
+    .tier-dot.active { background: var(--gold); }
+
+    /* Swipe arrows */
+    .swipe-hint {
+      position: absolute;
+      bottom: 90px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 16px;
+      pointer-events: none;
+      opacity: 0.5;
+    }
+    .swipe-arrow {
+      font-size: 20px;
+      color: var(--gold);
+    }
+
+    /* Transaction row */
+    .tx-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .tx-row:last-child { border-bottom: none; }
+    .tx-thumb {
+      width: 46px;
+      height: 46px;
+      border-radius: 10px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--gold-ultra);
+    }
+    .tx-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-name { font-size: 14px; font-weight: 500; truncate; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-meta { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+    .tx-price { font-size: 15px; font-weight: 500; color: var(--gold-deep); white-space: nowrap; }
+
+    /* Benchmark bar */
+    .benchmark-bar {
+      padding: 14px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .benchmark-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .benchmark-item:last-child { margin-bottom: 0; }
+    .benchmark-label { font-size: 12px; color: var(--text-sub); width: 48px; flex-shrink: 0; }
+    .benchmark-track {
+      flex: 1;
+      height: 5px;
+      background: var(--gold-ultra);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .benchmark-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-light), var(--gold));
+      border-radius: 3px;
+    }
+    .benchmark-val { font-size: 11px; color: var(--text-sub); width: 60px; text-align: right; flex-shrink: 0; }
+
+    /* Hot photo */
+    .hot-photo-card {
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      background: var(--gold-ultra);
+      aspect-ratio: 1;
+    }
+    .hot-photo-card img { width: 100%; height: 100%; object-fit: cover; }
+    .hot-photo-rank {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .hot-photo-count {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(196,149,106,0.85);
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 60px 20px;
+      color: var(--text-sub);
+      text-align: center;
+    }
+    .empty-icon { font-size: 48px; opacity: 0.4; }
+    .empty-text { font-size: 14px; }
+
+    /* Loading spinner */
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--gold-light);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Discovery flow phases */
+    .phase-dots {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .phase-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold-light);
+      transition: all 0.3s;
+    }
+    .phase-dot.active { background: var(--gold); width: 18px; border-radius: 3px; }
+
+    /* Style card */
+    .style-card {
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .style-card.selected { border-color: var(--gold); background: var(--gold-ultra); }
+    .style-card-emoji { font-size: 28px; margin-bottom: 6px; }
+    .style-card-name { font-size: 13px; font-weight: 500; color: var(--text); }
+    .style-card-desc { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+
+    /* Animations */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .slide-up { animation: slideUp 0.3s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-in { animation: fadeIn 0.2s ease; }
+  </style>
 </head>
 <body>
-    <div class="header" id="filter-bar">
-        <div class="filter-pill" data-dim="color">顏色 ▾</div>
-        <div class="filter-pill" data-dim="category">品類 ▾</div>
-        <div class="filter-pill" data-dim="price_band">價位 ▾</div>
-        <div class="filter-pill" data-dim="material">材質 ▾</div>
-        <div class="filter-pill" data-dim="gemstone">寶石 ▾</div>
-        <div class="filter-pill" id="clear-filter">✕ 清除</div>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── API helpers ─────────────────────────────────────────────────────────────
+const api = {
+  get: (path) => fetch(path).then(r => r.ok ? r.json() : Promise.reject(r)),
+  post: (path, body) => fetch(path, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.ok ? r.json() : Promise.reject(r)),
+  put: (path, body) => fetch(path, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.ok ? r.json() : Promise.reject(r)),
+  del: (path) => fetch(path, { method: 'DELETE' }).then(r => r.ok ? r.json() : Promise.reject(r)),
+};
+
+// Price band order for tier navigation
+const PRICE_BANDS = ['budget','mid','premium','luxury','ultra'];
+const PRICE_BAND_LABELS = { budget:'入門', mid:'中階', premium:'高階', luxury:'奢華', ultra:'頂級' };
+
+const STYLE_PROFILES = [
+  { id: 'classic', emoji: '✨', name: '古典璀璨', desc: '鑽石、K金、典雅設計', tags: ['古典','鑽石','K金','璀璨'] },
+  { id: 'natural', emoji: '🍃', name: '自然靈動', desc: '有機形態、彩寶、自然元素', tags: ['自然','彩寶','有機','靈動'] },
+  { id: 'romantic', emoji: '🌹', name: '浪漫玫瑰', desc: '玫瑰金、心形、粉色調', tags: ['浪漫','玫瑰金','心形','粉色'] },
+  { id: 'modern', emoji: '◆', name: '現代簡約', desc: '幾何線條、銀白金、極簡', tags: ['現代','簡約','幾何','白金'] },
+];
+
+// ─── Jewelry SVG placeholder ──────────────────────────────────────────────────
+function JewelrySVG({ category }) {
+  const cat = (category || '').toLowerCase();
+  if (cat.includes('ring') || cat.includes('戒')) {
+    return (
+      <svg viewBox="0 0 80 80" fill="none" width="60%" height="60%">
+        <circle cx="40" cy="44" r="18" stroke="#C4956A" strokeWidth="4" fill="none"/>
+        <circle cx="40" cy="44" r="10" stroke="#E8D5BC" strokeWidth="2" fill="none"/>
+        <ellipse cx="40" cy="22" rx="8" ry="5" fill="#C4956A" opacity="0.8"/>
+        <ellipse cx="40" cy="22" rx="4" ry="2.5" fill="#E8D5BC"/>
+      </svg>
+    );
+  }
+  if (cat.includes('necklace') || cat.includes('項')) {
+    return (
+      <svg viewBox="0 0 80 80" fill="none" width="60%" height="60%">
+        <path d="M20 20 Q40 50 60 20" stroke="#C4956A" strokeWidth="3" fill="none" strokeLinecap="round"/>
+        <circle cx="40" cy="54" r="8" fill="#C4956A" opacity="0.8"/>
+        <circle cx="40" cy="54" r="4" fill="#E8D5BC"/>
+      </svg>
+    );
+  }
+  if (cat.includes('earring') || cat.includes('耳')) {
+    return (
+      <svg viewBox="0 0 80 80" fill="none" width="60%" height="60%">
+        <circle cx="28" cy="20" r="5" fill="#C4956A" opacity="0.8"/>
+        <line x1="28" y1="25" x2="28" y2="50" stroke="#C4956A" strokeWidth="2.5"/>
+        <ellipse cx="28" cy="56" rx="6" ry="8" fill="#C4956A" opacity="0.6"/>
+        <circle cx="52" cy="20" r="5" fill="#C4956A" opacity="0.8"/>
+        <line x1="52" y1="25" x2="52" y2="50" stroke="#C4956A" strokeWidth="2.5"/>
+        <ellipse cx="52" cy="56" rx="6" ry="8" fill="#C4956A" opacity="0.6"/>
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 80 80" fill="none" width="60%" height="60%">
+      <polygon points="40,12 52,32 72,32 56,48 62,68 40,56 18,68 24,48 8,32 28,32" fill="#C4956A" opacity="0.3"/>
+      <polygon points="40,20 49,34 64,34 52,44 57,58 40,50 23,58 28,44 16,34 31,34" fill="#C4956A" opacity="0.6"/>
+    </svg>
+  );
+}
+
+function JewelryPhoto({ photo, className, style }) {
+  const [imgError, setImgError] = useState(false);
+  const src = photo?.filename ? `/static/thumb/${photo.filename}` : null;
+  if (src && !imgError) {
+    return <img src={src} className={className} style={style} onError={() => setImgError(true)} alt="" />;
+  }
+  return (
+    <div className="jewelry-svg-wrap" style={style}>
+      <JewelrySVG category={photo?.category} />
     </div>
+  );
+}
 
-    <div class="grid" id="grid"></div>
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function useToast() {
+  const [toast, setToast] = useState({ msg: '', show: false });
+  const timerRef = useRef(null);
+  const show = useCallback((msg) => {
+    clearTimeout(timerRef.current);
+    setToast({ msg, show: true });
+    timerRef.current = setTimeout(() => setToast(t => ({ ...t, show: false })), 2200);
+  }, []);
+  return { toast, showToast: show };
+}
 
-    <div class="lightbox" id="lightbox">
-        <img id="lightbox-img" src="" alt="">
+// ─── Staff Select Screen ──────────────────────────────────────────────────────
+function StaffSelectScreen({ onSelect }) {
+  const [staffList, setStaffList] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/api/staff').then(data => { setStaffList(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const addStaff = async () => {
+    if (!newName.trim()) return;
+    try {
+      const s = await api.post('/api/staff', { name: newName.trim() });
+      setStaffList(prev => [...prev, s]);
+      setNewName('');
+      setAdding(false);
+    } catch {}
+  };
+
+  return (
+    <div className="staff-screen">
+      <div className="staff-logo">JewelryDB</div>
+      <div className="staff-subtitle">珠寶偏好探索系統</div>
+
+      <div className="staff-list">
+        {loading ? <div style={{ textAlign:'center' }}><div className="spinner" style={{ margin:'0 auto' }} /></div>
+          : staffList.map(s => (
+          <button key={s.id} className="staff-btn" onClick={() => onSelect(s)}>
+            <div className="staff-avatar">{s.name[0]}</div>
+            <span>{s.name}</span>
+            <span style={{ marginLeft:'auto', color: 'var(--text-light)', fontSize: 12 }}>→</span>
+          </button>
+        ))}
+        {!loading && staffList.length === 0 && (
+          <p style={{ textAlign:'center', color:'var(--text-sub)', fontSize: 14 }}>尚無員工，請新增</p>
+        )}
+      </div>
+
+      {adding ? (
+        <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:10 }}>
+          <input className="form-input" placeholder="輸入姓名" value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addStaff()}
+            autoFocus />
+          <div style={{ display:'flex', gap:8 }}>
+            <button className="btn-primary" style={{ flex:1 }} onClick={addStaff}>新增</button>
+            <button className="btn-secondary" onClick={() => { setAdding(false); setNewName(''); }}>取消</button>
+          </div>
+        </div>
+      ) : (
+        <button className="btn-secondary" style={{ width:'100%' }} onClick={() => setAdding(true)}>
+          + 新增員工
+        </button>
+      )}
     </div>
+  );
+}
 
-    <div class="toast" id="toast"></div>
+// ─── Home Screen ──────────────────────────────────────────────────────────────
+function HomeScreen({ staff, showToast }) {
+  const [photos, setPhotos] = useState([]);
+  const [page, setPage] = useState(0);
+  const [priceBandIdx, setPriceBandIdx] = useState(null);
+  const [similarMode, setSimilarMode] = useState(null);
+  const [liked, setLiked] = useState({});
+  const [loading, setLoading] = useState(true);
+  const touchRef = useRef({ x: 0, y: 0 });
+  const containerRef = useRef(null);
 
-    <div class="footer">
-        <a href="/favorites.html">❤️ <span id="fav-count">0</span></a>
-        <a href="/locks.html">📌 <span id="lock-count">0</span></a>
-        <button id="sort-btn">⚙️ 隨機</button>
-        <a href="/stats.html">📊</a>
-        <a href="/quotes.html">💰</a>
+  const fetchPhotos = useCallback(async (opts = {}) => {
+    setLoading(true);
+    try {
+      let url = `/api/photos?limit=60&offset=0`;
+      if (opts.priceBand) url += `&price_band=${opts.priceBand}`;
+      if (opts.similarId) url = `/api/similar/${opts.similarId}?limit=60`;
+      const data = await api.get(url);
+      setPhotos(Array.isArray(data) ? data : (data.photos || data.results || []));
+      setPage(0);
+    } catch { setPhotos([]); }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
+
+  const paginate = (dir) => {
+    const maxPage = Math.max(0, Math.ceil(photos.length / 6) - 1);
+    setPage(p => dir > 0 ? Math.min(p + 1, maxPage) : Math.max(p - 1, 0));
+  };
+
+  const changeTier = (dir) => {
+    const curIdx = priceBandIdx === null ? 2 : priceBandIdx;
+    const next = Math.max(0, Math.min(PRICE_BANDS.length - 1, curIdx + dir));
+    const band = PRICE_BANDS[next];
+    setPriceBandIdx(next);
+    setSimilarMode(null);
+    fetchPhotos({ priceBand: band });
+    showToast(`價位：${PRICE_BAND_LABELS[band]}`);
+  };
+
+  const handlePhotoTap = async (photo) => {
+    setSimilarMode(photo.id);
+    fetchPhotos({ similarId: photo.id });
+    showToast('找相似款式…');
+  };
+
+  const handleHeart = async (e, photo) => {
+    e.stopPropagation();
+    const isLiked = liked[photo.id];
+    setLiked(prev => ({ ...prev, [photo.id]: !isLiked }));
+    if (!isLiked) {
+      const price = photo.price_estimate_low;
+      const priceStr = price ? `NT$${price.toLocaleString()}起` : '';
+      showToast(`♥ 加入喜愛${priceStr ? ` · ${priceStr}` : ''}`);
+      try {
+        await api.post('/api/events', { photo_id: photo.id, event_type: 'favorite', session_id: `staff_${staff.id}` });
+      } catch {}
+    }
+  };
+
+  // Touch swipe handling
+  const onTouchStart = (e) => {
+    touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const onTouchEnd = (e) => {
+    const dx = e.changedTouches[0].clientX - touchRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchRef.current.y;
+    const adx = Math.abs(dx), ady = Math.abs(dy);
+    if (adx < 20 && ady < 20) return;
+    if (adx > ady) {
+      if (dx < -40) paginate(1);
+      else if (dx > 40) paginate(-1);
+    } else {
+      if (dy < -40) changeTier(1);  // swipe up = more expensive
+      else if (dy > 40) changeTier(-1); // swipe down = cheaper
+    }
+  };
+
+  const pagePhotos = photos.slice(page * 6, page * 6 + 6);
+  const maxPage = Math.max(0, Math.ceil(photos.length / 6) - 1);
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: 82, position: 'relative' }}>
+      {/* Nav */}
+      <div className="nav-bar" style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <div className="nav-title">
+            {similarMode ? '相似款式' : '探索珠寶'}
+          </div>
+          {priceBandIdx !== null && !similarMode && (
+            <div style={{ fontSize: 12, color: 'var(--text-sub)' }}>
+              {PRICE_BAND_LABELS[PRICE_BANDS[priceBandIdx]]} 價位
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {similarMode && (
+            <button className="btn-ghost" onClick={() => { setSimilarMode(null); setPriceBandIdx(null); fetchPhotos(); }}>
+              ✕ 返回
+            </button>
+          )}
+          <div style={{ fontSize: 12, color: 'var(--text-sub)' }}>{staff.name}</div>
+        </div>
+      </div>
+
+      {/* Photo grid */}
+      <div
+        ref={containerRef}
+        style={{ flex: 1, padding: '0 12px', position: 'relative' }}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        {loading ? (
+          <div style={{ display:'flex', justifyContent:'center', paddingTop: 80 }}>
+            <div className="spinner" />
+          </div>
+        ) : pagePhotos.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">💎</div>
+            <div className="empty-text">目前沒有珠寶照片</div>
+          </div>
+        ) : (
+          <div className="photo-grid slide-up">
+            {Array.from({ length: 6 }).map((_, i) => {
+              const photo = pagePhotos[i];
+              return (
+                <div key={i} className="photo-card" onClick={() => photo && handlePhotoTap(photo)}>
+                  {photo ? (
+                    <>
+                      <JewelryPhoto photo={photo} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                      <div className="photo-num">{i + 1}</div>
+                      <button className={`photo-heart ${liked[photo.id] ? 'liked' : ''}`}
+                        onClick={(e) => handleHeart(e, photo)}>
+                        {liked[photo.id] ? '❤️' : '🤍'}
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ width:'100%', height:'100%', background:'var(--gold-ultra)' }} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Page indicators */}
+        {maxPage > 0 && (
+          <div style={{ display:'flex', justifyContent:'center', gap:5, padding:'12px 0' }}>
+            {Array.from({ length: Math.min(maxPage + 1, 8) }).map((_, i) => (
+              <div key={i} style={{
+                width: i === page ? 14 : 5,
+                height: 5,
+                borderRadius: 3,
+                background: i === page ? 'var(--gold)' : 'var(--gold-light)',
+                transition: 'all 0.3s'
+              }} />
+            ))}
+          </div>
+        )}
+
+        {/* Tier indicator */}
+        <div className="tier-indicator">
+          {PRICE_BANDS.map((b, i) => (
+            <div key={b} className={`tier-dot ${priceBandIdx === i ? 'active' : ''}`} />
+          ))}
+        </div>
+      </div>
+
+      {/* Hint */}
+      <div style={{ padding:'6px 16px 8px', display:'flex', justifyContent:'space-between', color:'var(--text-light)', fontSize:10, flexShrink: 0 }}>
+        <span>← 左右換頁</span>
+        <span>點選找相似</span>
+        <span>↑↓ 換價位 →</span>
+      </div>
     </div>
+  );
+}
 
-    <script type="module" src="/js/app.js"></script>
+// ─── Stats Screen ─────────────────────────────────────────────────────────────
+function StatsScreen() {
+  const [topPhotos, setTopPhotos] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/api/stats/top-photos?limit=20')
+      .then(data => { setTopPhotos(Array.isArray(data) ? data : (data.photos || [])); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: 82 }}>
+      <div className="nav-bar">
+        <div className="nav-title">熱門珠寶</div>
+      </div>
+
+      <div className="scroll-content" style={{ padding: '0 16px' }}>
+        {loading ? (
+          <div style={{ display:'flex', justifyContent:'center', paddingTop: 60 }}><div className="spinner" /></div>
+        ) : topPhotos.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📊</div>
+            <div className="empty-text">尚無收藏數據</div>
+          </div>
+        ) : (
+          <>
+            <p style={{ fontSize: 12, color: 'var(--text-sub)', marginBottom: 14 }}>
+              依收藏次數排行
+            </p>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10 }}>
+              {topPhotos.map((p, i) => (
+                <div key={p.id} className="hot-photo-card">
+                  <JewelryPhoto photo={p} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  <div className="hot-photo-rank">#{i + 1}</div>
+                  <div className="hot-photo-count">♥ {p.favorite_count || 0}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Transactions Screen ──────────────────────────────────────────────────────
+function TxEditModal({ tx, onSave, onClose }) {
+  const isNew = !tx?.id;
+  const [form, setForm] = useState({
+    item_name: tx?.item_name || '',
+    category: tx?.category || '',
+    material: tx?.material || '',
+    gemstone: tx?.gemstone || '',
+    stone_spec: tx?.stone_spec || '',
+    metal_weight: tx?.metal_weight || '',
+    price: tx?.price || '',
+    sale_date: tx?.sale_date || new Date().toISOString().slice(0,10),
+    notes: tx?.notes || '',
+    client_name: tx?.client_name || '',
+  });
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const field = (k, label, opts = {}) => (
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      <input className="form-input" value={form[k]} placeholder={opts.placeholder || ''}
+        type={opts.type || 'text'}
+        onChange={e => set(k, e.target.value)} />
+    </div>
+  );
+
+  const handleSave = () => {
+    if (!form.item_name.trim()) return;
+    const price = parseInt(form.price);
+    if (isNaN(price) || price <= 0) return;
+    onSave({ ...form, price, metal_weight: form.metal_weight ? parseFloat(form.metal_weight) : null });
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+        <div className="modal-handle" />
+        <div className="modal-title">{isNew ? '新增成交記錄' : '編輯成交記錄'}</div>
+        {field('item_name', '品名 *', { placeholder: '例：玫瑰金鑽石戒指' })}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          <div className="form-group">
+            <label className="form-label">品類</label>
+            <input className="form-input" value={form.category} onChange={e => set('category', e.target.value)} placeholder="戒指/項鍊…" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">材質</label>
+            <input className="form-input" value={form.material} onChange={e => set('material', e.target.value)} placeholder="18K金/鉑金…" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">寶石</label>
+            <input className="form-input" value={form.gemstone} onChange={e => set('gemstone', e.target.value)} placeholder="鑽石/紅寶…" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">石材規格</label>
+            <input className="form-input" value={form.stone_spec} onChange={e => set('stone_spec', e.target.value)} placeholder="0.3ct G VS1…" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">金屬重量(g)</label>
+            <input className="form-input" type="number" value={form.metal_weight} onChange={e => set('metal_weight', e.target.value)} placeholder="3.2" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">成交價 NT$ *</label>
+            <input className="form-input" type="number" value={form.price} onChange={e => set('price', e.target.value)} placeholder="68000" />
+          </div>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          <div className="form-group">
+            <label className="form-label">成交日期</label>
+            <input className="form-input" type="date" value={form.sale_date} onChange={e => set('sale_date', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">客戶名稱</label>
+            <input className="form-input" value={form.client_name} onChange={e => set('client_name', e.target.value)} placeholder="選填" />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label">備註</label>
+          <textarea className="form-input" value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="備忘事項…" />
+        </div>
+        <div style={{ display:'flex', gap:10, marginTop:8 }}>
+          <button className="btn-primary" style={{ flex:1 }} onClick={handleSave}>儲存</button>
+          <button className="btn-secondary" onClick={onClose}>取消</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TransactionsScreen({ showToast }) {
+  const [txList, setTxList] = useState([]);
+  const [benchmarks, setBenchmarks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editTx, setEditTx] = useState(null);
+  const [showNew, setShowNew] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [txs, bms] = await Promise.all([
+        api.get('/api/transactions'),
+        api.get('/api/transactions/benchmarks'),
+      ]);
+      setTxList(txs);
+      setBenchmarks(bms);
+    } catch {}
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const maxAvg = benchmarks.length ? Math.max(...benchmarks.map(b => b.avg_price)) : 1;
+
+  const handleSave = async (form) => {
+    try {
+      if (editTx?.id) {
+        const updated = await api.put(`/api/transactions/${editTx.id}`, form);
+        setTxList(prev => prev.map(t => t.id === updated.id ? updated : t));
+        showToast('已更新');
+      } else {
+        const created = await api.post('/api/transactions', form);
+        setTxList(prev => [created, ...prev]);
+        showToast('已新增');
+      }
+    } catch { showToast('操作失敗'); }
+    setEditTx(null);
+    setShowNew(false);
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await api.del(`/api/transactions/${id}`);
+      setTxList(prev => prev.filter(t => t.id !== id));
+      setEditTx(null);
+      showToast('已刪除');
+    } catch {}
+  };
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: 82 }}>
+      <div className="nav-bar">
+        <div className="nav-title">近期成交</div>
+        <button className="nav-action" onClick={() => setShowNew(true)}>+ 新增</button>
+      </div>
+
+      <div className="scroll-content">
+        {/* Benchmarks */}
+        {benchmarks.length > 0 && (
+          <div className="benchmark-bar">
+            <div style={{ fontSize: 11, color: 'var(--text-sub)', marginBottom: 10 }}>材質平均成交價</div>
+            {benchmarks.slice(0, 5).map(b => (
+              <div key={b.material} className="benchmark-item">
+                <div className="benchmark-label">{b.material}</div>
+                <div className="benchmark-track">
+                  <div className="benchmark-fill" style={{ width: `${(b.avg_price / maxAvg) * 100}%` }} />
+                </div>
+                <div className="benchmark-val">NT${b.avg_price >= 10000 ? (b.avg_price / 10000).toFixed(1) + 'w' : b.avg_price.toLocaleString()}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {loading ? (
+          <div style={{ display:'flex', justifyContent:'center', paddingTop:60 }}><div className="spinner" /></div>
+        ) : txList.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">💰</div>
+            <div className="empty-text">尚無成交記錄</div>
+          </div>
+        ) : (
+          <div className="card" style={{ margin:'16px', borderRadius: 'var(--radius)' }}>
+            {txList.map((tx, i) => (
+              <div key={tx.id} className="tx-row" onClick={() => setEditTx(tx)}>
+                {tx.photo_id ? (
+                  <div className="tx-thumb">
+                    <JewelryPhoto photo={{ filename: tx.filename, category: tx.category }} />
+                  </div>
+                ) : (
+                  <div className="tx-thumb" style={{ display:'flex', alignItems:'center', justifyContent:'center', background:'var(--gold-ultra)' }}>
+                    <span style={{ fontSize: 20 }}>💎</span>
+                  </div>
+                )}
+                <div className="tx-info">
+                  <div className="tx-name">{tx.item_name}</div>
+                  <div className="tx-meta">
+                    {[tx.material, tx.gemstone, tx.stone_spec].filter(Boolean).join(' · ')}
+                    {tx.sale_date && <> · {tx.sale_date}</>}
+                  </div>
+                </div>
+                <div className="tx-price">NT${tx.price.toLocaleString()}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {(showNew || editTx) && (
+        <TxEditModal
+          tx={editTx || null}
+          onSave={handleSave}
+          onClose={() => { setEditTx(null); setShowNew(false); }}
+        />
+      )}
+      {editTx && (
+        <div style={{ position:'absolute', bottom: 120, left: 0, right: 0, display:'flex', justifyContent:'center', zIndex:200 }}>
+          <button className="btn-danger" onClick={() => handleDelete(editTx.id)}>刪除此記錄</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Discovery Flow Modal ─────────────────────────────────────────────────────
+function DiscoveryFlowModal({ customer, staff, onClose, onSave, showToast }) {
+  const [phase, setPhase] = useState(0); // 0=style, 1=photos, 2=confirm
+  const [selectedStyles, setSelectedStyles] = useState([]);
+  const [photos, setPhotos] = useState([]);
+  const [likedIds, setLikedIds] = useState([]);
+  const [inferredTags, setInferredTags] = useState([]);
+  const [lineId, setLineId] = useState(customer.line_id || '');
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
+
+  const toggleStyle = (id) => {
+    setSelectedStyles(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
+
+  const fetchStylePhotos = async () => {
+    if (selectedStyles.length === 0) return;
+    setLoadingPhotos(true);
+    try {
+      const tags = selectedStyles.flatMap(sid => STYLE_PROFILES.find(s => s.id === sid)?.tags || []);
+      const data = await api.get('/api/photos?limit=12&offset=0');
+      setPhotos(Array.isArray(data) ? data.slice(0, 12) : []);
+    } catch { setPhotos([]); }
+    setLoadingPhotos(false);
+  };
+
+  const goPhase1 = () => {
+    if (selectedStyles.length === 0) { showToast('請選擇至少一種風格'); return; }
+    fetchStylePhotos();
+    setPhase(1);
+  };
+
+  const goPhase2 = () => {
+    if (likedIds.length === 0) { showToast('請選擇至少一張喜愛的照片'); return; }
+    // Infer tags from selected styles + liked photos
+    const tags = selectedStyles.flatMap(sid => STYLE_PROFILES.find(s => s.id === sid)?.tags || []);
+    setInferredTags([...new Set(tags)].slice(0, 6));
+    setPhase(2);
+  };
+
+  const handleSave = async () => {
+    try {
+      await onSave({
+        liked_photo_ids: likedIds,
+        tags: inferredTags,
+        line_id: lineId || null,
+        staff_id: staff.id,
+        notes: `風格：${selectedStyles.join(', ')}`,
+      });
+      showToast('偏好已儲存 ✓');
+      onClose();
+    } catch { showToast('儲存失敗'); }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" style={{ maxHeight: '85%' }} onClick={e => e.stopPropagation()}>
+        <div className="modal-handle" />
+
+        {/* Phase dots */}
+        <div className="phase-dots">
+          {[0,1,2].map(i => <div key={i} className={`phase-dot ${phase === i ? 'active' : ''}`} />)}
+        </div>
+
+        {phase === 0 && (
+          <>
+            <div className="modal-title">選擇偏好風格</div>
+            <p style={{ fontSize: 13, color: 'var(--text-sub)', marginBottom: 16 }}>
+              幫 {customer.name} 選擇可能喜歡的風格（可多選）
+            </p>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
+              {STYLE_PROFILES.map(s => (
+                <div key={s.id} className={`style-card ${selectedStyles.includes(s.id) ? 'selected' : ''}`}
+                  onClick={() => toggleStyle(s.id)}>
+                  <div className="style-card-emoji">{s.emoji}</div>
+                  <div className="style-card-name">{s.name}</div>
+                  <div className="style-card-desc">{s.desc}</div>
+                </div>
+              ))}
+            </div>
+            <button className="btn-primary" style={{ width:'100%' }} onClick={goPhase1}>
+              看推薦款式 →
+            </button>
+          </>
+        )}
+
+        {phase === 1 && (
+          <>
+            <div className="modal-title">選擇喜愛款式</div>
+            <p style={{ fontSize: 13, color: 'var(--text-sub)', marginBottom: 12 }}>
+              點選喜歡的款式（可多選）
+            </p>
+            {loadingPhotos ? (
+              <div style={{ display:'flex', justifyContent:'center', padding:40 }}><div className="spinner" /></div>
+            ) : (
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:6, marginBottom:16 }}>
+                {photos.map((p, i) => (
+                  <div key={p.id} style={{ position:'relative', borderRadius:10, overflow:'hidden', aspectRatio:1,
+                    border: likedIds.includes(p.id) ? '2.5px solid var(--gold)' : '2.5px solid transparent',
+                    cursor: 'pointer' }}
+                    onClick={() => setLikedIds(prev => prev.includes(p.id) ? prev.filter(id => id !== p.id) : [...prev, p.id])}>
+                    <JewelryPhoto photo={p} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                    <div style={{ position:'absolute', top:4, left:4, background:'rgba(0,0,0,0.5)', color:'#fff',
+                      borderRadius:'50%', width:20, height:20, fontSize:10, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      {i+1}
+                    </div>
+                    {likedIds.includes(p.id) && (
+                      <div style={{ position:'absolute', top:4, right:4, fontSize:14 }}>❤️</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display:'flex', gap:8 }}>
+              <button className="btn-secondary" onClick={() => setPhase(0)}>← 返回</button>
+              <button className="btn-primary" style={{ flex:1 }} onClick={goPhase2}>
+                確認偏好 →
+              </button>
+            </div>
+          </>
+        )}
+
+        {phase === 2 && (
+          <>
+            <div className="modal-title">確認偏好標籤</div>
+            <p style={{ fontSize: 13, color: 'var(--text-sub)', marginBottom: 12 }}>
+              選了 {likedIds.length} 款，推斷偏好如下
+            </p>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:16 }}>
+              {inferredTags.map(tag => (
+                <button key={tag} className="pill pill-gold"
+                  onClick={() => setInferredTags(prev => prev.filter(t => t !== tag))}>
+                  {tag} ✕
+                </button>
+              ))}
+            </div>
+            <div className="form-group">
+              <label className="form-label">LINE ID（選填，用於下次識別）</label>
+              <input className="form-input" placeholder="@lineId" value={lineId}
+                onChange={e => setLineId(e.target.value)} />
+            </div>
+            <div style={{ display:'flex', gap:8, marginTop:8 }}>
+              <button className="btn-secondary" onClick={() => setPhase(1)}>← 返回</button>
+              <button className="btn-primary" style={{ flex:1 }} onClick={handleSave}>
+                儲存偏好 ✓
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Customer Detail Modal ────────────────────────────────────────────────────
+function CustomerDetailModal({ customer, staff, onClose, showToast, onUpdated }) {
+  const [detail, setDetail] = useState(null);
+  const [showDiscovery, setShowDiscovery] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get(`/api/customers/${customer.id}`)
+      .then(d => { setDetail(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [customer.id]);
+
+  const removeTag = async (tag) => {
+    try {
+      await api.del(`/api/customers/${customer.id}/tags/${encodeURIComponent(tag)}`);
+      setDetail(d => ({ ...d, tags: d.tags.filter(t => t !== tag) }));
+    } catch {}
+  };
+
+  const handleDiscoverySave = async (sessionData) => {
+    const result = await api.post(`/api/customers/${customer.id}/sessions`, sessionData);
+    setDetail(result.customer);
+    onUpdated && onUpdated(result.customer);
+  };
+
+  const handleDelete = async () => {
+    try {
+      await api.del(`/api/customers/${customer.id}`);
+      showToast('客戶已刪除');
+      onUpdated && onUpdated(null);
+      onClose();
+    } catch { showToast('刪除失敗'); }
+  };
+
+  return (
+    <>
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-sheet" style={{ maxHeight:'88%' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-handle" />
+
+          {loading ? (
+            <div style={{ display:'flex', justifyContent:'center', padding:40 }}><div className="spinner" /></div>
+          ) : detail ? (
+            <>
+              {/* Header */}
+              <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:16 }}>
+                <div className="customer-avatar" style={{ width:56, height:56, fontSize:22 }}>
+                  {detail.name[0]}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:18, fontWeight:500 }}>{detail.name}</div>
+                  {detail.line_id && <div style={{ fontSize:12, color:'var(--text-sub)' }}>LINE: {detail.line_id}</div>}
+                  {detail.phone && <div style={{ fontSize:12, color:'var(--text-sub)' }}>{detail.phone}</div>}
+                </div>
+                <button className="btn-primary" style={{ padding:'8px 14px', fontSize:13 }}
+                  onClick={() => setShowDiscovery(true)}>
+                  探索偏好
+                </button>
+              </div>
+
+              {/* Tags */}
+              {detail.tags.length > 0 && (
+                <div style={{ marginBottom:14 }}>
+                  <div style={{ fontSize:12, color:'var(--text-sub)', marginBottom:6 }}>偏好標籤</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                    {detail.tags.map(tag => (
+                      <button key={tag} className="pill pill-gold" onClick={() => removeTag(tag)}>
+                        {tag} ✕
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Favorites */}
+              {detail.favorites.length > 0 && (
+                <div style={{ marginBottom:14 }}>
+                  <div style={{ fontSize:12, color:'var(--text-sub)', marginBottom:8 }}>
+                    喜愛款式 ({detail.favorites.length})
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
+                    {detail.favorites.slice(0,8).map(f => (
+                      <div key={f.photo_id} style={{ aspectRatio:1, borderRadius:8, overflow:'hidden', background:'var(--gold-ultra)' }}>
+                        <JewelryPhoto photo={{ filename: f.filename, category: f.category }} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Session count */}
+              <div style={{ fontSize:12, color:'var(--text-sub)', marginBottom:16 }}>
+                服務次數：{detail.session_count} 次
+              </div>
+
+              <button className="btn-danger" style={{ width:'100%' }} onClick={handleDelete}>
+                刪除客戶
+              </button>
+            </>
+          ) : (
+            <div className="empty-state"><div className="empty-text">載入失敗</div></div>
+          )}
+        </div>
+      </div>
+
+      {showDiscovery && detail && (
+        <DiscoveryFlowModal
+          customer={detail}
+          staff={staff}
+          onClose={() => setShowDiscovery(false)}
+          onSave={handleDiscoverySave}
+          showToast={showToast}
+        />
+      )}
+    </>
+  );
+}
+
+// ─── Add Customer Modal ───────────────────────────────────────────────────────
+function AddCustomerModal({ onClose, onAdded }) {
+  const [form, setForm] = useState({ name: '', line_id: '', phone: '', notes: '' });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleAdd = async () => {
+    if (!form.name.trim()) return;
+    try {
+      const c = await api.post('/api/customers', form);
+      onAdded(c);
+      onClose();
+    } catch {}
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+        <div className="modal-handle" />
+        <div className="modal-title">新增客戶</div>
+        <div className="form-group">
+          <label className="form-label">姓名 *</label>
+          <input className="form-input" autoFocus value={form.name} onChange={e => set('name', e.target.value)} placeholder="客戶姓名" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">LINE ID</label>
+          <input className="form-input" value={form.line_id} onChange={e => set('line_id', e.target.value)} placeholder="@lineId" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">電話</label>
+          <input className="form-input" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="09xx-xxx-xxx" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">備註</label>
+          <textarea className="form-input" value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="備忘…" />
+        </div>
+        <div style={{ display:'flex', gap:10, marginTop:8 }}>
+          <button className="btn-primary" style={{ flex:1 }} onClick={handleAdd}>新增</button>
+          <button className="btn-secondary" onClick={onClose}>取消</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Favorites / Customers Screen ─────────────────────────────────────────────
+function FavoritesScreen({ staff, showToast }) {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+
+  const load = async (q = '') => {
+    setLoading(true);
+    try {
+      const url = q ? `/api/customers?q=${encodeURIComponent(q)}` : '/api/customers';
+      const data = await api.get(url);
+      setCustomers(data);
+    } catch { setCustomers([]); }
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSearch = (e) => {
+    const q = e.target.value;
+    setSearch(q);
+    const timer = setTimeout(() => load(q), 300);
+    return () => clearTimeout(timer);
+  };
+
+  const handleUpdated = (updated) => {
+    if (!updated) {
+      setCustomers(prev => prev.filter(c => c.id !== selectedCustomer?.id));
+      setSelectedCustomer(null);
+    } else {
+      setCustomers(prev => prev.map(c => c.id === updated.id ? { ...c, ...updated } : c));
+    }
+  };
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: 82 }}>
+      <div className="nav-bar">
+        <div className="nav-title">客戶偏好</div>
+        <button className="nav-action" onClick={() => setShowAdd(true)}>+ 新增</button>
+      </div>
+
+      {/* Search */}
+      <div style={{ padding: '0 16px 12px', flexShrink: 0 }}>
+        <input className="form-input" placeholder="🔍 搜尋姓名、LINE、標籤…"
+          value={search} onChange={handleSearch} />
+      </div>
+
+      <div className="scroll-content" style={{ padding: '0 16px' }}>
+        {loading ? (
+          <div style={{ display:'flex', justifyContent:'center', paddingTop:40 }}><div className="spinner" /></div>
+        ) : customers.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">👥</div>
+            <div className="empty-text">{search ? '找不到符合客戶' : '尚無客戶資料'}</div>
+          </div>
+        ) : (
+          customers.map(c => (
+            <div key={c.id} className="customer-card" onClick={() => setSelectedCustomer(c)}>
+              <div className="customer-avatar">{c.name[0]}</div>
+              <div className="customer-info">
+                <div className="customer-name">{c.name}</div>
+                {c.line_id && <div style={{ fontSize:11, color:'var(--text-sub)' }}>LINE: {c.line_id}</div>}
+                <div className="customer-tags">
+                  {(c.tags || []).slice(0,4).map(t => (
+                    <span key={t} className="pill pill-gold">{t}</span>
+                  ))}
+                </div>
+              </div>
+              <div style={{ flexShrink:0, textAlign:'right' }}>
+                {c.fav_count > 0 && <div style={{ fontSize:12, color:'var(--text-sub)' }}>♥ {c.fav_count}</div>}
+                {c.last_fav_filename && (
+                  <div style={{ width:40, height:40, borderRadius:8, overflow:'hidden', marginTop:4, background:'var(--gold-ultra)' }}>
+                    <JewelryPhoto photo={{ filename: c.last_fav_filename }} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {selectedCustomer && (
+        <CustomerDetailModal
+          customer={selectedCustomer}
+          staff={staff}
+          onClose={() => setSelectedCustomer(null)}
+          showToast={showToast}
+          onUpdated={handleUpdated}
+        />
+      )}
+
+      {showAdd && (
+        <AddCustomerModal
+          onClose={() => setShowAdd(false)}
+          onAdded={(c) => setCustomers(prev => [c, ...prev])}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+function App() {
+  const [staff, setStaff] = useState(null);
+  const [tab, setTab] = useState(0);
+  const { toast, showToast } = useToast();
+
+  const TABS = [
+    { label: '首頁', icon: '💎' },
+    { label: '洞察', icon: '📊' },
+    { label: '成交', icon: '💰' },
+    { label: '客戶', icon: '👥' },
+  ];
+
+  return (
+    <div id="app-root">
+      <div className="phone-frame">
+        <div className="dynamic-island" />
+        <div className="status-bar">
+          <span>9:41</span>
+          <span>●●●</span>
+        </div>
+
+        {!staff ? (
+          <StaffSelectScreen onSelect={setStaff} />
+        ) : (
+          <div className="screen" style={{ paddingTop: 54 }}>
+            {tab === 0 && <HomeScreen staff={staff} showToast={showToast} />}
+            {tab === 1 && <StatsScreen />}
+            {tab === 2 && <TransactionsScreen showToast={showToast} />}
+            {tab === 3 && <FavoritesScreen staff={staff} showToast={showToast} />}
+
+            <div className="tab-bar">
+              {TABS.map((t, i) => (
+                <button key={i} className={`tab-item ${tab === i ? 'active' : ''}`} onClick={() => setTab(i)}>
+                  <div className="tab-icon">{t.icon}</div>
+                  <div className="tab-label">{t.label}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Staff switcher */}
+            <button
+              onClick={() => setStaff(null)}
+              style={{ position:'absolute', top:58, right:16, fontSize:10, color:'var(--text-light)', zIndex:60 }}>
+              {staff.name} ↩
+            </button>
+          </div>
+        )}
+
+        {/* Toast */}
+        <div className={`toast ${toast.show ? 'show' : ''}`}>{toast.msg}</div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
 </body>
 </html>

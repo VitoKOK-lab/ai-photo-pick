@@ -86,4 +86,77 @@ CREATE TABLE IF NOT EXISTS quotes (
 );
 CREATE INDEX IF NOT EXISTS idx_quotes_gemstone ON quotes(gemstone);
 CREATE INDEX IF NOT EXISTS idx_quotes_material ON quotes(material);
+
+CREATE TABLE IF NOT EXISTS staff (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    line_id TEXT,
+    phone TEXT,
+    notes TEXT,
+    session_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_customers_line_id ON customers(line_id);
+
+CREATE TABLE IF NOT EXISTS customer_tags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER NOT NULL,
+    tag TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    UNIQUE(customer_id, tag)
+);
+CREATE INDEX IF NOT EXISTS idx_customer_tags_cid ON customer_tags(customer_id);
+
+CREATE TABLE IF NOT EXISTS customer_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER NOT NULL,
+    staff_id INTEGER,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    FOREIGN KEY (staff_id) REFERENCES staff(id)
+);
+
+CREATE TABLE IF NOT EXISTS customer_favorites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER NOT NULL,
+    photo_id INTEGER NOT NULL,
+    session_id INTEGER,
+    note TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    FOREIGN KEY (photo_id) REFERENCES photos(id),
+    FOREIGN KEY (session_id) REFERENCES customer_sessions(id)
+);
+CREATE INDEX IF NOT EXISTS idx_cf_customer  ON customer_favorites(customer_id);
+CREATE INDEX IF NOT EXISTS idx_cf_photo     ON customer_favorites(photo_id);
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_name TEXT NOT NULL,
+    category TEXT,
+    material TEXT,
+    gemstone TEXT,
+    stone_spec TEXT,
+    metal_weight REAL,
+    price INTEGER NOT NULL,
+    sale_date DATE,
+    notes TEXT,
+    client_name TEXT,
+    photo_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (photo_id) REFERENCES photos(id)
+);
+CREATE INDEX IF NOT EXISTS idx_tx_material ON transactions(material);
+CREATE INDEX IF NOT EXISTS idx_tx_gemstone ON transactions(gemstone);
+CREATE INDEX IF NOT EXISTS idx_tx_date     ON transactions(sale_date);
 """
