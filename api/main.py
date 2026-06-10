@@ -7,12 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import BASE_DIR, PROCESSED_DIR, ALLOWED_ORIGINS
-from api.auth import TokenAuthMiddleware
 
 app = FastAPI(title="Jewelry DB API")
-
-# Auth middleware（設定 JEWELRY_AUTH_TOKEN 才生效）
-app.add_middleware(TokenAuthMiddleware)
 
 # CORS
 app.add_middleware(
