@@ -1,8 +1,17 @@
 // cs.js — 客服訂單追蹤前端邏輯（純 JS，無建置步驟）
 const BASE = "";
 
+// 存取通行碼（部署時若設了 JEWELRY_AUTH_TOKEN，網址帶 ?token=XXX 進來即可）
+const AUTH_TOKEN = (() => {
+  const u = new URLSearchParams(location.search).get("token");
+  if (u) { try { localStorage.setItem("cs_token", u); } catch {} return u; }
+  try { return localStorage.getItem("cs_token") || ""; } catch { return ""; }
+})();
+
 async function api(path, opts = {}) {
-  const r = await fetch(BASE + path, opts);
+  const headers = { ...(opts.headers || {}) };
+  if (AUTH_TOKEN) headers["Authorization"] = "Bearer " + AUTH_TOKEN;
+  const r = await fetch(BASE + path, { ...opts, headers });
   if (!r.ok) {
     let msg = `錯誤 ${r.status}`;
     try { msg = (await r.json()).detail || msg; } catch {}

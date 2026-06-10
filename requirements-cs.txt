@@ -1,0 +1,7 @@
+# 只跑客服訂單追蹤所需的套件（不含影像辨識的 torch/chromadb）
+# 安裝：pip install -r requirements-cs.txt
+fastapi>=0.111.0
+uvicorn==0.27.0
+python-multipart==0.0.6
+xlrd==2.0.2
+pydantic>=2.0
