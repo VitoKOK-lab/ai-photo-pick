@@ -12,27 +12,26 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     :root {
-      --bg: #F7F7F7;
-      --surface: #FFFFFF;
-      --text: #111111;
-      --text-sub: #777777;
-      --text-light: #C5C5C5;
-      --border: #EBEBEB;
-      --chip-bg: #EFEFEF;
-      --active: #111111;
-      --active-text: #FFFFFF;
-      --gold: #C4956A;
-      --gold-soft: rgba(196,149,106,0.12);
-      --red: #E05252;
-      --green: #4CAF7D;
-      --radius: 12px;
+      --bg:       #F5F5F5;
+      --surface:  #FFFFFF;
+      --text:     #111111;
+      --text-2:   #666666;
+      --text-3:   #BBBBBB;
+      --border:   #E8E8E8;
+      --chip-bg:  #ECECEC;
+      --active:   #111111;
+      --active-t: #FFFFFF;
+      --red:      #D94040;
+      --green:    #3D9E6B;
+      --radius:   12px;
       --radius-sm: 8px;
-      --shadow: 0 2px 16px rgba(0,0,0,0.08);
-      --shadow-sm: 0 1px 6px rgba(0,0,0,0.05);
+      --shadow:   0 1px 12px rgba(0,0,0,0.06);
+      --shadow-sm:0 1px 4px  rgba(0,0,0,0.05);
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; background: #1A1A1A; }
-    body { font-family: 'Noto Sans TC', sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; overflow: hidden; }
+    html, body { height: 100%; background: #1C1C1C; }
+    body { font-family: 'Noto Sans TC', sans-serif; color: var(--text);
+           -webkit-font-smoothing: antialiased; overflow: hidden; }
     #root { height: 100%; display: flex; justify-content: center; align-items: center; }
     button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
     input, textarea, select { font-family: inherit; }
@@ -40,156 +39,149 @@
     .hide-scroll { scrollbar-width: none; }
     .hide-scroll::-webkit-scrollbar { display: none; }
 
-    /* Phone frame */
+    /* ── Phone frame ────────────────────────────────────────── */
     .phone-frame {
       width: 390px; height: 844px;
       background: var(--bg);
-      border-radius: 52px;
-      overflow: hidden; position: relative;
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 40px 80px rgba(0,0,0,0.6);
+      border-radius: 52px; overflow: hidden; position: relative;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 40px 80px rgba(0,0,0,0.65);
     }
-    @media (max-height: 900px)  { .phone-frame { transform: scale(0.92); transform-origin: center; } }
-    @media (max-height: 800px)  { .phone-frame { transform: scale(0.82); transform-origin: center; } }
-    @media (max-height: 700px)  { .phone-frame { transform: scale(0.72); transform-origin: center; } }
+    @media (max-height: 900px) { .phone-frame { transform: scale(0.92); transform-origin: center; } }
+    @media (max-height: 800px) { .phone-frame { transform: scale(0.82); transform-origin: center; } }
+    @media (max-height: 700px) { .phone-frame { transform: scale(0.72); transform-origin: center; } }
 
-    /* Dynamic Island */
     .dynamic-island {
       position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
       width: 126px; height: 36px; background: #000; border-radius: 20px; z-index: 100;
     }
-    /* Status bar */
     .status-bar {
       position: absolute; top: 0; left: 0; right: 0; height: 54px;
       display: flex; align-items: flex-end; justify-content: space-between;
       padding: 0 28px 8px; z-index: 99; font-size: 12px; font-weight: 600;
       pointer-events: none; background: var(--bg);
     }
-
-    /* Screen */
     .screen {
       position: absolute; inset: 0;
       background: var(--bg);
       display: flex; flex-direction: column; overflow: hidden;
     }
 
-    /* Tab bar */
+    /* ── Tab bar ─────────────────────────────────────────────── */
     .tab-bar {
       position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
-      background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);
+      background: rgba(255,255,255,0.97); backdrop-filter: blur(24px);
       border-top: 1px solid var(--border);
       display: flex; align-items: flex-start; padding-top: 10px; z-index: 50;
     }
     .tab-item {
       flex: 1; display: flex; flex-direction: column; align-items: center;
-      gap: 2px; padding: 2px 0;
-      color: var(--text-light); font-size: 10px; font-weight: 500; transition: color 0.2s;
+      gap: 3px; padding: 2px 0;
+      color: var(--text-3); font-size: 10px; font-weight: 500; transition: color 0.18s;
     }
     .tab-item.active { color: var(--active); }
-    .tab-icon { font-size: 20px; line-height: 1.2; }
+    .tab-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
 
-    /* Nav bar */
+    /* ── Nav bar ─────────────────────────────────────────────── */
     .nav-bar {
-      height: 80px; display: flex; align-items: flex-end;
-      padding: 0 18px 12px; gap: 12px; flex-shrink: 0;
-      background: var(--bg); position: relative; z-index: 10;
+      height: 56px; display: flex; align-items: center;
+      padding: 0 18px; gap: 10px; flex-shrink: 0;
+      background: var(--bg);
     }
-    .nav-title { font-size: 22px; font-weight: 600; flex: 1; }
-    .nav-sub { font-size: 11px; color: var(--text-sub); letter-spacing: 0.02em; }
+    .nav-title { font-size: 20px; font-weight: 600; flex: 1; letter-spacing: -0.01em; }
+    .nav-sub   { font-size: 11px; color: var(--text-2); margin-top: 1px; }
     .nav-btn {
-      padding: 7px 14px; border-radius: 20px;
+      padding: 7px 16px; border-radius: 20px;
       font-size: 13px; font-weight: 500;
       background: var(--active); color: #fff; transition: opacity 0.15s;
     }
     .nav-btn:active { opacity: 0.75; }
-    .nav-btn-ghost { color: var(--text-sub); font-size: 13px; padding: 7px 4px; }
+    .nav-btn-ghost { color: var(--text-2); font-size: 13px; padding: 7px 0; }
 
-    /* Scroll */
+    /* ── Scroll ──────────────────────────────────────────────── */
     .scroll-view {
       flex: 1; overflow-y: auto; overflow-x: hidden;
       -webkit-overflow-scrolling: touch; padding-bottom: 80px;
     }
-    .scroll-view.hide-scroll::-webkit-scrollbar { display: none; }
 
-    /* Filter chips row */
+    /* ── Filter chips ────────────────────────────────────────── */
     .filter-row {
-      display: flex; gap: 6px; overflow-x: auto; padding: 6px 16px 10px;
+      display: flex; gap: 6px; overflow-x: auto; padding: 2px 16px 10px;
       flex-shrink: 0; background: var(--bg);
     }
     .chip {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 6px 12px; border-radius: 20px;
-      background: var(--chip-bg); color: var(--text-sub);
-      font-size: 12px; font-weight: 500; white-space: nowrap;
-      flex-shrink: 0; transition: all 0.15s; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 13px; border-radius: 20px;
+      background: var(--surface); color: var(--text-2);
+      font-size: 12px; font-weight: 500; white-space: nowrap; flex-shrink: 0;
+      transition: all 0.15s; cursor: pointer;
+      border: 1.5px solid var(--border);
     }
-    .chip.active { background: var(--active); color: var(--active-text); }
-    .chip.clear { background: transparent; color: var(--red); border: 1px solid rgba(224,82,82,0.3); }
-    .chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .chip.active { background: var(--active); color: var(--active-t); border-color: var(--active); }
+    .chip.clear  { background: transparent; color: var(--red); border-color: rgba(217,64,64,0.25); }
+    .chip-dot    { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-    /* Photo grid */
-    .photo-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; }
+    /* ── Photo grid ──────────────────────────────────────────── */
+    .photo-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5px; }
     .photo-cell {
-      position: relative; aspect-ratio: 1; background: #F0F0F0;
+      position: relative; aspect-ratio: 1; background: #E8E8E8;
       cursor: pointer; overflow: hidden;
     }
-    .photo-cell img { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.2s; }
-    .photo-cell-tags {
+    .photo-cell img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-cell-info {
       position: absolute; bottom: 0; left: 0; right: 0;
-      padding: 10px 4px 4px;
-      background: linear-gradient(transparent, rgba(0,0,0,0.45));
-      display: flex; gap: 2px; flex-wrap: wrap;
+      padding: 18px 6px 6px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.52));
     }
-    .photo-tag {
-      background: rgba(255,255,255,0.9); color: #111;
-      font-size: 9px; font-weight: 600;
-      padding: 2px 5px; border-radius: 4px; white-space: nowrap;
-    }
-    .photo-empty {
-      width: 100%; height: 100%; display: flex; align-items: center;
-      justify-content: center; background: #F0F0F0; font-size: 24px;
+    .photo-cell-label {
+      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.95);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
 
-    /* Bottom sheet */
+    /* ── Bottom sheet ────────────────────────────────────────── */
     .sheet-overlay {
-      position: absolute; inset: 0; background: rgba(0,0,0,0.4); z-index: 200;
+      position: absolute; inset: 0; background: rgba(0,0,0,0.36); z-index: 200;
       display: flex; align-items: flex-end;
     }
     .sheet-body {
       width: 100%; background: var(--surface);
-      border-radius: 20px 20px 0 0;
-      padding: 0 0 36px; max-height: 75%; overflow-y: auto;
+      border-radius: 24px 24px 0 0;
+      padding: 0 0 40px; max-height: 75%; overflow-y: auto;
     }
-    .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 14px; }
-    .sheet-title { font-size: 15px; font-weight: 600; padding: 0 20px 12px; }
-    .sheet-options { padding: 0 16px; display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
+    .sheet-handle { width: 32px; height: 4px; background: var(--border); border-radius: 2px; margin: 14px auto 16px; }
+    .sheet-title  { font-size: 15px; font-weight: 600; padding: 0 20px 14px; }
+    .sheet-options { padding: 0 16px 8px; display: flex; flex-wrap: wrap; gap: 8px; }
 
-    /* Modal */
-    .modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; display: flex; align-items: flex-end; }
+    /* ── Modal ───────────────────────────────────────────────── */
+    .modal-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.42); z-index: 300;
+      display: flex; align-items: flex-end;
+    }
     .modal-body {
       width: 100%; background: var(--bg);
       border-radius: 24px 24px 0 0;
-      padding: 0 20px 40px; max-height: 90%; overflow-y: auto;
+      padding: 0 20px 44px; max-height: 90%; overflow-y: auto;
     }
 
-    /* Buttons */
+    /* ── Buttons ─────────────────────────────────────────────── */
     .btn {
       display: flex; align-items: center; justify-content: center; gap: 6px;
       border-radius: var(--radius); font-weight: 500; transition: opacity 0.15s; cursor: pointer;
     }
     .btn:active { opacity: 0.75; }
-    .btn-primary { background: var(--active); color: #fff; padding: 13px 24px; font-size: 14px; }
-    .btn-secondary { background: var(--chip-bg); color: var(--text); padding: 12px 20px; font-size: 14px; }
-    .btn-gold { background: var(--gold); color: #fff; padding: 13px 24px; font-size: 14px; }
-    .btn-outline { border: 1.5px solid var(--border); color: var(--text-sub); padding: 11px 20px; font-size: 14px; }
-    .btn-danger { background: rgba(224,82,82,0.1); color: var(--red); padding: 12px 20px; font-size: 14px; }
-    .btn-sm { padding: 8px 14px; font-size: 12px; border-radius: 8px; }
-    .btn-full { width: 100%; }
+    .btn-primary   { background: var(--active); color: #fff; padding: 14px 24px; font-size: 14px; }
+    .btn-secondary { background: var(--surface); color: var(--text); padding: 13px 20px; font-size: 14px; border: 1.5px solid var(--border); }
+    .btn-danger    { background: rgba(217,64,64,0.07); color: var(--red); padding: 12px 20px; font-size: 14px; border: 1.5px solid rgba(217,64,64,0.18); }
+    .btn-sm  { padding: 7px 13px; font-size: 12px; border-radius: 8px; }
+    .btn-full{ width: 100%; }
 
-    /* Form */
+    /* ── Form ────────────────────────────────────────────────── */
     .form-group { margin-bottom: 12px; }
-    .form-label { font-size: 11px; color: var(--text-sub); margin-bottom: 4px; display: block; font-weight: 500; letter-spacing: 0.03em; }
+    .form-label {
+      font-size: 11px; color: var(--text-2); margin-bottom: 5px;
+      display: block; font-weight: 500; letter-spacing: 0.025em;
+    }
     .form-input {
-      width: 100%; padding: 11px 12px;
+      width: 100%; padding: 11px 13px;
       border: 1.5px solid var(--border);
       border-radius: var(--radius-sm);
       font-size: 14px; background: var(--surface); color: var(--text);
@@ -198,13 +190,13 @@
     .form-input:focus { border-color: var(--active); }
     textarea.form-input { resize: none; min-height: 72px; }
 
-    /* Cards */
+    /* ── Card ────────────────────────────────────────────────── */
     .card {
       background: var(--surface); border-radius: var(--radius);
-      box-shadow: var(--shadow-sm); overflow: hidden;
+      border: 1px solid var(--border); overflow: hidden;
     }
 
-    /* Transaction row */
+    /* ── Transaction row ─────────────────────────────────────── */
     .tx-row {
       display: flex; align-items: center; gap: 10px;
       padding: 12px 16px; border-bottom: 1px solid var(--border);
@@ -212,127 +204,152 @@
     }
     .tx-row:last-child { border-bottom: none; }
     .tx-thumb { width: 44px; height: 44px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #F0F0F0; }
-    .tx-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .tx-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tx-meta { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+    .tx-name  { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-meta  { font-size: 11px; color: var(--text-2); margin-top: 2px; }
     .tx-price { font-size: 14px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
 
-    /* Customer */
+    /* ── Customer ────────────────────────────────────────────── */
     .customer-card {
       display: flex; align-items: center; gap: 12px;
       padding: 13px 16px; background: var(--surface);
-      border-radius: var(--radius); box-shadow: var(--shadow-sm);
+      border-radius: var(--radius); border: 1px solid var(--border);
       margin-bottom: 8px; cursor: pointer;
     }
     .customer-avatar {
       width: 44px; height: 44px; border-radius: 50%;
       background: var(--chip-bg); display: flex; align-items: center;
       justify-content: center; font-size: 17px; font-weight: 600;
-      color: var(--text-sub); flex-shrink: 0;
+      color: var(--text-2); flex-shrink: 0;
     }
 
-    /* Quote flow */
-    .step-bar { display: flex; gap: 4px; padding: 0 18px 14px; flex-shrink: 0; }
-    .step-seg { height: 3px; flex: 1; border-radius: 2px; background: var(--border); transition: background 0.2s; }
-    .step-seg.done { background: var(--active); }
-    .step-seg.current { background: var(--gold); }
+    /* ── Quote step flow ─────────────────────────────────────── */
+    .step-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 18px 4px; flex-shrink: 0;
+    }
+    .step-dots { display: flex; gap: 5px; align-items: center; }
+    .step-dot  {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--border); transition: all 0.22s;
+    }
+    .step-dot.done    { background: var(--text-3); }
+    .step-dot.current { background: var(--active); width: 14px; border-radius: 3px; }
 
     .option-grid { display: grid; gap: 8px; }
     .option-btn {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding: 14px 8px; border-radius: var(--radius-sm);
       background: var(--surface); border: 1.5px solid var(--border);
-      cursor: pointer; text-align: center; transition: all 0.15s;
-      min-height: 70px;
+      cursor: pointer; text-align: center; transition: all 0.15s; min-height: 68px;
     }
-    .option-btn:active { transform: scale(0.96); }
+    .option-btn:active { transform: scale(0.97); }
     .option-btn.selected { border-color: var(--active); background: var(--active); color: #fff; }
-    .option-btn.selected .opt-sub { color: rgba(255,255,255,0.65); }
-    .opt-icon { font-size: 20px; margin-bottom: 4px; line-height: 1; }
+    .option-btn.selected .opt-sub { color: rgba(255,255,255,0.5); }
+    .opt-icon  { font-size: 18px; margin-bottom: 4px; line-height: 1; }
     .opt-label { font-size: 12px; font-weight: 500; }
-    .opt-sub { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
+    .opt-sub   { font-size: 10px; color: var(--text-2); margin-top: 2px; }
 
-    /* Recent quote item */
+    /* ── Quote home list ─────────────────────────────────────── */
     .quote-item {
       display: flex; align-items: center; gap: 12px;
-      padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer;
+      padding: 13px 16px; border-bottom: 1px solid var(--border); cursor: pointer;
     }
     .quote-item:last-child { border-bottom: none; }
-    .quote-attrs { flex: 1; min-width: 0; }
     .quote-label { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .quote-price { font-size: 14px; font-weight: 600; white-space: nowrap; }
+    .quote-price { font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--text-2); flex-shrink: 0; }
 
-    /* Price result */
-    .price-range { text-align: center; padding: 24px 0 16px; }
-    .price-range-num { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
-    .price-range-sep { font-size: 16px; color: var(--text-sub); margin: 0 4px; }
-    .price-range-unit { font-size: 14px; color: var(--text-sub); margin-top: 4px; font-weight: 400; }
+    /* ── Price result card ───────────────────────────────────── */
+    .price-card {
+      margin: 0 16px 14px; background: var(--active);
+      border-radius: 16px; padding: 26px 20px 22px;
+      color: #fff; text-align: center;
+    }
+    .price-card-label  { font-size: 12px; opacity: 0.5; margin-bottom: 12px; letter-spacing: 0.04em; }
+    .price-card-range  { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+    .price-card-num    { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+    .price-card-sep    { font-size: 18px; opacity: 0.45; }
+    .price-card-source { font-size: 11px; opacity: 0.48; margin-top: 12px; }
 
-    /* Toast */
+    /* ── Toast ───────────────────────────────────────────────── */
     .toast {
       position: absolute; bottom: 96px; left: 50%;
       transform: translateX(-50%) translateY(10px);
-      background: rgba(30,30,30,0.9); backdrop-filter: blur(12px);
+      background: rgba(18,18,18,0.9); backdrop-filter: blur(14px);
       color: #fff; padding: 9px 18px; border-radius: 20px;
       font-size: 13px; white-space: nowrap;
-      opacity: 0; transition: all 0.25s; z-index: 500; pointer-events: none;
+      opacity: 0; transition: all 0.22s; z-index: 500; pointer-events: none;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* Spinner */
+    /* ── Spinner ─────────────────────────────────────────────── */
     .spinner {
-      width: 28px; height: 28px;
-      border: 2px solid var(--border); border-top-color: var(--text-sub);
+      width: 24px; height: 24px;
+      border: 2px solid var(--border); border-top-color: var(--text-2);
       border-radius: 50%; animation: spin 0.7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Empty state */
-    .empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 60px 24px; color: var(--text-sub); text-align: center; }
-    .empty-icon { font-size: 40px; opacity: 0.35; }
+    /* ── Empty state ─────────────────────────────────────────── */
+    .empty {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 10px; padding: 64px 24px; color: var(--text-2); text-align: center;
+    }
+    .empty-icon { font-size: 36px; opacity: 0.22; }
     .empty-text { font-size: 14px; }
+    .empty-hint { font-size: 12px; color: var(--text-3); }
 
-    /* Tag pill */
-    .tag { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; background: var(--chip-bg); color: var(--text-sub); }
-    .tag-gold { background: var(--gold-soft); color: var(--gold); }
+    /* ── Tag pill ────────────────────────────────────────────── */
+    .tag { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px;
+           border-radius: 6px; font-size: 11px; font-weight: 500;
+           background: var(--chip-bg); color: var(--text-2); }
+    .tag-outline { background: transparent; border: 1px solid var(--border); }
 
-    /* Benchmark bar */
-    .bench-bar { height: 4px; background: var(--chip-bg); border-radius: 2px; overflow: hidden; flex: 1; }
+    /* ── Bench bar ───────────────────────────────────────────── */
+    .bench-bar  { height: 3px; background: var(--chip-bg); border-radius: 2px; overflow: hidden; flex: 1; }
     .bench-fill { height: 100%; background: var(--active); border-radius: 2px; }
 
-    /* Phase dots */
-    .phase-dots { display: flex; gap: 5px; justify-content: center; margin-bottom: 14px; }
-    .phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all 0.25s; }
+    /* ── Phase dots ──────────────────────────────────────────── */
+    .phase-dots { display: flex; gap: 5px; justify-content: center; margin-bottom: 16px; }
+    .phase-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all 0.25s; }
     .phase-dot.active { background: var(--active); width: 16px; border-radius: 3px; }
 
-    /* Animations */
-    @keyframes slideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
-    .slide-up { animation: slideUp 0.25s ease; }
-    .fade-in  { animation: fadeIn 0.2s ease; }
+    /* ── Animations ──────────────────────────────────────────── */
+    @keyframes slideUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeIn  { from { opacity:0; }                             to { opacity:1; }                          }
+    .slide-up { animation: slideUp 0.22s ease; }
+    .fade-in  { animation: fadeIn  0.18s ease; }
+
+    /* ── Section label ───────────────────────────────────────── */
+    .section-label {
+      font-size: 11px; font-weight: 600; color: var(--text-2);
+      letter-spacing: 0.04em; padding: 14px 16px 8px; text-transform: uppercase;
+    }
   </style>
 </head>
 <body>
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback, useMemo } = React;
+const { useState, useEffect, useRef, useCallback } = React;
 
-// ═══ Constants ════════════════════════════════════════════════════════════════
-const CATEGORIES    = ['戒指','手鏈','墜子','耳釘','項鏈','胸針','手鐲','其他'];
-const STONE_SIZES   = ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉以上'];
-const STONE_SHAPES  = ['圓形','橢圓形','水滴形','心形','方形','長方形','馬眼形','枕形','花形','不規則','無主石'];
-const GEMSTONES     = ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','紫水晶','珍珠','翡翠','其他彩寶','無寶石'];
-const COLORS        = ['紅色','粉紅色','橙色','黃色','綠色','藍綠色','藍色','紫色','白色','無色透明','黑色','棕色','多色'];
+// ═══ Constants ═══════════════════════════════════════════════════════════════
+const CATEGORIES   = ['戒指','手鏈','墜子','耳釘','項鏈','胸針','手鐲','其他'];
+const STONE_SIZES  = ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉以上'];
+const STONE_SHAPES = ['圓形','橢圓形','水滴形','心形','方形','長方形','馬眼形','枕形','花形','不規則','無主石'];
+const GEMSTONES    = ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','紫水晶','珍珠','翡翠','其他彩寶','無寶石'];
+const COLORS       = ['紅色','粉紅色','橙色','黃色','綠色','藍綠色','藍色','紫色','白色','無色透明','黑色','棕色','多色'];
 const STYLES = [
-  { value:'無鑽',          label:'A 無鑽',  desc:'純金屬，無鑽石' },
-  { value:'簡約(5顆鑽內)', label:'B 簡約',  desc:'5顆鑽以內' },
-  { value:'輕奢(20顆鑽內)',label:'C 輕奢',  desc:'20顆鑽以內' },
-  { value:'豪鑲滿鑲鑽',   label:'D 豪鑲',  desc:'全鑽設計' },
+  { value:'無鑽',           label:'A  無鑽',  desc:'純金屬，無鑽石' },
+  { value:'簡約(5顆鑽內)',  label:'B  簡約',  desc:'5顆鑽以內' },
+  { value:'輕奢(20顆鑽內)', label:'C  輕奢',  desc:'20顆鑽以內' },
+  { value:'豪鑲滿鑲鑽',    label:'D  豪鑲',  desc:'全鑽設計' },
 ];
 const STYLE_LABEL = Object.fromEntries(STYLES.map(s => [s.value, s.label]));
 
-const CAT_ICONS = { '戒指':'💍','手鏈':'📿','墜子':'💎','耳釘':'◈','項鏈':'〇','胸針':'✦','手鐲':'◯','其他':'◆' };
+const CAT_ICONS = {
+  '戒指':'💍','手鏈':'📿','墜子':'💎','耳釘':'◈',
+  '項鏈':'○','胸針':'✦','手鐲':'◯','其他':'◆',
+};
 const SHAPE_SYM = {
   '圓形':'●','橢圓形':'⬬','水滴形':'▼','心形':'♥',
   '方形':'■','長方形':'▬','馬眼形':'◆','枕形':'▪',
@@ -345,15 +362,15 @@ const COLOR_HEX = {
   '無色透明':'#F0F0F0','黑色':'#333','棕色':'#9B7A5A','多色':'#999',
 };
 
-// ═══ API ══════════════════════════════════════════════════════════════════════
+// ═══ API ═════════════════════════════════════════════════════════════════════
 const api = {
   get:  p     => fetch(p).then(r => r.ok ? r.json() : Promise.reject(r)),
-  post: (p,b) => fetch(p,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }).then(r=>r.ok?r.json():Promise.reject(r)),
-  put:  (p,b) => fetch(p,{ method:'PUT',  headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }).then(r=>r.ok?r.json():Promise.reject(r)),
+  post: (p,b) => fetch(p,{ method:'POST',   headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }).then(r=>r.ok?r.json():Promise.reject(r)),
+  put:  (p,b) => fetch(p,{ method:'PUT',    headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }).then(r=>r.ok?r.json():Promise.reject(r)),
   del:  p     => fetch(p,{ method:'DELETE' }).then(r=>r.ok?r.json():Promise.reject(r)),
 };
 
-// ═══ useToast ═════════════════════════════════════════════════════════════════
+// ═══ useToast ════════════════════════════════════════════════════════════════
 function useToast() {
   const [toast, setToast] = useState({ msg:'', show:false });
   const tid = useRef(null);
@@ -365,21 +382,49 @@ function useToast() {
   return { toast, showToast };
 }
 
-// ═══ JewelryPhoto ═════════════════════════════════════════════════════════════
+// ═══ SVG Icons ═══════════════════════════════════════════════════════════════
+const IconGrid = () => (
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
+    <rect x="2" y="2" width="8" height="8" rx="2"/>
+    <rect x="12" y="2" width="8" height="8" rx="2"/>
+    <rect x="2" y="12" width="8" height="8" rx="2"/>
+    <rect x="12" y="12" width="8" height="8" rx="2"/>
+  </svg>
+);
+const IconChat = () => (
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
+    <path d="M11 2.5C6.58 2.5 3 5.63 3 9.5c0 1.9.8 3.62 2.1 4.87L4.5 18l4.16-1.02A8.5 8.5 0 0011 17.5c4.42 0 8-3.13 8-7s-3.58-8-8-8z"/>
+  </svg>
+);
+const IconList = () => (
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
+    <rect x="3" y="4.5" width="16" height="2" rx="1"/>
+    <rect x="3" y="10"  width="16" height="2" rx="1"/>
+    <rect x="3" y="15.5" width="11" height="2" rx="1"/>
+  </svg>
+);
+const IconPerson = () => (
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
+    <circle cx="11" cy="7.5" r="3.5"/>
+    <path fillRule="evenodd" d="M11 13c-3.87 0-7 2.46-7 5.5h14c0-3.04-3.13-5.5-7-5.5z"/>
+  </svg>
+);
+
+// ═══ JewelryPhoto ════════════════════════════════════════════════════════════
 function JewelryPhoto({ photo, style: s, className }) {
   const [err, setErr] = useState(false);
   const src = photo?.filename ? `/static/thumb/${photo.filename}` : null;
   if (src && !err)
     return <img src={src} style={s} className={className} onError={() => setErr(true)} alt="" />;
   return (
-    <div style={{ ...s, display:'flex', alignItems:'center', justifyContent:'center', background:'#F0F0F0', fontSize:24 }}
-      className={className}>
+    <div style={{ ...s, display:'flex', alignItems:'center', justifyContent:'center',
+                  background:'#EBEBEB', fontSize:22 }} className={className}>
       {CAT_ICONS[photo?.category] || '💎'}
     </div>
   );
 }
 
-// ═══ BottomSheet ══════════════════════════════════════════════════════════════
+// ═══ BottomSheet ═════════════════════════════════════════════════════════════
 function BottomSheet({ title, onClose, children }) {
   return (
     <div className="sheet-overlay" onClick={onClose}>
@@ -392,14 +437,14 @@ function BottomSheet({ title, onClose, children }) {
   );
 }
 
-// ═══ FilterRow ════════════════════════════════════════════════════════════════
+// ═══ FilterRow ═══════════════════════════════════════════════════════════════
 const FILTER_DEFS = [
-  { key:'category',    label:'品項', opts:CATEGORIES,               display: v => v },
-  { key:'gemstone',    label:'寶石', opts:GEMSTONES,                display: v => v },
-  { key:'stone_shape', label:'形狀', opts:STONE_SHAPES,             display: v => (SHAPE_SYM[v]||'') + v },
-  { key:'stone_size',  label:'大小', opts:STONE_SIZES,              display: v => v },
-  { key:'color',       label:'顏色', opts:COLORS,                   display: v => v },
-  { key:'style',       label:'款式', opts:STYLES.map(s=>s.value),   display: v => STYLE_LABEL[v]||v },
+  { key:'category',    label:'品項', opts:CATEGORIES,             display: v => v },
+  { key:'gemstone',    label:'寶石', opts:GEMSTONES,              display: v => v },
+  { key:'stone_shape', label:'形狀', opts:STONE_SHAPES,           display: v => (SHAPE_SYM[v]||'') + ' ' + v },
+  { key:'stone_size',  label:'大小', opts:STONE_SIZES,            display: v => v },
+  { key:'color',       label:'顏色', opts:COLORS,                 display: v => v },
+  { key:'style',       label:'款式', opts:STYLES.map(s=>s.value), display: v => STYLE_LABEL[v]||v },
 ];
 
 function FilterRow({ filters, onChange }) {
@@ -436,9 +481,9 @@ function FilterRow({ filters, onChange }) {
               <button key={opt}
                 className={`chip ${filters[sheet] === opt ? 'active' : ''}`}
                 onClick={() => { onChange({ ...filters, [sheet]: opt }); setSheet(null); }}
-                style={{ gap: 5 }}>
+                style={{ gap:5 }}>
                 {sheet === 'color' && COLOR_HEX[opt] && (
-                  <span className="chip-dot" style={{ background: COLOR_HEX[opt], border:'1px solid rgba(0,0,0,0.1)' }} />
+                  <span className="chip-dot" style={{ background:COLOR_HEX[opt], border:'1px solid rgba(0,0,0,0.1)' }} />
                 )}
                 {sheet === 'stone_shape' && SHAPE_SYM[opt] && <span>{SHAPE_SYM[opt]}</span>}
                 {sheet === 'style' ? (STYLE_LABEL[opt] || opt) : opt}
@@ -451,33 +496,28 @@ function FilterRow({ filters, onChange }) {
   );
 }
 
-// ═══ Photo Detail Modal ════════════════════════════════════════════════════════
+// ═══ Photo Detail Modal ═══════════════════════════════════════════════════════
 function PhotoDetailModal({ photo, onClose, onUseForQuote, onFindSimilar }) {
   const attrs = [
     photo.category, photo.gemstone, photo.stone_shape,
-    photo.stone_size, photo.color, STYLE_LABEL[photo.style] || photo.style
+    photo.stone_size, photo.color, STYLE_LABEL[photo.style] || photo.style,
   ].filter(v => v && v !== '未定' && v !== '無寶石');
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-body" style={{ maxHeight:'88%', paddingTop:0 }} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" />
-        {/* Photo */}
-        <div style={{ borderRadius:12, overflow:'hidden', aspectRatio:'1', background:'#F0F0F0', marginBottom:14 }}>
+        <div style={{ borderRadius:14, overflow:'hidden', aspectRatio:'1', background:'#EBEBEB', marginBottom:14 }}>
           <JewelryPhoto photo={photo} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
         </div>
-        {/* Tags */}
         <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:18 }}>
-          {attrs.map((a,i) => (
-            <span key={i} className="tag">{a}</span>
-          ))}
-          {photo.price_estimate_low && (
-            <span className="tag tag-gold">
+          {attrs.map((a,i) => <span key={i} className="tag">{a}</span>)}
+          {photo.price_estimate_low > 0 && (
+            <span className="tag" style={{ background:'#F0F0F0', fontWeight:600 }}>
               NT${(photo.price_estimate_low/10000).toFixed(1)}–{(photo.price_estimate_high/10000).toFixed(1)}萬
             </span>
           )}
         </div>
-        {/* Actions */}
         <div style={{ display:'flex', gap:8 }}>
           <button className="btn btn-secondary btn-full" onClick={onFindSimilar}>找相似款</button>
           <button className="btn btn-primary btn-full" onClick={onUseForQuote}>用此估價</button>
@@ -487,18 +527,18 @@ function PhotoDetailModal({ photo, onClose, onUseForQuote, onFindSimilar }) {
   );
 }
 
-// ═══ Browse Screen ═════════════════════════════════════════════════════════════
+// ═══ Browse Screen ════════════════════════════════════════════════════════════
 function BrowseScreen({ onUseForQuote }) {
-  const [filters, setFilters]     = useState({});
-  const [photos, setPhotos]       = useState([]);
-  const [page, setPage]           = useState(1);
-  const [hasMore, setHasMore]     = useState(true);
-  const [loading, setLoading]     = useState(false);
-  const [detail, setDetail]       = useState(null);
-  const [similar, setSimilar]     = useState(null); // photo for similar mode
-  const sentinelRef               = useRef(null);
-  const filtersRef                = useRef(filters);
-  filtersRef.current              = filters;
+  const [filters, setFilters] = useState({});
+  const [photos, setPhotos]   = useState([]);
+  const [page, setPage]       = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [detail, setDetail]   = useState(null);
+  const [similar, setSimilar] = useState(null);
+  const sentinelRef           = useRef(null);
+  const filtersRef            = useRef(filters);
+  filtersRef.current          = filters;
 
   const buildQuery = useCallback((f, p) => {
     const params = new URLSearchParams({ page: p });
@@ -519,44 +559,33 @@ function BrowseScreen({ onUseForQuote }) {
     setLoading(false);
   }, [loading, buildQuery]);
 
-  // Reset on filter change
   useEffect(() => {
-    setSimilar(null);
-    setPhotos([]);
-    setPage(1);
-    setHasMore(true);
+    setSimilar(null); setPhotos([]); setPage(1); setHasMore(true);
     load(filters, 1, true);
   }, [JSON.stringify(filters)]);
 
-  // Infinite scroll observer
   useEffect(() => {
     if (!sentinelRef.current) return;
     const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting && hasMore && !loading) load(filtersRef.current, page); },
+      ([e]) => { if (e.isIntersecting && hasMore && !loading) load(filtersRef.current, page); },
       { threshold: 0.1 }
     );
     obs.observe(sentinelRef.current);
     return () => obs.disconnect();
   }, [hasMore, loading, page, load]);
 
-  const loadSimilar = async (photo) => {
-    setLoading(true);
-    setSimilar(photo);
-    setDetail(null);
+  const loadSimilar = async photo => {
+    setLoading(true); setSimilar(photo); setDetail(null);
     try {
       const data = await api.get(`/api/photos/${photo.id}/similar?limit=18`);
-      const list = Array.isArray(data) ? data : (data.similar || data.results || []);
-      setPhotos(list);
+      setPhotos(Array.isArray(data) ? data : (data.similar || data.results || []));
       setHasMore(false);
     } catch { setPhotos([]); }
     setLoading(false);
   };
 
   const clearSimilar = () => {
-    setSimilar(null);
-    setPhotos([]);
-    setPage(1);
-    setHasMore(true);
+    setSimilar(null); setPhotos([]); setPage(1); setHasMore(true);
     load(filters, 1, true);
   };
 
@@ -564,23 +593,21 @@ function BrowseScreen({ onUseForQuote }) {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1, paddingBottom:80, overflow:'hidden' }}>
-      {/* Nav */}
       <div className="nav-bar">
-        <div style={{ flex:1 }}>
-          <div className="nav-title">{similar ? '相似款式' : '找款'}</div>
-        </div>
-        {similar ? (
-          <button className="nav-btn-ghost" onClick={clearSimilar}>← 返回</button>
-        ) : null}
+        <div className="nav-title">{similar ? '相似款式' : '找款'}</div>
+        {similar
+          ? <button className="nav-btn-ghost" onClick={clearSimilar}>← 返回</button>
+          : null}
       </div>
 
       {!similar && <FilterRow filters={filters} onChange={setFilters} />}
 
       <div className="scroll-view hide-scroll">
-        {/* Result count */}
         {!loading && photos.length > 0 && (
-          <div style={{ padding:'8px 16px 6px', fontSize:11, color:'var(--text-sub)' }}>
-            {similar ? `與「${similar.category||''}」相似 · ${photos.length} 件` : `${photos.length} 件${hasFilters ? '符合篩選' : ''}`}
+          <div style={{ padding:'6px 16px 4px', fontSize:11, color:'var(--text-3)' }}>
+            {similar
+              ? `與「${similar.category||''}」相似 · ${photos.length} 件`
+              : `${photos.length} 件${hasFilters ? '符合篩選' : ''}`}
           </div>
         )}
 
@@ -595,30 +622,33 @@ function BrowseScreen({ onUseForQuote }) {
           </div>
         ) : (
           <div className="photo-grid">
-            {photos.map(p => (
-              <div key={p.id} className="photo-cell" onClick={() => setDetail(p)}>
-                <JewelryPhoto photo={p} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                <div className="photo-cell-tags">
-                  {p.category && p.category !== '未定' && <span className="photo-tag">{p.category}</span>}
-                  {p.gemstone && p.gemstone !== '未定' && p.gemstone !== '無寶石' && (
-                    <span className="photo-tag">{p.gemstone}</span>
+            {photos.map(p => {
+              const label = [
+                p.category && p.category !== '未定' ? p.category : null,
+                p.gemstone && p.gemstone !== '無寶石' && p.gemstone !== '未定' ? p.gemstone : null,
+              ].filter(Boolean).join(' · ');
+              return (
+                <div key={p.id} className="photo-cell" onClick={() => setDetail(p)}>
+                  <JewelryPhoto photo={p} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  {label && (
+                    <div className="photo-cell-info">
+                      <div className="photo-cell-label">{label}</div>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* Infinite scroll sentinel */}
-        <div ref={sentinelRef} style={{ height:60, display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div ref={sentinelRef} style={{ height:56, display:'flex', alignItems:'center', justifyContent:'center' }}>
           {loading && photos.length > 0 && <div className="spinner" style={{ width:20, height:20 }} />}
           {!hasMore && photos.length > 0 && (
-            <span style={{ fontSize:11, color:'var(--text-light)' }}>全部 {photos.length} 件</span>
+            <span style={{ fontSize:11, color:'var(--text-3)' }}>共 {photos.length} 件</span>
           )}
         </div>
       </div>
 
-      {/* Photo detail modal */}
       {detail && (
         <PhotoDetailModal
           photo={detail}
@@ -634,12 +664,15 @@ function BrowseScreen({ onUseForQuote }) {
 // ═══ Quote Screen ══════════════════════════════════════════════════════════════
 const QUOTE_STEPS = 5;
 
-function StepBar({ current }) {
+function StepNav({ current }) {
   return (
-    <div className="step-bar">
-      {Array.from({ length: QUOTE_STEPS }).map((_, i) => (
-        <div key={i} className={`step-seg ${i < current - 1 ? 'done' : i === current - 1 ? 'current' : ''}`} />
-      ))}
+    <div className="step-nav">
+      <div className="step-dots">
+        {Array.from({ length: QUOTE_STEPS }).map((_, i) => (
+          <div key={i} className={`step-dot ${i < current - 1 ? 'done' : i === current - 1 ? 'current' : ''}`} />
+        ))}
+      </div>
+      <span style={{ fontSize:11, color:'var(--text-3)', fontWeight:500 }}>{current} / {QUOTE_STEPS}</span>
     </div>
   );
 }
@@ -648,7 +681,7 @@ function Step1Category({ value, onChange }) {
   return (
     <div style={{ padding:'0 16px' }}>
       <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>選品項</div>
-      <div style={{ fontSize:13, color:'var(--text-sub)', marginBottom:16 }}>要估哪類珠寶？</div>
+      <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:16 }}>要估哪類珠寶？</div>
       <div className="option-grid" style={{ gridTemplateColumns:'repeat(4,1fr)' }}>
         {CATEGORIES.map(cat => (
           <button key={cat} className={`option-btn ${value===cat?'selected':''}`} onClick={() => onChange(cat)}>
@@ -665,7 +698,7 @@ function Step2Size({ value, onChange }) {
   return (
     <div style={{ padding:'0 16px' }}>
       <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>主石大小</div>
-      <div style={{ fontSize:13, color:'var(--text-sub)', marginBottom:16 }}>主要寶石的克拉數</div>
+      <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:16 }}>主要寶石的克拉數</div>
       <div className="option-grid" style={{ gridTemplateColumns:'repeat(3,1fr)' }}>
         {STONE_SIZES.map(sz => (
           <button key={sz} className={`option-btn ${value===sz?'selected':''}`} onClick={() => onChange(sz)}>
@@ -681,7 +714,7 @@ function Step3Shape({ value, onChange }) {
   return (
     <div style={{ padding:'0 16px' }}>
       <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>主石形狀</div>
-      <div style={{ fontSize:13, color:'var(--text-sub)', marginBottom:16 }}>寶石的切割形狀</div>
+      <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:16 }}>寶石的切割形狀</div>
       <div className="option-grid" style={{ gridTemplateColumns:'repeat(4,1fr)' }}>
         {STONE_SHAPES.map(sh => (
           <button key={sh} className={`option-btn ${value===sh?'selected':''}`} onClick={() => onChange(sh)}>
@@ -698,14 +731,15 @@ function Step4Style({ value, onChange }) {
   return (
     <div style={{ padding:'0 16px' }}>
       <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>款式等級</div>
-      <div style={{ fontSize:13, color:'var(--text-sub)', marginBottom:16 }}>鑲嵌工藝複雜程度</div>
+      <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:16 }}>鑲嵌工藝複雜程度</div>
       <div className="option-grid" style={{ gridTemplateColumns:'1fr 1fr' }}>
         {STYLES.map(s => (
-          <button key={s.value} className={`option-btn ${value===s.value?'selected':''}`}
+          <button key={s.value}
+            className={`option-btn ${value===s.value?'selected':''}`}
             style={{ padding:'16px 12px', alignItems:'flex-start', textAlign:'left' }}
             onClick={() => onChange(s.value)}>
             <div className="opt-label" style={{ fontSize:14, fontWeight:600 }}>{s.label}</div>
-            <div className="opt-sub" style={{ marginTop:4, lineHeight:1.4 }}>{s.desc}</div>
+            <div className="opt-sub" style={{ marginTop:5, lineHeight:1.4 }}>{s.desc}</div>
           </button>
         ))}
       </div>
@@ -717,10 +751,10 @@ function Step5Gemstone({ gemstone, color, onChangeGemstone, onChangeColor }) {
   return (
     <div style={{ padding:'0 16px' }}>
       <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>寶石與顏色</div>
-      <div style={{ fontSize:13, color:'var(--text-sub)', marginBottom:14 }}>選填，可提升估價精準度</div>
+      <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:14 }}>選填，可提升估價精準度</div>
 
-      <div style={{ fontSize:12, fontWeight:600, marginBottom:8, color:'var(--text-sub)' }}>寶石種類</div>
-      <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:18 }}>
+      <div style={{ fontSize:11, fontWeight:600, marginBottom:8, color:'var(--text-2)', textTransform:'uppercase', letterSpacing:'0.04em' }}>寶石種類</div>
+      <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:20 }}>
         {GEMSTONES.map(g => (
           <button key={g} className={`chip ${gemstone===g?'active':''}`}
             onClick={() => onChangeGemstone(gemstone===g ? null : g)}>
@@ -729,13 +763,12 @@ function Step5Gemstone({ gemstone, color, onChangeGemstone, onChangeColor }) {
         ))}
       </div>
 
-      <div style={{ fontSize:12, fontWeight:600, marginBottom:8, color:'var(--text-sub)' }}>顏色</div>
+      <div style={{ fontSize:11, fontWeight:600, marginBottom:8, color:'var(--text-2)', textTransform:'uppercase', letterSpacing:'0.04em' }}>顏色</div>
       <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
         {COLORS.map(c => (
           <button key={c} className={`chip ${color===c?'active':''}`}
-            onClick={() => onChangeColor(color===c ? null : c)}
-            style={{ gap:5 }}>
-            <span className="chip-dot" style={{ background: COLOR_HEX[c]||'#999', border:'1px solid rgba(0,0,0,0.1)' }} />
+            onClick={() => onChangeColor(color===c ? null : c)} style={{ gap:5 }}>
+            <span className="chip-dot" style={{ background:COLOR_HEX[c]||'#999', border:'1px solid rgba(0,0,0,0.1)' }} />
             {c}
           </button>
         ))}
@@ -744,7 +777,7 @@ function Step5Gemstone({ gemstone, color, onChangeGemstone, onChangeColor }) {
   );
 }
 
-function QuoteResult({ data, result, onSaveAsTx, onReset, showToast }) {
+function QuoteResult({ data, result, onSaveAsTx, onReset }) {
   const summaryParts = [
     data.category, data.stone_size, data.stone_shape,
     data.gemstone, STYLE_LABEL[data.style]||data.style, data.color,
@@ -757,46 +790,40 @@ function QuoteResult({ data, result, onSaveAsTx, onReset, showToast }) {
   return (
     <div className="slide-up">
       {/* Summary chips */}
-      <div style={{ padding:'0 16px 12px', display:'flex', flexWrap:'wrap', gap:6 }}>
+      <div style={{ padding:'4px 16px 12px', display:'flex', flexWrap:'wrap', gap:5 }}>
         {summaryParts.map((p,i) => (
           <span key={i} className="tag">{p}</span>
         ))}
       </div>
 
-      {/* Price range */}
-      <div style={{ padding:'0 16px 8px', background:'var(--surface)', margin:'0 16px', borderRadius:12, boxShadow:'var(--shadow-sm)' }}>
-        {result?.estimated ? (
-          <>
-            <div className="price-range">
-              <div style={{ fontSize:13, color:'var(--text-sub)', marginBottom:6 }}>參考成交價區間</div>
-              <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:4 }}>
-                <div className="price-range-num">NT${fmt(result.price_low)}</div>
-                <div className="price-range-sep">–</div>
-                <div className="price-range-num">{fmt(result.price_high)}</div>
-              </div>
-            </div>
-            <div style={{ textAlign:'center', fontSize:11, color:'var(--text-sub)', paddingBottom:14 }}>
-              參考 {result.sample_count} 筆成交紀錄 · {result.source}
-            </div>
-          </>
-        ) : (
-          <div className="empty" style={{ padding:'24px 0' }}>
+      {/* Price card */}
+      {result?.estimated ? (
+        <div className="price-card">
+          <div className="price-card-label">參考成交區間</div>
+          <div className="price-card-range">
+            <div className="price-card-num">NT${fmt(result.price_low)}</div>
+            <div className="price-card-sep">–</div>
+            <div className="price-card-num">{fmt(result.price_high)}</div>
+          </div>
+          <div className="price-card-source">參考 {result.sample_count} 筆成交紀錄 · {result.source}</div>
+        </div>
+      ) : (
+        <div style={{ margin:'0 16px 14px' }} className="card">
+          <div className="empty" style={{ padding:'28px 16px' }}>
             <div className="empty-icon" style={{ fontSize:28 }}>📊</div>
             <div className="empty-text">{result?.message || '成交紀錄不足，無法推估'}</div>
-            <div style={{ fontSize:11, color:'var(--text-light)', marginTop:4 }}>新增成交紀錄後可自動估價</div>
+            <div className="empty-hint">新增成交紀錄後可自動估價</div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Matching photos */}
       {result?.matching_photos?.length > 0 && (
-        <div style={{ padding:'16px 16px 0' }}>
-          <div style={{ fontSize:12, fontWeight:600, color:'var(--text-sub)', marginBottom:10 }}>
-            相似款式參考（{result.matching_photos.length} 件）
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:4 }}>
+        <div style={{ padding:'0 16px 12px' }}>
+          <div className="section-label">相似款式參考（{result.matching_photos.length} 件）</div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:3 }}>
             {result.matching_photos.slice(0,9).map((p,i) => (
-              <div key={p.id||i} style={{ aspectRatio:'1', borderRadius:8, overflow:'hidden', background:'#F0F0F0' }}>
+              <div key={p.id||i} style={{ aspectRatio:'1', borderRadius:8, overflow:'hidden', background:'#EBEBEB' }}>
                 <JewelryPhoto photo={p} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
               </div>
             ))}
@@ -805,16 +832,15 @@ function QuoteResult({ data, result, onSaveAsTx, onReset, showToast }) {
       )}
 
       {/* Actions */}
-      <div style={{ padding:'16px 16px 0', display:'flex', gap:8 }}>
+      <div style={{ padding:'4px 16px 0', display:'flex', gap:8 }}>
         <button className="btn btn-secondary" style={{ flex:1 }} onClick={onReset}>重新估價</button>
-        <button className="btn btn-primary" style={{ flex:1 }} onClick={onSaveAsTx}>新增成交</button>
+        <button className="btn btn-primary"   style={{ flex:1 }} onClick={onSaveAsTx}>新增成交</button>
       </div>
     </div>
   );
 }
 
 function QuoteScreen({ initialData, onClearInitial, showToast }) {
-  // step: null=home, 1-5=steps, 'result'=results
   const [step, setStep]           = useState(initialData ? 1 : null);
   const [data, setData]           = useState(initialData || {});
   const [result, setResult]       = useState(null);
@@ -822,22 +848,15 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
   const [recentQuotes, setRecentQuotes] = useState([]);
   const [showNewTx, setShowNewTx] = useState(false);
 
-  // If initialData provided from BrowseScreen "用此估價"
   useEffect(() => {
     if (initialData) {
-      setData(initialData);
-      setStep(1);
-      onClearInitial?.();
+      setData(initialData); setStep(1); onClearInitial?.();
     }
   }, [initialData]);
 
   const set = (k, v) => setData(d => ({ ...d, [k]: v }));
 
-  const startNew = () => {
-    setData({});
-    setResult(null);
-    setStep(1);
-  };
+  const startNew = () => { setData({}); setResult(null); setStep(1); };
 
   const goBack = () => {
     if (step === 1 || step === null) { setStep(null); setData({}); }
@@ -851,17 +870,14 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
   };
 
   const runEstimate = async () => {
-    setLoading(true);
-    setStep('result');
+    setLoading(true); setStep('result');
     try {
       const params = new URLSearchParams();
       Object.entries(data).forEach(([k, v]) => { if (v) params.set(k, v); });
       const res = await api.get(`/api/quotes/estimate-by-attrs?${params}`);
       setResult(res);
-      // Save to recent
       setRecentQuotes(prev => [{
-        data: { ...data },
-        result: res,
+        data: { ...data }, result: res,
         time: new Date().toLocaleDateString('zh-TW', { month:'numeric', day:'numeric' }),
       }, ...prev.slice(0, 9)]);
     } catch { setResult({ estimated:false, message:'網路錯誤，請再試', matching_photos:[] }); }
@@ -873,10 +889,9 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
     if (step === 2) return !!data.stone_size;
     if (step === 3) return !!data.stone_shape;
     if (step === 4) return !!data.style;
-    return true; // step 5 optional
+    return true;
   };
 
-  const stepTitle = ['選品項','主石大小','主石形狀','款式等級','寶石與顏色'][step - 1] || '';
   const summaryLabel = [data.category, data.stone_size, data.stone_shape, STYLE_LABEL[data.style]||data.style]
     .filter(Boolean).join(' · ');
 
@@ -887,31 +902,30 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
         <div className="nav-bar">
           <div className="nav-title">估價</div>
         </div>
-        <div className="scroll-view hide-scroll" style={{ padding:'8px 16px' }}>
-          {/* Start button */}
-          <button className="btn btn-primary btn-full" style={{ marginBottom:24, height:52, fontSize:15 }}
+        <div className="scroll-view hide-scroll" style={{ padding:'6px 16px' }}>
+          <button className="btn btn-primary btn-full"
+            style={{ marginBottom:24, height:52, fontSize:15, borderRadius:14 }}
             onClick={startNew}>
             ＋ 開始新估價
           </button>
 
-          {/* Recent quotes */}
           {recentQuotes.length > 0 && (
             <>
-              <div style={{ fontSize:12, fontWeight:600, color:'var(--text-sub)', marginBottom:8 }}>最近估價</div>
+              <div className="section-label" style={{ padding:'0 0 8px' }}>最近估價</div>
               <div className="card">
                 {recentQuotes.map((q, i) => {
                   const label = [q.data.category, q.data.stone_size, q.data.gemstone, STYLE_LABEL[q.data.style]||q.data.style]
                     .filter(Boolean).join(' · ');
                   return (
-                    <div key={i} className="quote-item" style={{ padding:'12px 16px' }}
+                    <div key={i} className="quote-item"
                       onClick={() => { setData(q.data); setResult(q.result); setStep('result'); }}>
-                      <div className="quote-attrs">
+                      <div style={{ flex:1, minWidth:0 }}>
                         <div className="quote-label">{label || '未命名估價'}</div>
-                        <div style={{ fontSize:11, color:'var(--text-sub)', marginTop:2 }}>{q.time}</div>
+                        <div style={{ fontSize:11, color:'var(--text-3)', marginTop:2 }}>{q.time}</div>
                       </div>
                       {q.result?.estimated && (
-                        <div className="quote-price" style={{ color:'var(--text)' }}>
-                          NT${(q.result.price_low/10000).toFixed(1)}–{(q.result.price_high/10000).toFixed(1)}萬
+                        <div className="quote-price">
+                          {(q.result.price_low/10000).toFixed(1)}–{(q.result.price_high/10000).toFixed(1)}萬
                         </div>
                       )}
                     </div>
@@ -924,7 +938,7 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
           {recentQuotes.length === 0 && (
             <div className="empty" style={{ padding:'40px 0' }}>
               <div className="empty-icon">💬</div>
-              <div className="empty-text">選擇條件，30秒找到相似案例估價</div>
+              <div className="empty-text">選擇條件，30秒找相似案例估價</div>
             </div>
           )}
         </div>
@@ -937,11 +951,12 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
     return (
       <div style={{ display:'flex', flexDirection:'column', flex:1, paddingBottom:80 }}>
         <div className="nav-bar">
-          <div style={{ flex:1 }}>
-            <div className="nav-title">估價結果</div>
-            {summaryLabel && <div className="nav-sub">{summaryLabel}</div>}
-          </div>
           <button className="nav-btn-ghost" onClick={goBack}>← 返回</button>
+          <div style={{ flex:1 }}>
+            <div className="nav-title" style={{ textAlign:'center' }}>估價結果</div>
+            {summaryLabel && <div className="nav-sub" style={{ textAlign:'center' }}>{summaryLabel}</div>}
+          </div>
+          <div style={{ width:44 }} />
         </div>
         <div className="scroll-view hide-scroll">
           {loading ? (
@@ -953,18 +968,17 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
               data={data} result={result}
               onReset={() => { setStep(null); setData({}); setResult(null); }}
               onSaveAsTx={() => setShowNewTx(true)}
-              showToast={showToast}
             />
           )}
         </div>
         {showNewTx && (
           <TxEditModal
             tx={{
-              item_name: summaryLabel,
-              category: data.category,
-              gemstone: data.gemstone,
+              item_name:  summaryLabel,
+              category:   data.category,
+              gemstone:   data.gemstone,
               stone_spec: [data.stone_size, data.stone_shape].filter(Boolean).join(' '),
-              price: result?.estimated ? Math.round((result.price_low + result.price_high) / 2) : '',
+              price:      result?.estimated ? Math.round((result.price_low + result.price_high) / 2) : '',
             }}
             onSave={async form => {
               try { await api.post('/api/transactions', form); showToast('已新增成交紀錄'); }
@@ -982,20 +996,18 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1, paddingBottom:80 }}>
       <div className="nav-bar">
-        <div style={{ flex:1 }}>
-          <div className="nav-title">估價 {step}/{QUOTE_STEPS}</div>
-        </div>
         <button className="nav-btn-ghost" onClick={goBack}>
           {step === 1 ? '取消' : '← 返回'}
         </button>
+        <div style={{ flex:1 }} />
       </div>
-      <StepBar current={step} />
+      <StepNav current={step} />
 
       <div className="scroll-view hide-scroll" style={{ paddingBottom:100 }}>
-        {step === 1 && <Step1Category value={data.category} onChange={v => set('category', v)} />}
-        {step === 2 && <Step2Size     value={data.stone_size} onChange={v => set('stone_size', v)} />}
+        {step === 1 && <Step1Category value={data.category}   onChange={v => set('category', v)} />}
+        {step === 2 && <Step2Size     value={data.stone_size}  onChange={v => set('stone_size', v)} />}
         {step === 3 && <Step3Shape    value={data.stone_shape} onChange={v => set('stone_shape', v)} />}
-        {step === 4 && <Step4Style    value={data.style} onChange={v => set('style', v)} />}
+        {step === 4 && <Step4Style    value={data.style}       onChange={v => set('style', v)} />}
         {step === 5 && (
           <Step5Gemstone
             gemstone={data.gemstone} color={data.color}
@@ -1005,29 +1017,29 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
         )}
       </div>
 
-      {/* Bottom action bar */}
       <div style={{
         position:'absolute', bottom:80, left:0, right:0,
-        padding:'10px 16px', background:'rgba(247,247,247,0.95)', backdropFilter:'blur(12px)',
-        borderTop:'1px solid var(--border)',
-        display:'flex', gap:8,
+        padding:'10px 16px', background:'rgba(245,245,245,0.96)', backdropFilter:'blur(14px)',
+        borderTop:'1px solid var(--border)', display:'flex', gap:8,
       }}>
         {step === 5 && (
-          <button className="btn btn-secondary" style={{ flex:1 }} onClick={runEstimate}>跳過 →估價</button>
+          <button className="btn btn-secondary" style={{ flex:1 }} onClick={runEstimate}>
+            跳過 → 估價
+          </button>
         )}
         <button
           className="btn btn-primary"
-          style={{ flex:2, opacity: canNext() ? 1 : 0.4 }}
+          style={{ flex:2, opacity: canNext() ? 1 : 0.38 }}
           onClick={goNext}
           disabled={!canNext()}>
-          {step === QUOTE_STEPS ? '開始估價' : `下一步 →`}
+          {step === QUOTE_STEPS ? '開始估價' : '下一步 →'}
         </button>
       </div>
     </div>
   );
 }
 
-// ═══ Transaction Edit Modal ════════════════════════════════════════════════════
+// ═══ Transaction Edit Modal ═══════════════════════════════════════════════════
 function TxEditModal({ tx, onSave, onClose }) {
   const isNew = !tx?.id;
   const [form, setForm] = useState({
@@ -1063,7 +1075,7 @@ function TxEditModal({ tx, onSave, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-body" onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" />
-        <div style={{ fontSize:16, fontWeight:600, marginBottom:16 }}>{isNew?'新增成交記錄':'編輯成交記錄'}</div>
+        <div style={{ fontSize:16, fontWeight:600, marginBottom:16 }}>{isNew ? '新增成交記錄' : '編輯成交記錄'}</div>
         <F k="item_name" label="品名 *" opts={{ placeholder:'例：玫瑰金藍寶石墜子' }} />
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
           <F k="category"     label="品類"       opts={{ placeholder:'墜子 / 戒指…' }} />
@@ -1077,7 +1089,7 @@ function TxEditModal({ tx, onSave, onClose }) {
         </div>
         <F k="notes" label="備註" opts={{ placeholder:'備忘…' }} />
         <div style={{ display:'flex', gap:8, marginTop:8 }}>
-          <button className="btn btn-primary" style={{ flex:1 }} onClick={handleSave}>儲存</button>
+          <button className="btn btn-primary"   style={{ flex:1 }} onClick={handleSave}>儲存</button>
           <button className="btn btn-secondary" onClick={onClose}>取消</button>
         </div>
       </div>
@@ -1085,7 +1097,7 @@ function TxEditModal({ tx, onSave, onClose }) {
   );
 }
 
-// ═══ Transactions Screen ═══════════════════════════════════════════════════════
+// ═══ Transactions Screen ══════════════════════════════════════════════════════
 function TransactionsScreen({ showToast }) {
   const [txList, setTxList]   = useState([]);
   const [benchmarks, setBM]   = useState([]);
@@ -1141,16 +1153,17 @@ function TransactionsScreen({ showToast }) {
       </div>
 
       <div className="scroll-view hide-scroll">
-        {/* Benchmarks */}
         {benchmarks.length > 0 && (
-          <div style={{ background:'var(--surface)', padding:'14px 16px', marginBottom:8 }}>
-            <div style={{ fontSize:11, color:'var(--text-sub)', marginBottom:10, fontWeight:600 }}>材質均價參考</div>
+          <div style={{ background:'var(--surface)', padding:'14px 16px', marginBottom:8, borderBottom:'1px solid var(--border)' }}>
+            <div className="section-label" style={{ padding:'0 0 10px' }}>材質均價參考</div>
             {benchmarks.slice(0,5).map(b => (
-              <div key={b.material} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                <div style={{ fontSize:12, color:'var(--text-sub)', width:56, flexShrink:0 }}>{b.material}</div>
-                <div className="bench-bar"><div className="bench-fill" style={{ width:`${(b.avg_price/maxAvg)*100}%` }} /></div>
-                <div style={{ fontSize:11, color:'var(--text-sub)', width:60, textAlign:'right', flexShrink:0 }}>
-                  NT${b.avg_price>=10000?(b.avg_price/10000).toFixed(1)+'w':b.avg_price.toLocaleString()}
+              <div key={b.material} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:9 }}>
+                <div style={{ fontSize:12, color:'var(--text-2)', width:56, flexShrink:0 }}>{b.material}</div>
+                <div className="bench-bar">
+                  <div className="bench-fill" style={{ width:`${(b.avg_price/maxAvg)*100}%` }} />
+                </div>
+                <div style={{ fontSize:11, color:'var(--text-2)', width:62, textAlign:'right', flexShrink:0 }}>
+                  {b.avg_price >= 10000 ? `${(b.avg_price/10000).toFixed(1)}萬` : b.avg_price.toLocaleString()}
                 </div>
               </div>
             ))}
@@ -1158,7 +1171,9 @@ function TransactionsScreen({ showToast }) {
         )}
 
         {loading ? (
-          <div style={{ display:'flex', justifyContent:'center', paddingTop:60 }}><div className="spinner" /></div>
+          <div style={{ display:'flex', justifyContent:'center', paddingTop:60 }}>
+            <div className="spinner" />
+          </div>
         ) : txList.length === 0 ? (
           <div className="empty">
             <div className="empty-icon">📋</div>
@@ -1207,16 +1222,16 @@ const STYLE_PROFILES = [
   { id:'classic',  emoji:'✨', name:'古典璀璨', desc:'鑽石、K金、典雅',  tags:['古典','鑽石','K金'] },
   { id:'natural',  emoji:'🍃', name:'自然靈動', desc:'有機形態、彩寶',   tags:['自然','彩寶','有機'] },
   { id:'romantic', emoji:'🌹', name:'浪漫玫瑰', desc:'玫瑰金、心形',     tags:['浪漫','玫瑰金','心形'] },
-  { id:'modern',   emoji:'◆', name:'現代簡約', desc:'幾何、白金、極簡', tags:['現代','簡約','白金'] },
+  { id:'modern',   emoji:'◆',  name:'現代簡約', desc:'幾何、白金、極簡', tags:['現代','簡約','白金'] },
 ];
 
 function DiscoveryFlowModal({ customer, staff, onClose, onSave, showToast }) {
-  const [phase, setPhase]               = useState(0);
+  const [phase, setPhase]                 = useState(0);
   const [selectedStyles, setSelectedStyles] = useState([]);
-  const [photos, setPhotos]             = useState([]);
-  const [likedIds, setLikedIds]         = useState([]);
-  const [inferredTags, setInferredTags] = useState([]);
-  const [lineId, setLineId]             = useState(customer.line_id||'');
+  const [photos, setPhotos]               = useState([]);
+  const [likedIds, setLikedIds]           = useState([]);
+  const [inferredTags, setInferredTags]   = useState([]);
+  const [lineId, setLineId]               = useState(customer.line_id||'');
   const [loadingPhotos, setLoadingPhotos] = useState(false);
 
   const toggle = id => setSelectedStyles(p => p.includes(id) ? p.filter(s=>s!==id) : [...p,id]);
@@ -1228,15 +1243,13 @@ function DiscoveryFlowModal({ customer, staff, onClose, onSave, showToast }) {
       const data = await api.get('/api/photos?limit=12');
       setPhotos(Array.isArray(data) ? data : (data.photos||[]));
     } catch { setPhotos([]); }
-    setLoadingPhotos(false);
-    setPhase(1);
+    setLoadingPhotos(false); setPhase(1);
   };
 
   const goPhase2 = () => {
     if (!likedIds.length) { showToast('請選擇至少一張喜愛的照片'); return; }
     const tags = selectedStyles.flatMap(sid => STYLE_PROFILES.find(s=>s.id===sid)?.tags||[]);
-    setInferredTags([...new Set(tags)].slice(0,6));
-    setPhase(2);
+    setInferredTags([...new Set(tags)].slice(0,6)); setPhase(2);
   };
 
   const handleSave = async () => {
@@ -1257,7 +1270,7 @@ function DiscoveryFlowModal({ customer, staff, onClose, onSave, showToast }) {
         {phase === 0 && (
           <>
             <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>選擇偏好風格</div>
-            <div style={{ fontSize:13, color:'var(--text-sub)', marginBottom:14 }}>幫 {customer.name} 選擇可能喜歡的風格（可多選）</div>
+            <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:14 }}>幫 {customer.name} 選擇可能喜歡的風格（可多選）</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:18 }}>
               {STYLE_PROFILES.map(s => (
                 <button key={s.id} className={`option-btn ${selectedStyles.includes(s.id)?'selected':''}`}
@@ -1276,18 +1289,20 @@ function DiscoveryFlowModal({ customer, staff, onClose, onSave, showToast }) {
         {phase === 1 && (
           <>
             <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>選擇喜愛款式</div>
-            <div style={{ fontSize:13, color:'var(--text-sub)', marginBottom:12 }}>點選喜歡的款式（可多選）</div>
+            <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:12 }}>點選喜歡的款式（可多選）</div>
             {loadingPhotos ? (
               <div style={{ display:'flex', justifyContent:'center', padding:40 }}><div className="spinner" /></div>
             ) : (
               <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:6, marginBottom:14 }}>
-                {photos.map((p,i) => (
-                  <div key={p.id} style={{ position:'relative', borderRadius:8, overflow:'hidden', aspectRatio:'1', cursor:'pointer',
-                    border: likedIds.includes(p.id) ? '2.5px solid var(--active)' : '2.5px solid transparent' }}
+                {photos.map(p => (
+                  <div key={p.id} style={{
+                    position:'relative', borderRadius:8, overflow:'hidden', aspectRatio:'1', cursor:'pointer',
+                    border: likedIds.includes(p.id) ? '2.5px solid var(--active)' : '2.5px solid transparent',
+                  }}
                     onClick={() => setLikedIds(prev => prev.includes(p.id) ? prev.filter(id=>id!==p.id) : [...prev,p.id])}>
                     <JewelryPhoto photo={p} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                     {likedIds.includes(p.id) && (
-                      <div style={{ position:'absolute', top:4, right:4, fontSize:14 }}>♥</div>
+                      <div style={{ position:'absolute', top:4, right:5, fontSize:14, color:'var(--active)' }}>♥</div>
                     )}
                   </div>
                 ))}
@@ -1303,7 +1318,7 @@ function DiscoveryFlowModal({ customer, staff, onClose, onSave, showToast }) {
         {phase === 2 && (
           <>
             <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>確認偏好標籤</div>
-            <div style={{ fontSize:13, color:'var(--text-sub)', marginBottom:12 }}>
+            <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:12 }}>
               選了 {likedIds.length} 款，推斷偏好如下
             </div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
@@ -1329,9 +1344,9 @@ function DiscoveryFlowModal({ customer, staff, onClose, onSave, showToast }) {
 }
 
 function CustomerDetailModal({ customer, staff, onClose, showToast, onUpdated }) {
-  const [detail, setDetail]         = useState(null);
+  const [detail, setDetail]           = useState(null);
   const [showDiscovery, setShowDiscovery] = useState(false);
-  const [loading, setLoading]       = useState(true);
+  const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
     api.get(`/api/customers/${customer.id}`)
@@ -1348,15 +1363,13 @@ function CustomerDetailModal({ customer, staff, onClose, showToast, onUpdated })
 
   const handleDiscoverySave = async sessionData => {
     const result = await api.post(`/api/customers/${customer.id}/sessions`, sessionData);
-    setDetail(result.customer);
-    onUpdated?.(result.customer);
+    setDetail(result.customer); onUpdated?.(result.customer);
   };
 
   const handleDelete = async () => {
     try {
       await api.del(`/api/customers/${customer.id}`);
-      showToast('客戶已刪除');
-      onUpdated?.(null); onClose();
+      showToast('客戶已刪除'); onUpdated?.(null); onClose();
     } catch { showToast('刪除失敗'); }
   };
 
@@ -1375,15 +1388,15 @@ function CustomerDetailModal({ customer, staff, onClose, showToast, onUpdated })
                 </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:17, fontWeight:600 }}>{detail.name}</div>
-                  {detail.line_id && <div style={{ fontSize:11, color:'var(--text-sub)' }}>LINE: {detail.line_id}</div>}
-                  {detail.phone  && <div style={{ fontSize:11, color:'var(--text-sub)' }}>{detail.phone}</div>}
+                  {detail.line_id && <div style={{ fontSize:11, color:'var(--text-2)' }}>LINE: {detail.line_id}</div>}
+                  {detail.phone  && <div style={{ fontSize:11, color:'var(--text-2)' }}>{detail.phone}</div>}
                 </div>
                 <button className="btn btn-primary btn-sm" onClick={() => setShowDiscovery(true)}>探索偏好</button>
               </div>
 
               {detail.tags?.length > 0 && (
                 <div style={{ marginBottom:14 }}>
-                  <div style={{ fontSize:11, color:'var(--text-sub)', marginBottom:6, fontWeight:600 }}>偏好標籤</div>
+                  <div className="section-label" style={{ padding:'0 0 6px' }}>偏好標籤</div>
                   <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
                     {detail.tags.map(t => (
                       <button key={t} className="chip active btn-sm" style={{ fontSize:11 }} onClick={() => removeTag(t)}>
@@ -1396,12 +1409,10 @@ function CustomerDetailModal({ customer, staff, onClose, showToast, onUpdated })
 
               {detail.favorites?.length > 0 && (
                 <div style={{ marginBottom:14 }}>
-                  <div style={{ fontSize:11, color:'var(--text-sub)', marginBottom:8, fontWeight:600 }}>
-                    喜愛款式（{detail.favorites.length}）
-                  </div>
+                  <div className="section-label" style={{ padding:'0 0 8px' }}>喜愛款式（{detail.favorites.length}）</div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:5 }}>
                     {detail.favorites.slice(0,8).map(f => (
-                      <div key={f.photo_id} style={{ aspectRatio:'1', borderRadius:8, overflow:'hidden', background:'#F0F0F0' }}>
+                      <div key={f.photo_id} style={{ aspectRatio:'1', borderRadius:8, overflow:'hidden', background:'#EBEBEB' }}>
                         <JewelryPhoto photo={{ filename:f.filename, category:f.category }} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                       </div>
                     ))}
@@ -1409,7 +1420,7 @@ function CustomerDetailModal({ customer, staff, onClose, showToast, onUpdated })
                 </div>
               )}
 
-              <div style={{ fontSize:11, color:'var(--text-sub)', marginBottom:14 }}>
+              <div style={{ fontSize:11, color:'var(--text-2)', marginBottom:14 }}>
                 服務次數：{detail.session_count} 次
               </div>
 
@@ -1456,7 +1467,7 @@ function AddCustomerModal({ onClose, onAdded }) {
           <textarea className="form-input" value={form.notes} onChange={e=>set('notes',e.target.value)} placeholder="備忘…" />
         </div>
         <div style={{ display:'flex', gap:8, marginTop:8 }}>
-          <button className="btn btn-primary" style={{ flex:1 }} onClick={handleAdd}>新增</button>
+          <button className="btn btn-primary"   style={{ flex:1 }} onClick={handleAdd}>新增</button>
           <button className="btn btn-secondary" onClick={onClose}>取消</button>
         </div>
       </div>
@@ -1465,11 +1476,11 @@ function AddCustomerModal({ onClose, onAdded }) {
 }
 
 function CustomersScreen({ staff, showToast }) {
-  const [customers, setCustomers]   = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [search, setSearch]         = useState('');
-  const [selected, setSelected]     = useState(null);
-  const [showAdd, setShowAdd]       = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [search, setSearch]       = useState('');
+  const [selected, setSelected]   = useState(null);
+  const [showAdd, setShowAdd]     = useState(false);
 
   const load = async (q='') => {
     setLoading(true);
@@ -1483,8 +1494,7 @@ function CustomersScreen({ staff, showToast }) {
   useEffect(() => { load(); }, []);
 
   const handleSearch = e => {
-    const q = e.target.value;
-    setSearch(q);
+    const q = e.target.value; setSearch(q);
     const t = setTimeout(() => load(q), 300);
     return () => clearTimeout(t);
   };
@@ -1502,8 +1512,9 @@ function CustomersScreen({ staff, showToast }) {
       </div>
 
       <div style={{ padding:'0 16px 10px', flexShrink:0 }}>
-        <input className="form-input" placeholder="🔍 搜尋姓名、LINE、標籤…"
-          value={search} onChange={handleSearch} />
+        <input className="form-input" placeholder="搜尋姓名、LINE、標籤…"
+          value={search} onChange={handleSearch}
+          style={{ background:'var(--surface)' }} />
       </div>
 
       <div className="scroll-view hide-scroll" style={{ padding:'0 16px' }}>
@@ -1519,18 +1530,18 @@ function CustomersScreen({ staff, showToast }) {
             <div className="customer-avatar">{c.name[0]}</div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:14, fontWeight:500 }}>{c.name}</div>
-              {c.line_id && <div style={{ fontSize:11, color:'var(--text-sub)' }}>LINE: {c.line_id}</div>}
+              {c.line_id && <div style={{ fontSize:11, color:'var(--text-2)' }}>LINE: {c.line_id}</div>}
               <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:5 }}>
                 {(c.tags||[]).slice(0,4).map(t => (
-                  <span key={t} className="tag tag-gold">{t}</span>
+                  <span key={t} className="tag tag-outline">{t}</span>
                 ))}
               </div>
             </div>
             {c.fav_count > 0 && (
               <div style={{ flexShrink:0, textAlign:'right' }}>
-                <div style={{ fontSize:11, color:'var(--text-sub)' }}>♥ {c.fav_count}</div>
+                <div style={{ fontSize:11, color:'var(--text-3)' }}>♥ {c.fav_count}</div>
                 {c.last_fav_filename && (
-                  <div style={{ width:38, height:38, borderRadius:6, overflow:'hidden', marginTop:4, background:'#F0F0F0' }}>
+                  <div style={{ width:38, height:38, borderRadius:6, overflow:'hidden', marginTop:4, background:'#EBEBEB' }}>
                     <JewelryPhoto photo={{ filename:c.last_fav_filename }} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                   </div>
                 )}
@@ -1560,21 +1571,21 @@ function CustomersScreen({ staff, showToast }) {
 
 // ═══ App ══════════════════════════════════════════════════════════════════════
 const TABS = [
-  { label:'找款', icon:'◻' },
-  { label:'估價', icon:'◈' },
-  { label:'成交', icon:'◎' },
-  { label:'客戶', icon:'◯' },
+  { label:'找款', Icon:IconGrid   },
+  { label:'估價', Icon:IconChat   },
+  { label:'成交', Icon:IconList   },
+  { label:'客戶', Icon:IconPerson },
 ];
 
 function App() {
-  const [tab, setTab]                   = useState(0);
+  const [tab, setTab]                     = useState(0);
   const [quoteInitData, setQuoteInitData] = useState(null);
-  const { toast, showToast }            = useToast();
-  const staff                           = { id:1, name:'店員' };
+  const { toast, showToast }              = useToast();
+  const staff                             = { id:1, name:'店員' };
 
   const handleUseForQuote = photo => {
     setQuoteInitData({
-      category:    photo.category || null,
+      category:    photo.category    || null,
       stone_shape: photo.stone_shape || null,
       stone_size:  photo.stone_size  || null,
       style:       photo.style       || null,
@@ -1590,7 +1601,7 @@ function App() {
         <div className="dynamic-island" />
         <div className="status-bar">
           <span>9:41</span>
-          <span style={{ letterSpacing:2 }}>●●●</span>
+          <span style={{ letterSpacing:2, fontSize:10 }}>●●●</span>
         </div>
 
         <div className="screen" style={{ paddingTop:54 }}>
@@ -1608,7 +1619,7 @@ function App() {
           <div className="tab-bar">
             {TABS.map((t, i) => (
               <button key={i} className={`tab-item ${tab===i?'active':''}`} onClick={() => setTab(i)}>
-                <div className="tab-icon">{t.icon}</div>
+                <div className="tab-icon"><t.Icon /></div>
                 <div>{t.label}</div>
               </button>
             ))}
