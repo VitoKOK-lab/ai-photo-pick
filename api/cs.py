@@ -185,21 +185,27 @@ async def import_report(file: UploadFile = File(...)):
             )
             updated_count += 1
         else:
+            # 只追未完成：新單若一進來就已出貨/完成/取消，直接進封存（可查、不佔看板）
+            closed = shipped_now or _contains_any(
+                f"{order_status} {payment} {shipping}", _CANCELLED_KEYWORDS
+            )
             conn.execute(
                 """INSERT INTO cs_orders
                        (order_number, customer_name, phone, order_date, total, item_summary,
                         sl_order_status, sl_payment_status, sl_shipping_status,
-                        track_status, shipped_at, raw_json)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        track_status, shipped_at, archived, raw_json)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (order_number, g(row, "customer_name"), g(row, "phone"),
                  g(row, "order_date"), g(row, "total"), g(row, "item_summary"),
                  order_status, payment, shipping,
                  _initial_track_status(payment, shipping, order_status),
                  _today() if shipped_now else None,
+                 1 if closed else 0,
                  json.dumps(row, ensure_ascii=False)),
             )
             new_count += 1
-            new_orders.append(order_number)
+            if not closed:
+                new_orders.append(order_number)
 
     conn.commit()
     archived = _run_archive(conn)

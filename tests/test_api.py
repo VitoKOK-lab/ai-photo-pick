@@ -283,7 +283,11 @@ class TestCSImport:
         by_no = {o["order_number"]: o for o in rows}
         assert by_no["20260601002"]["track_status"] == "待付款"   # 未付款
         assert by_no["20260601001"]["track_status"] == "製作中"   # 已付款未出貨
-        assert by_no["20260601003"]["shipped_at"] is not None     # 已出貨 → 記出貨日
+        # 只追未完成：一進來就已出貨的單直接封存、不佔看板
+        assert by_no["20260601003"]["shipped_at"] is not None
+        assert by_no["20260601003"]["archived"] == 1
+        active_nos = [o["order_number"] for o in client.get("/api/cs/orders?view=active").json()]
+        assert set(active_nos) == {"20260601001", "20260601002"}
 
     def test_import_missing_order_column(self, client):
         r = _import(client, "姓名,金額\n王小明,100\n")
@@ -294,12 +298,12 @@ class TestCSBoard:
     def test_dashboard_counts(self, client):
         _import(client)
         d = client.get("/api/cs/dashboard").json()
-        assert d["active"] == 3
+        assert d["active"] == 2          # 已出貨的 003 直接封存，不算進行中
         assert d["risk"] == 0
 
     def test_update_and_risk_flag(self, client):
         _import(client)
-        oid = client.get("/api/cs/orders?view=all").json()[0]["id"]
+        oid = client.get("/api/cs/orders?view=active").json()[0]["id"]
         r = client.put(f"/api/cs/orders/{oid}", json={
             "is_risk": True, "risk_type": "欠石", "owner": "深圳-阿明",
             "next_action": "聯絡客人告知延期", "track_status": "售後處理中",
@@ -313,7 +317,7 @@ class TestCSBoard:
 
     def test_overdue_flag(self, client):
         _import(client)
-        oid = client.get("/api/cs/orders?view=all").json()[0]["id"]
+        oid = client.get("/api/cs/orders?view=active").json()[0]["id"]
         client.put(f"/api/cs/orders/{oid}", json={"due_date": "2020-01-01"})
         o = client.get(f"/api/cs/orders/{oid}").json()
         assert o["overdue"] is True
