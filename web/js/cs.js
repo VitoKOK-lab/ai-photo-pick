@@ -134,8 +134,9 @@ async function doImport() {
   fd.append("file", f);
   try {
     const r = await api("/api/cs/import", { method: "POST", body: fd });
+    const orders = (r.orders_in_file != null) ? `（合併為 ${r.orders_in_file} 張訂單）` : "";
     let html = `<div class="import-result">
-      讀取 ${r.rows_read} 列　→
+      讀取 ${r.rows_read} 列${orders}　→
       新增 <b>${r.new}</b> 筆新單，更新 ${r.updated} 筆，封存 ${r.archived} 筆。`;
     const matched = Object.keys(r.columns_matched || {});
     if (!matched.includes("customer_name") || !matched.includes("sl_payment_status")) {

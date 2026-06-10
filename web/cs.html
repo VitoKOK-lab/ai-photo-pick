@@ -77,10 +77,10 @@
   <div class="overlay hidden" id="import-modal">
     <div class="modal">
       <h2>上傳 SHOPLINE 報表</h2>
-      <p class="sub">選擇從 SHOPLINE 匯出的訂單 CSV。系統會自動比對訂單號，只把<b>沒見過的新單</b>寫進看板，舊單只更新狀態，不會重複。</p>
+      <p class="sub">選擇從 SHOPLINE 匯出的訂單報表（.xls 或 .csv）。系統會依訂單號自動合併同單多列、比對去重，只把<b>沒見過的新單</b>寫進看板；已出貨／已完成／已取消的單直接進封存資料庫，看板只留<b>未完成</b>的單。</p>
       <div class="field">
-        <label>報表檔案（.csv）</label>
-        <input type="file" id="import-file" accept=".csv,text/csv">
+        <label>報表檔案（.xls / .csv）</label>
+        <input type="file" id="import-file" accept=".xls,.csv,application/vnd.ms-excel,text/csv">
       </div>
       <div id="import-result"></div>
       <div class="modal-actions">

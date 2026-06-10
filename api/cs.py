@@ -36,12 +36,17 @@ RISK_TYPES = [
     "付款超時", "寄送問題", "缺貨待叫貨", "客戶指定款待確認圖", "其他",
 ]
 
-# SHOPLINE 狀態關鍵字 → 判斷用
+# SHOPLINE 狀態關鍵字 → 判斷用（涵蓋實際匯出報表的用語）
 _PAID_KEYWORDS = ["已付款", "已收款", "付款完成", "paid"]
-_UNPAID_KEYWORDS = ["未付款", "待付款", "未收款", "待匯款", "unpaid", "pending"]
-_SHIPPED_KEYWORDS = ["已出貨", "已寄出", "已送達", "已完成", "已到貨", "配送中",
-                     "運送中", "shipped", "delivered", "fulfilled", "completed"]
-_CANCELLED_KEYWORDS = ["已取消", "取消", "退款", "cancel", "refund"]
+_UNPAID_KEYWORDS = ["未付款", "待付款", "未收款", "待匯款", "超過付款時間",
+                    "unpaid", "pending"]
+# 送貨已進入「出貨後」階段（含已發貨/發貨中/已到達/已取貨），或訂單已完成
+_SHIPPED_KEYWORDS = ["已出貨", "已發貨", "發貨中", "已寄出", "已送達", "已到達",
+                     "已到貨", "已取貨", "配送中", "運送中",
+                     "shipped", "delivered", "fulfilled", "completed"]
+# 已取消／退款／退回／付款失敗 → 視為結案，不佔看板
+_CANCELLED_KEYWORDS = ["已取消", "取消", "已退回", "退款", "付款失敗",
+                       "cancel", "refund", "returned", "failed"]
 
 
 def _conn():
@@ -102,6 +107,60 @@ def _decode(raw: bytes) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
+def _is_xls(filename: str, raw: bytes) -> bool:
+    """判斷是否為舊版 Excel(.xls / OLE 複合文件)。"""
+    name = (filename or "").lower()
+    if name.endswith(".xls"):
+        return True
+    # OLE2 複合文件魔術位元組
+    return raw[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+
+
+def _cell(value, datemode: int = 0, is_date: bool = False) -> str:
+    """把一格（CSV 字串或 xls 原生值）轉成乾淨字串。"""
+    if value is None:
+        return ""
+    if isinstance(value, float):
+        if is_date and value > 0:
+            try:
+                import xlrd
+                return xlrd.xldate_as_datetime(value, datemode).date().isoformat()
+            except Exception:
+                pass
+        # 1360.0 → "1360"；保留非整數小數
+        return str(int(value)) if value.is_integer() else str(value)
+    s = str(value).strip()
+    if is_date and s:
+        # 字串日期取日期部分（"2026/05/01 10:00" → "2026/05/01"）
+        return s.split(" ")[0]
+    return s
+
+
+def _read_table(filename: str, raw: bytes):
+    """讀取 .xls 或 .csv，回傳 (fieldnames, rows, datemode)。
+    rows 為 list[dict]，值維持原生型別（xls 數字保留 float）。"""
+    if _is_xls(filename, raw):
+        try:
+            import xlrd
+        except ImportError:
+            raise HTTPException(
+                400, "偵測到 .xls 檔，但伺服器缺少 xlrd 套件，請改用 CSV 匯出或安裝 xlrd。"
+            )
+        wb = xlrd.open_workbook(file_contents=raw)
+        sh = wb.sheet_by_index(0)
+        if sh.nrows < 1:
+            return [], [], wb.datemode
+        fieldnames = [str(sh.cell_value(0, c)).strip() for c in range(sh.ncols)]
+        rows = [
+            {fieldnames[c]: sh.cell_value(r, c) for c in range(sh.ncols)}
+            for r in range(1, sh.nrows)
+        ]
+        return fieldnames, rows, wb.datemode
+    # CSV
+    reader = csv.DictReader(io.StringIO(_decode(raw)))
+    return list(reader.fieldnames or []), list(reader), 0
+
+
 def _resolve_columns(fieldnames: List[str], mapping: dict) -> dict:
     """把實際 CSV 標題對應到內部欄位。回傳 {內部欄位: 實際標題}。"""
     norm_to_actual = {_norm(h): h for h in (fieldnames or [])}
@@ -128,38 +187,81 @@ def _initial_track_status(payment: str, shipping: str, order_status: str) -> str
     return "待處理"
 
 
+def _clean_order_no(value: str) -> str:
+    """SHOPLINE 訂單號常帶 '#' 前綴，去掉以利去重比對。"""
+    return (value or "").lstrip("#").strip()
+
+
+def _group_orders(rows: List[dict], cols: dict, datemode: int) -> List[dict]:
+    """SHOPLINE 一張訂單可橫跨多列（每件商品一列）。依訂單號合併，
+    訂單層欄位取第一列，商品名稱跨列彙整成一段摘要。"""
+    def cv(row, field, is_date=False):
+        actual = cols.get(field)
+        return _cell(row.get(actual), datemode, is_date) if actual else ""
+
+    grouped: "dict[str, dict]" = {}
+    order_seq: List[str] = []
+    for row in rows:
+        order_number = _clean_order_no(cv(row, "order_number"))
+        if not order_number:
+            continue
+        if order_number not in grouped:
+            grouped[order_number] = {
+                "order_number": order_number,
+                "customer_name": cv(row, "customer_name"),
+                "phone": cv(row, "phone"),
+                "order_date": cv(row, "order_date", is_date=True),
+                "total": cv(row, "total"),
+                "sl_order_status": cv(row, "sl_order_status"),
+                "sl_payment_status": cv(row, "sl_payment_status"),
+                "sl_shipping_status": cv(row, "sl_shipping_status"),
+                "_items": [],
+                "_raw_first": row,
+            }
+            order_seq.append(order_number)
+        name = cv(row, "item_summary")
+        if name:
+            qty = cv(row, "qty")
+            label = f"{name}×{qty}" if qty and qty not in ("1", "1.0") else name
+            items = grouped[order_number]["_items"]
+            if label not in items:
+                items.append(label)
+
+    out = []
+    for on in order_seq:
+        g = grouped[on]
+        g["item_summary"] = "、".join(g["_items"])[:300]
+        out.append(g)
+    return out
+
+
 @router.post("/import")
 async def import_report(file: UploadFile = File(...)):
-    """上傳 SHOPLINE 報表 CSV：自動去重，只新增新單，更新既有單的 SHOPLINE 狀態。"""
+    """上傳 SHOPLINE 報表（.xls 或 .csv）：依訂單號合併多列、自動去重，
+    只新增新單並更新既有單的 SHOPLINE 狀態。"""
     raw = await file.read()
-    text = _decode(raw)
     mapping = _load_mapping()
 
-    reader = csv.DictReader(io.StringIO(text))
-    cols = _resolve_columns(reader.fieldnames or [], mapping)
+    fieldnames, rows, datemode = _read_table(file.filename or "", raw)
+    cols = _resolve_columns(fieldnames, mapping)
     if "order_number" not in cols:
         raise HTTPException(
             400,
             "找不到訂單號欄位。請確認報表標題列，或把實際欄名加進 config/shopline_mapping.json。"
-            f" 偵測到的標題：{reader.fieldnames}",
+            f" 偵測到的標題：{fieldnames}",
         )
 
+    orders = _group_orders(rows, cols, datemode)
+
     conn = _conn()
-    new_count = updated_count = row_count = 0
+    new_count = updated_count = 0
     new_orders: List[str] = []
 
-    def g(row, field):
-        actual = cols.get(field)
-        return (row.get(actual) or "").strip() if actual else ""
-
-    for row in reader:
-        order_number = g(row, "order_number")
-        if not order_number:
-            continue
-        row_count += 1
-        payment = g(row, "sl_payment_status")
-        shipping = g(row, "sl_shipping_status")
-        order_status = g(row, "sl_order_status")
+    for o in orders:
+        order_number = o["order_number"]
+        payment = o["sl_payment_status"]
+        shipping = o["sl_shipping_status"]
+        order_status = o["sl_order_status"]
         shipped_now = _contains_any(shipping, _SHIPPED_KEYWORDS) or \
             _contains_any(order_status, ["已完成", "completed"])
 
@@ -178,10 +280,10 @@ async def import_report(file: UploadFile = File(...)):
                        sl_order_status=?, sl_payment_status=?, sl_shipping_status=?,
                        shipped_at=?, raw_json=?, updated_at=CURRENT_TIMESTAMP
                    WHERE order_number=?""",
-                (g(row, "customer_name"), g(row, "phone"), g(row, "order_date"),
-                 g(row, "total"), g(row, "item_summary"),
+                (o["customer_name"], o["phone"], o["order_date"],
+                 o["total"], o["item_summary"],
                  order_status, payment, shipping, shipped_at,
-                 json.dumps(row, ensure_ascii=False), order_number),
+                 json.dumps(o["_raw_first"], ensure_ascii=False, default=str), order_number),
             )
             updated_count += 1
         else:
@@ -195,13 +297,13 @@ async def import_report(file: UploadFile = File(...)):
                         sl_order_status, sl_payment_status, sl_shipping_status,
                         track_status, shipped_at, archived, raw_json)
                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (order_number, g(row, "customer_name"), g(row, "phone"),
-                 g(row, "order_date"), g(row, "total"), g(row, "item_summary"),
+                (order_number, o["customer_name"], o["phone"],
+                 o["order_date"], o["total"], o["item_summary"],
                  order_status, payment, shipping,
                  _initial_track_status(payment, shipping, order_status),
                  _today() if shipped_now else None,
                  1 if closed else 0,
-                 json.dumps(row, ensure_ascii=False)),
+                 json.dumps(o["_raw_first"], ensure_ascii=False, default=str)),
             )
             new_count += 1
             if not closed:
@@ -212,13 +314,14 @@ async def import_report(file: UploadFile = File(...)):
     conn.close()
 
     return {
-        "rows_read": row_count,
+        "rows_read": len(rows),
+        "orders_in_file": len(orders),
         "new": new_count,
         "updated": updated_count,
         "archived": archived,
         "new_orders": new_orders[:50],
         "columns_matched": cols,
-        "columns_in_file": reader.fieldnames,
+        "columns_in_file": fieldnames,
     }
 
 

@@ -294,6 +294,51 @@ class TestCSImport:
         assert r.status_code == 400
 
 
+# 真實 SHOPLINE 報表：一張訂單橫跨多列、訂單號帶 '#'、欄名為「收件人/訂單合計/送貨狀態」
+MULTI_ROW_CSV = (
+    "訂單號碼,收件人,收件人電話號碼,訂單日期,商品名稱,數量,訂單合計,付款狀態,送貨狀態,訂單狀態\n"
+    "#A100,林小姐,0911000111,2026-06-01,藍寶戒,1,30000,已付款,備貨中,處理中\n"
+    "#A100,林小姐,0911000111,2026-06-01,珍珠耳環,2,30000,已付款,備貨中,處理中\n"
+    "#A200,陳先生,0922000222,2026-06-02,紅寶墜,1,50000,已付款,已到達,已完成\n"
+)
+
+
+class TestCSImportGrouping:
+    def test_multi_row_grouped_into_one_order(self, client):
+        d = _import(client, MULTI_ROW_CSV).json()
+        assert d["rows_read"] == 3
+        assert d["orders_in_file"] == 2          # 兩張單，非三列
+        assert d["new"] == 2
+        # 真實欄名都對得上
+        m = d["columns_matched"]
+        assert m["customer_name"] == "收件人"
+        assert m["total"] == "訂單合計"
+        assert m["sl_shipping_status"] == "送貨狀態"
+
+    def test_order_number_hash_stripped_and_items_aggregated(self, client):
+        _import(client, MULTI_ROW_CSV)
+        by_no = {o["order_number"]: o for o in client.get("/api/cs/orders?view=all").json()}
+        assert "A100" in by_no and "#A100" not in by_no   # '#' 去前綴
+        a100 = by_no["A100"]
+        assert a100["customer_name"] == "林小姐"
+        assert a100["item_summary"] == "藍寶戒、珍珠耳環×2"  # 跨列彙整＋數量
+        assert a100["order_date"] == "2026-06-01"
+
+    def test_only_unfinished_on_board(self, client):
+        _import(client, MULTI_ROW_CSV)
+        active = [o["order_number"] for o in client.get("/api/cs/orders?view=active").json()]
+        archived = [o["order_number"] for o in client.get("/api/cs/orders?view=archived").json()]
+        assert active == ["A100"]        # 備貨中／處理中 → 看板
+        assert archived == ["A200"]      # 已到達／已完成 → 直接封存
+
+    def test_excel_serial_date_conversion(self):
+        """xls 的訂單日期是 Excel 序號，需轉成 ISO 日期。"""
+        from api.cs import _cell
+        # 46143 = 2026-05-01（1900 datemode）
+        assert _cell(46143.0, datemode=0, is_date=True) == "2026-05-01"
+        assert _cell(1360.0) == "1360"   # 金額去掉 .0
+
+
 class TestCSBoard:
     def test_dashboard_counts(self, client):
         _import(client)
