@@ -218,6 +218,21 @@ CREATE TABLE IF NOT EXISTS cs_order_events (
 );
 CREATE INDEX IF NOT EXISTS idx_cs_events_order ON cs_order_events(order_id);
 
+-- 匯入記錄：每次匯入（自動或手動）的結果，供「自動匯入」頁顯示狀態與歷史
+CREATE TABLE IF NOT EXISTS cs_import_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    source TEXT DEFAULT 'manual',        -- auto（定時自動）/ manual（手動補匯）
+    filename TEXT,
+    rows_read INTEGER DEFAULT 0,
+    orders_in_file INTEGER DEFAULT 0,
+    new_count INTEGER DEFAULT 0,
+    updated_count INTEGER DEFAULT 0,
+    archived_count INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'ok',            -- ok / error
+    message TEXT
+);
+
 CREATE TABLE IF NOT EXISTS cs_handovers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     shift_date TEXT,                     -- 交班日期

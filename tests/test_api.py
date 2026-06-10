@@ -277,6 +277,26 @@ class TestCSImport:
         assert d["new"] == 0         # 不重複建單
         assert d["updated"] == 3     # 只更新既有
 
+    def test_import_log_recorded(self, client):
+        # 自動匯入帶 source=auto，會寫一筆成功記錄
+        client.post("/api/cs/import?source=auto",
+                    files={"file": ("shopline.csv", SHOPLINE_CSV, "text/csv")})
+        log = client.get("/api/cs/import-log").json()
+        assert len(log) == 1
+        assert log[0]["source"] == "auto"
+        assert log[0]["status"] == "ok"
+        assert log[0]["new_count"] == 3
+        # 儀表板帶出最後一次匯入狀態
+        d = client.get("/api/cs/dashboard").json()
+        assert d["last_import_log"]["status"] == "ok"
+
+    def test_import_log_records_failure(self, client):
+        # 找不到訂單號欄位 → 記一筆 error
+        r = _import(client, "姓名,金額\n王小明,100\n")
+        assert r.status_code == 400
+        log = client.get("/api/cs/import-log").json()
+        assert log[0]["status"] == "error"
+
     def test_initial_track_status(self, client):
         _import(client)
         rows = client.get("/api/cs/orders?view=all").json()

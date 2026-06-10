@@ -119,6 +119,13 @@ def _migrate(c):
         kind TEXT DEFAULT 'note', content TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     c.execute("CREATE INDEX IF NOT EXISTS idx_cs_events_order ON cs_order_events(order_id)")
+    c.execute("""CREATE TABLE IF NOT EXISTS cs_import_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        source TEXT DEFAULT 'manual', filename TEXT,
+        rows_read INTEGER DEFAULT 0, orders_in_file INTEGER DEFAULT 0,
+        new_count INTEGER DEFAULT 0, updated_count INTEGER DEFAULT 0,
+        archived_count INTEGER DEFAULT 0, status TEXT DEFAULT 'ok', message TEXT)""")
     c.commit()
 
 
@@ -375,16 +382,34 @@ def _group_orders(rows: List[dict], cols: dict, datemode: int) -> List[dict]:
     return out
 
 
+def _log_import(conn, source, filename, result, status, message=""):
+    """寫一筆匯入記錄（成功或失敗都記），供「自動匯入」頁顯示。"""
+    conn.execute(
+        """INSERT INTO cs_import_log
+               (source, filename, rows_read, orders_in_file,
+                new_count, updated_count, archived_count, status, message)
+           VALUES (?,?,?,?,?,?,?,?,?)""",
+        (source, filename, result.get("rows_read", 0), result.get("orders_in_file", 0),
+         result.get("new", 0), result.get("updated", 0), result.get("archived", 0),
+         status, message[:500]),
+    )
+    conn.commit()
+
+
 @router.post("/import")
-async def import_report(file: UploadFile = File(...)):
+async def import_report(file: UploadFile = File(...), source: str = Query("manual")):
     """上傳 SHOPLINE 報表（.xls 或 .csv）：依訂單號合併多列、自動去重，
-    只新增新單並更新既有單的 SHOPLINE 狀態。"""
+    只新增新單並更新既有單的 SHOPLINE 狀態。source=auto 為排程自動匯入。"""
     raw = await file.read()
+    fname = file.filename or ""
     mapping = _load_mapping()
 
-    fieldnames, rows, datemode = _read_table(file.filename or "", raw)
+    fieldnames, rows, datemode = _read_table(fname, raw)
     cols = _resolve_columns(fieldnames, mapping)
     if "order_number" not in cols:
+        c = _conn()
+        _log_import(c, source, fname, {}, "error", f"找不到訂單號欄位；偵測到標題：{fieldnames}")
+        c.close()
         raise HTTPException(
             400,
             "找不到訂單號欄位。請確認報表標題列，或把實際欄名加進 config/shopline_mapping.json。"
@@ -467,9 +492,7 @@ async def import_report(file: UploadFile = File(...)):
 
     conn.commit()
     archived = _run_archive(conn)
-    conn.close()
-
-    return {
+    result = {
         "rows_read": len(rows),
         "orders_in_file": len(orders),
         "new": new_count,
@@ -479,6 +502,9 @@ async def import_report(file: UploadFile = File(...)):
         "columns_matched": cols,
         "columns_in_file": fieldnames,
     }
+    _log_import(conn, source, fname, result, "ok")
+    conn.close()
+    return result
 
 
 def _run_archive(conn) -> int:
@@ -502,6 +528,17 @@ def archive_run():
     n = _run_archive(conn)
     conn.close()
     return {"archived": n}
+
+
+@router.get("/import-log")
+def import_log(limit: int = Query(20)):
+    """最近的匯入記錄（自動/手動），供「自動匯入」頁顯示狀態與歷史。"""
+    conn = _conn()
+    rows = conn.execute(
+        "SELECT * FROM cs_import_log ORDER BY id DESC LIMIT ?", (limit,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 # ─── 看板 ────────────────────────────────────────────────────────────────────
@@ -613,6 +650,10 @@ def dashboard():
     last_import = conn.execute(
         "SELECT MAX(updated_at) FROM cs_orders"
     ).fetchone()[0]
+    last_log = conn.execute(
+        "SELECT imported_at, source, status, new_count, updated_count, archived_count "
+        "FROM cs_import_log ORDER BY id DESC LIMIT 1"
+    ).fetchone()
     conn.close()
     return {
         "active": active,
@@ -621,6 +662,7 @@ def dashboard():
         "due_soon": due_soon,
         "by_status": by_status,
         "last_import": last_import,
+        "last_import_log": dict(last_log) if last_log else None,
     }
 
 
