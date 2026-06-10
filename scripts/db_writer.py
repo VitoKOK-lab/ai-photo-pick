@@ -41,21 +41,23 @@ def insert_photo(metadata: dict, classification: dict, embedding: list) -> int:
             color, color_confidence,
             category, category_confidence,
             material, material_confidence,
-            diamond_status, diamond_confidence,
-            gemstone, gemstone_confidence,
+            stone_shape, stone_shape_confidence,
+            stone_size, stone_size_confidence,
             style, style_confidence,
+            price_band,
             file_hash, file_size, width, height
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         metadata["filename"], metadata["original_filename"], metadata["original_path"],
         metadata["full_path"], metadata["thumb_path"], metadata["micro_path"],
-        classification["color"]["label"],        classification["color"]["confidence"],
-        classification["category"]["label"],     classification["category"]["confidence"],
-        classification["material"]["label"],     classification["material"]["confidence"],
-        classification["diamond_status"]["label"], classification["diamond_status"]["confidence"],
-        classification["gemstone"]["label"],     classification["gemstone"]["confidence"],
+        classification["color"]["label"],           classification["color"]["confidence"],
+        classification["category"]["label"],        classification["category"]["confidence"],
+        classification["material"]["label"],        classification["material"]["confidence"],
+        classification["stone_shape"]["label"],     classification["stone_shape"]["confidence"],
+        classification["stone_size"]["label"],      classification["stone_size"]["confidence"],
         classification.get("style", {}).get("label"),
         classification.get("style", {}).get("confidence"),
+        classification.get("price_band", {}).get("label"),
         metadata["file_hash"], metadata["file_size"],
         metadata["width"], metadata["height"],
     ))
