@@ -1,0 +1,74 @@
+<!DOCTYPE html><html lang="zh-TW"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>員工版訂單 · 客服訂單追蹤</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./mock.css"></head><body>
+<div class="mockbar">設計稿（假資料）· <b>員工版訂單（極簡：一鍵完成這關）</b> · <a href="./menu.html">🎨 所有畫面</a> · <a href="./order-spec.html">看主管完整版 →</a></div>
+
+<div class="topbar">
+  <a class="back" href="./board.html">← 返回看板</a>
+  <h1>客服訂單追蹤</h1>
+  <span class="grow"></span>
+  <span class="userchip">👤 深圳-阿明<span class="role">員工</span><a href="./index.html">登出</a></span>
+</div>
+
+<div class="staff-card">
+  <!-- 一眼看懂：誰、什麼、急不急 -->
+  <div class="staff-head">
+    <div>
+      <div class="cust-big">陳怡君</div>
+      <div class="sub">規格 · 藍寶石墜子 18吋 · <a class="sl-link">🔗 SHOPLINE</a></div>
+    </div>
+    <div class="due-badge late">出貨期限<br>6/09 逾期1天</div>
+  </div>
+
+  <!-- 目前要做的事（員工只要看這裡）-->
+  <div class="now-box">
+    <div class="now-label">目前進度</div>
+    <div class="now-stage">大陸-備貨</div>
+    <div class="next-label">👉 下一步要做</div>
+    <div class="next-text">缺藍寶，已請深圳採購，回貨後拍照</div>
+  </div>
+
+  <!-- 主要動作：一鍵完成這關、自動進下一關 -->
+  <button class="btn-big">✓ 完成「備貨」，進入「拍照」</button>
+
+  <!-- 次要動作：兩個鍵就夠 -->
+  <div class="quick-actions">
+    <button class="qa risk">🔴 回報異常</button>
+    <button class="qa">💬 記一句話 / 客人說的</button>
+  </div>
+
+  <!-- 少用的才收進來，平常不出現 -->
+  <details class="more"><summary>需要跳到別的進度？</summary>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <select style="flex:1;border:1px solid var(--line);border-radius:8px;padding:9px;">
+        <option>待處理</option><option selected>大陸-備貨</option><option>大陸-拍照(出貨備查)</option>
+        <option>大陸-打包出貨</option><option>已寄台灣(在途)</option><option>台灣-品管出貨</option><option>已完成</option>
+      </select>
+      <button class="btn">更新</button>
+    </div>
+  </details>
+
+  <!-- 購物旅程：看得到前因後果，但不用操作 -->
+  <h3 class="tl-h">購物旅程</h3>
+  <div class="timeline">
+    <div class="tl-item tl-sys"><div class="tl-dot">⚙</div><div class="tl-body">
+      <div class="tl-meta"><span>5/31 16:02</span><span class="tl-actor">系統</span></div>
+      <div class="tl-text">客人下單・完成付款</div></div></div>
+    <div class="tl-item tl-ret"><div class="tl-dot">🔴</div><div class="tl-body">
+      <div class="tl-meta"><span>6/02 09:30</span><span class="tl-actor">深圳-阿明</span></div>
+      <div class="tl-text">缺藍寶，已請採購</div></div></div>
+    <div class="tl-item tl-cust"><div class="tl-dot">🗣</div><div class="tl-body">
+      <div class="tl-meta"><span>6/03 14:20</span><span class="tl-actor">陳怡君</span></div>
+      <div class="tl-text">客人問：大概什麼時候能出貨？</div></div></div>
+    <div class="tl-item tl-staff"><div class="tl-dot">✔</div><div class="tl-body">
+      <div class="tl-meta"><span>6/03 14:45</span><span class="tl-actor">台灣-阿May</span></div>
+      <div class="tl-text">已回客人：預計 6/13 出貨</div></div></div>
+  </div>
+
+  <details class="more"><summary>SHOPLINE 訂單明細</summary>
+    <div id="om-raw" style="margin-top:8px;"><div><b>訂單號碼</b>: #20260531160234640</div><div><b>付款狀態</b>: 已付款</div><div><b>送貨狀態</b>: 備貨中</div></div>
+  </details>
+</div>
+</body></html>
