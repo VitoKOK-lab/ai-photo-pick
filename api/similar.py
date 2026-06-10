@@ -115,11 +115,24 @@ def find_similar(
 
     conn.close()
 
+    # 強制同品項優先：先取同品項，不足再補其他
+    same_cat  = {k: v for k, v in candidates.items() if v.get("category") == anchor.get("category")}
+    other_cat = {k: v for k, v in candidates.items() if v.get("category") != anchor.get("category")}
+
+    if len(same_cat) >= max(3, limit // 2):
+        pool = same_cat
+    else:
+        # 同品項不夠時補其他，但同品項排前面
+        extra = dict(list(other_cat.items())[: limit - len(same_cat)])
+        pool = {**same_cat, **extra}
+
     scored = []
-    for pid, target in candidates.items():
+    for pid, target in pool.items():
         v_score = visual_scores.get(pid, 0)
         a_score = _attribute_sim(anchor, target)
-        final = weight_visual * v_score + weight_attribute * a_score
+        # 同品項加分
+        cat_bonus = 0.3 if target.get("category") == anchor.get("category") else 0.0
+        final = weight_visual * v_score + weight_attribute * a_score + cat_bonus
         scored.append((pid, final, target))
 
     scored.sort(key=lambda x: x[1], reverse=True)

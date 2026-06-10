@@ -841,16 +841,45 @@ function QuoteResult({ data, result, onSaveAsTx, onReset }) {
 }
 
 function QuoteScreen({ initialData, onClearInitial, showToast }) {
-  const [step, setStep]           = useState(initialData ? 1 : null);
-  const [data, setData]           = useState(initialData || {});
+  const [step, setStep]           = useState(null);
+  const [data, setData]           = useState({});
   const [result, setResult]       = useState(null);
   const [loading, setLoading]     = useState(false);
   const [recentQuotes, setRecentQuotes] = useState([]);
   const [showNewTx, setShowNewTx] = useState(false);
 
+  const runEstimateWith = useCallback(async (d) => {
+    setLoading(true); setStep('result');
+    try {
+      const params = new URLSearchParams();
+      Object.entries(d).forEach(([k, v]) => { if (v) params.set(k, v); });
+      const res = await api.get(`/api/quotes/estimate-by-attrs?${params}`);
+      setResult(res);
+      setRecentQuotes(prev => [{
+        data: { ...d }, result: res,
+        time: new Date().toLocaleDateString('zh-TW', { month:'numeric', day:'numeric' }),
+      }, ...prev.slice(0, 9)]);
+    } catch { setResult({ estimated:false, message:'網路錯誤，請再試', matching_photos:[] }); }
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    if (initialData) {
-      setData(initialData); setStep(1); onClearInitial?.();
+    if (!initialData) return;
+    setData(initialData);
+    onClearInitial?.();
+    // 照片已有屬性 → 直接估價，不用再選一遍
+    const hasCore = initialData.category && initialData.stone_size &&
+                    initialData.stone_shape && initialData.style;
+    if (hasCore) {
+      runEstimateWith(initialData);
+    } else {
+      // 缺部分資料 → 跳到第一個空白步驟
+      const firstMissing =
+        !initialData.category   ? 1 :
+        !initialData.stone_size  ? 2 :
+        !initialData.stone_shape ? 3 :
+        !initialData.style       ? 4 : 5;
+      setStep(firstMissing);
     }
   }, [initialData]);
 
@@ -860,29 +889,16 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
 
   const goBack = () => {
     if (step === 1 || step === null) { setStep(null); setData({}); }
-    else if (step === 'result')      { setStep(5); }
+    else if (step === 'result')      { setStep(null); }
     else                             { setStep(s => s - 1); }
   };
 
   const goNext = () => {
     if (step < QUOTE_STEPS) setStep(s => s + 1);
-    else runEstimate();
+    else runEstimateWith(data);
   };
 
-  const runEstimate = async () => {
-    setLoading(true); setStep('result');
-    try {
-      const params = new URLSearchParams();
-      Object.entries(data).forEach(([k, v]) => { if (v) params.set(k, v); });
-      const res = await api.get(`/api/quotes/estimate-by-attrs?${params}`);
-      setResult(res);
-      setRecentQuotes(prev => [{
-        data: { ...data }, result: res,
-        time: new Date().toLocaleDateString('zh-TW', { month:'numeric', day:'numeric' }),
-      }, ...prev.slice(0, 9)]);
-    } catch { setResult({ estimated:false, message:'網路錯誤，請再試', matching_photos:[] }); }
-    setLoading(false);
-  };
+  const runEstimate = () => runEstimateWith(data);
 
   const canNext = () => {
     if (step === 1) return !!data.category;
