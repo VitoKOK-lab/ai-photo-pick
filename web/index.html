@@ -107,7 +107,7 @@ button { font-family: inherit; cursor: pointer; }
 .grid-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 3px; }
 .card { background: var(--surface); cursor: pointer; overflow: hidden; position: relative; border-radius: 4px; }
-.card img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--s3); }
+.card img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; background: #fff; }
 .card-fav { position: absolute; top: 7px; right: 7px; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.85); border: none; font-size: 15px; display: flex; align-items: center; justify-content: center; color: var(--text3); box-shadow: var(--shadow); }
 .card-fav.on { color: var(--gold); }
 .card-lbl { padding: 6px 9px 8px; font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -186,12 +186,10 @@ const { useState, useEffect, useRef } = React;
 
 /* ── Config ─────────────────────────────────────────── */
 const CFG = {
-  category:    { label: '品項',  values: ['手鏈','墜子','耳釘','項鏈','胸針','戒指','手鐲','其他'] },
-  gemstone:    { label: '寶石',  values: ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','珍珠','翡翠','其他彩寶','無寶石'] },
-  stone_shape: { label: '形狀',  values: ['橢圓形','圓形','水滴形','心形','方形','長方形','馬眼形','枕形','花形','不規則','無主石'] },
-  stone_size:  { label: '大小',  values: ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉以上'] },
-  style:       { label: '款式',  values: ['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','豪鑲滿鑲鑽'] },
-  color:       { label: '顏色',  values: ['紅色','粉紅色','橙色','黃色','綠色','藍色','紫色','白色','無色透明','黑色','多色'] },
+  category:   { label: '品項',  values: ['手鏈','墜子','耳釘','項鏈','胸針','戒指','手鐲','其他'] },
+  style:      { label: '鑽石',  values: ['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','豪鑲滿鑲鑽'] },
+  material:   { label: '材質',  values: ['18K黃金','18K白金','18K玫瑰金','925銀','鉑金','其他金屬'] },
+  stone_size: { label: '大小',  values: ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉以上'] },
 };
 
 /* ── Fav storage ────────────────────────────────────── */
@@ -232,7 +230,7 @@ function FilterSheet({ field, cur, onPick, onClose }) {
 
 /* ── Sidebar ────────────────────────────────────────── */
 function Sidebar({ filters, onFilter, onClear }) {
-  const [open, setOpen] = useState({ category: true, gemstone: true, stone_shape: false, stone_size: false, style: false, color: false });
+  const [open, setOpen] = useState({ category: true, style: true, material: false, stone_size: false });
   return (
     <aside className="sidebar">
       {Object.keys(filters).length > 0 && (
