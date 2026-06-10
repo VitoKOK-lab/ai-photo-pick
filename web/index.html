@@ -1,1730 +1,607 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>JewelryDB</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <script src="/js/vendor/react.min.js" crossorigin></script>
-  <script src="/js/vendor/react-dom.min.js" crossorigin></script>
-  <script src="/js/vendor/babel.min.js"></script>
   <style>
-    :root {
-      --bg:       #F5F5F5;
-      --surface:  #FFFFFF;
-      --text:     #111111;
-      --text-2:   #666666;
-      --text-3:   #BBBBBB;
-      --border:   #E8E8E8;
-      --chip-bg:  #ECECEC;
-      --active:   #111111;
-      --active-t: #FFFFFF;
-      --red:      #D94040;
-      --green:    #3D9E6B;
-      --radius:   12px;
-      --radius-sm: 8px;
-      --shadow:   0 1px 12px rgba(0,0,0,0.06);
-      --shadow-sm:0 1px 4px  rgba(0,0,0,0.05);
-    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; background: #1C1C1C; }
-    body { font-family: 'Noto Sans TC', sans-serif; color: var(--text);
-           -webkit-font-smoothing: antialiased; overflow: hidden; }
-    #root { height: 100%; display: flex; justify-content: center; align-items: center; }
-    button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
-    input, textarea, select { font-family: inherit; }
-    img { display: block; }
-    .hide-scroll { scrollbar-width: none; }
-    .hide-scroll::-webkit-scrollbar { display: none; }
+    :root {
+      --bg:      #f5f5f5;
+      --surface: #ffffff;
+      --text:    #1a1a1a;
+      --text2:   #888888;
+      --border:  #ebebeb;
+      --accent:  #1a1a1a;
+      --chip-bg: #f0f0f0;
+      --radius:  10px;
+      --tab-h:   56px;
+      --nav-h:   50px;
+    }
+    html, body { height: 100%; background: var(--bg); font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; color: var(--text); -webkit-tap-highlight-color: transparent; }
+    #root { height: 100%; display: flex; flex-direction: column; }
 
-    /* ── Phone frame ────────────────────────────────────────── */
-    .phone-frame {
-      width: 390px; height: 844px;
-      background: var(--bg);
-      border-radius: 52px; overflow: hidden; position: relative;
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 40px 80px rgba(0,0,0,0.65);
-    }
-    @media (max-height: 900px) { .phone-frame { transform: scale(0.92); transform-origin: center; } }
-    @media (max-height: 800px) { .phone-frame { transform: scale(0.82); transform-origin: center; } }
-    @media (max-height: 700px) { .phone-frame { transform: scale(0.72); transform-origin: center; } }
+    /* Nav */
+    .nav { height: var(--nav-h); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; flex-shrink: 0; }
+    .nav-title { font-size: 17px; font-weight: 700; letter-spacing: 1px; }
 
-    .dynamic-island {
-      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-      width: 126px; height: 36px; background: #000; border-radius: 20px; z-index: 100;
-    }
-    .status-bar {
-      position: absolute; top: 0; left: 0; right: 0; height: 54px;
-      display: flex; align-items: flex-end; justify-content: space-between;
-      padding: 0 28px 8px; z-index: 99; font-size: 12px; font-weight: 600;
-      pointer-events: none; background: var(--bg);
-    }
-    .screen {
-      position: absolute; inset: 0;
-      background: var(--bg);
-      display: flex; flex-direction: column; overflow: hidden;
-    }
+    /* Tab bar */
+    .tab-bar { height: var(--tab-h); background: var(--surface); border-top: 1px solid var(--border); display: flex; flex-shrink: 0; }
+    .tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: none; cursor: pointer; color: var(--text2); font-size: 10px; font-weight: 500; }
+    .tab-btn.active { color: var(--accent); }
+    .tab-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
-    /* ── Tab bar ─────────────────────────────────────────────── */
-    .tab-bar {
-      position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
-      background: rgba(255,255,255,0.97); backdrop-filter: blur(24px);
-      border-top: 1px solid var(--border);
-      display: flex; align-items: flex-start; padding-top: 10px; z-index: 50;
-    }
-    .tab-item {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      gap: 3px; padding: 2px 0;
-      color: var(--text-3); font-size: 10px; font-weight: 500; transition: color 0.18s;
-    }
-    .tab-item.active { color: var(--active); }
-    .tab-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+    /* Screen */
+    .screen { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
 
-    /* ── Nav bar ─────────────────────────────────────────────── */
-    .nav-bar {
-      height: 56px; display: flex; align-items: center;
-      padding: 0 18px; gap: 10px; flex-shrink: 0;
-      background: var(--bg);
-    }
-    .nav-title { font-size: 20px; font-weight: 600; flex: 1; letter-spacing: -0.01em; }
-    .nav-sub   { font-size: 11px; color: var(--text-2); margin-top: 1px; }
-    .nav-btn {
-      padding: 7px 16px; border-radius: 20px;
-      font-size: 13px; font-weight: 500;
-      background: var(--active); color: #fff; transition: opacity 0.15s;
-    }
-    .nav-btn:active { opacity: 0.75; }
-    .nav-btn-ghost { color: var(--text-2); font-size: 13px; padding: 7px 0; }
+    /* Filter chips */
+    .filter-row { padding: 10px 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .chip { display: inline-flex; align-items: center; gap: 3px; padding: 6px 12px; border-radius: 20px; background: var(--chip-bg); font-size: 13px; color: var(--text); border: none; cursor: pointer; margin-right: 6px; white-space: nowrap; }
+    .chip.active { background: var(--accent); color: #fff; }
+    .chip-clear { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 20px; background: none; border: 1px solid var(--border); font-size: 12px; color: var(--text2); cursor: pointer; margin-right: 6px; white-space: nowrap; }
 
-    /* ── Scroll ──────────────────────────────────────────────── */
-    .scroll-view {
-      flex: 1; overflow-y: auto; overflow-x: hidden;
-      -webkit-overflow-scrolling: touch; padding-bottom: 80px;
-    }
+    /* Photo grid */
+    .photo-grid-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; }
+    .photo-card { background: var(--surface); cursor: pointer; overflow: hidden; }
+    .photo-card img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #f0f0f0; }
+    .photo-card-label { padding: 5px 8px 7px; font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sentinel { height: 1px; }
+    .loading-row { text-align: center; padding: 24px; color: var(--text2); font-size: 13px; }
+    .empty-state { text-align: center; padding: 60px 24px; color: var(--text2); font-size: 14px; line-height: 1.6; }
 
-    /* ── Filter chips ────────────────────────────────────────── */
-    .filter-row {
-      display: flex; gap: 6px; overflow-x: auto; padding: 2px 16px 10px;
-      flex-shrink: 0; background: var(--bg);
-    }
-    .chip {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 6px 13px; border-radius: 20px;
-      background: var(--surface); color: var(--text-2);
-      font-size: 12px; font-weight: 500; white-space: nowrap; flex-shrink: 0;
-      transition: all 0.15s; cursor: pointer;
-      border: 1.5px solid var(--border);
-    }
-    .chip.active { background: var(--active); color: var(--active-t); border-color: var(--active); }
-    .chip.clear  { background: transparent; color: var(--red); border-color: rgba(217,64,64,0.25); }
-    .chip-dot    { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    /* Sheet */
+    .sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; display: flex; align-items: flex-end; }
+    .sheet { background: var(--surface); border-radius: 16px 16px 0 0; width: 100%; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; animation: slideUp .22s cubic-bezier(.32,.72,0,1); }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sheet-handle { width: 36px; height: 4px; background: #ddd; border-radius: 2px; margin: 10px auto 0; flex-shrink: 0; }
+    .sheet-header { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .sheet-title { font-size: 16px; font-weight: 600; }
+    .sheet-close { width: 28px; height: 28px; border-radius: 50%; background: var(--chip-bg); border: none; cursor: pointer; font-size: 18px; line-height: 28px; text-align: center; }
+    .sheet-body { overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+    .sheet-item { padding: 14px 16px; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .sheet-item:last-child { border-bottom: none; }
+    .sheet-item:active { background: var(--chip-bg); }
+    .sheet-item.selected { font-weight: 600; }
+    .sheet-item.clear-item { color: var(--text2); font-size: 14px; }
 
-    /* ── Photo grid ──────────────────────────────────────────── */
-    .photo-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5px; }
-    .photo-cell {
-      position: relative; aspect-ratio: 1; background: #E8E8E8;
-      cursor: pointer; overflow: hidden;
-    }
-    .photo-cell img { width: 100%; height: 100%; object-fit: cover; }
-    .photo-cell-info {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      padding: 18px 6px 6px;
-      background: linear-gradient(transparent, rgba(0,0,0,0.52));
-    }
-    .photo-cell-label {
-      font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.95);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
+    /* Photo detail */
+    .detail-img { width: 100%; max-height: 55vw; object-fit: cover; display: block; background: #f0f0f0; }
+    .detail-tags { padding: 12px 16px 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { padding: 4px 10px; background: var(--chip-bg); border-radius: 20px; font-size: 12px; color: var(--text); }
+    .detail-actions { padding: 10px 16px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn { padding: 13px; border-radius: var(--radius); border: none; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn-outline { background: none; border: 1.5px solid var(--border); color: var(--text); }
+    .btn-primary { background: var(--accent); color: #fff; }
 
-    /* ── Bottom sheet ────────────────────────────────────────── */
-    .sheet-overlay {
-      position: absolute; inset: 0; background: rgba(0,0,0,0.36); z-index: 200;
-      display: flex; align-items: flex-end;
-    }
-    .sheet-body {
-      width: 100%; background: var(--surface);
-      border-radius: 24px 24px 0 0;
-      padding: 0 0 40px; max-height: 75%; overflow-y: auto;
-    }
-    .sheet-handle { width: 32px; height: 4px; background: var(--border); border-radius: 2px; margin: 14px auto 16px; }
-    .sheet-title  { font-size: 15px; font-weight: 600; padding: 0 20px 14px; }
-    .sheet-options { padding: 0 16px 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+    /* Similar grid */
+    .similar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+    .similar-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #f0f0f0; cursor: pointer; }
 
-    /* ── Modal ───────────────────────────────────────────────── */
-    .modal-overlay {
-      position: absolute; inset: 0; background: rgba(0,0,0,0.42); z-index: 300;
-      display: flex; align-items: flex-end;
-    }
-    .modal-body {
-      width: 100%; background: var(--bg);
-      border-radius: 24px 24px 0 0;
-      padding: 0 20px 44px; max-height: 90%; overflow-y: auto;
-    }
+    /* Quote */
+    .quote-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .quote-hero { padding: 48px 24px 24px; text-align: center; }
+    .quote-hero h2 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+    .quote-hero p { color: var(--text2); font-size: 14px; }
+    .quote-big-btn { display: block; margin: 0 24px; padding: 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; width: calc(100% - 48px); text-align: center; }
 
-    /* ── Buttons ─────────────────────────────────────────────── */
-    .btn {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      border-radius: var(--radius); font-weight: 500; transition: opacity 0.15s; cursor: pointer;
-    }
-    .btn:active { opacity: 0.75; }
-    .btn-primary   { background: var(--active); color: #fff; padding: 14px 24px; font-size: 14px; }
-    .btn-secondary { background: var(--surface); color: var(--text); padding: 13px 20px; font-size: 14px; border: 1.5px solid var(--border); }
-    .btn-danger    { background: rgba(217,64,64,0.07); color: var(--red); padding: 12px 20px; font-size: 14px; border: 1.5px solid rgba(217,64,64,0.18); }
-    .btn-sm  { padding: 7px 13px; font-size: 12px; border-radius: 8px; }
-    .btn-full{ width: 100%; }
+    .step-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .step-back { width: 36px; height: 36px; border-radius: 50%; background: var(--chip-bg); border: none; cursor: pointer; font-size: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .step-info { flex: 1; }
+    .step-num { font-size: 11px; color: var(--text2); margin-bottom: 1px; }
+    .step-title { font-size: 17px; font-weight: 600; }
+    .step-body { padding: 16px; }
+    .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .option-btn { padding: 16px 10px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); cursor: pointer; text-align: center; font-size: 13px; font-weight: 500; line-height: 1.4; }
+    .option-btn.selected { border-color: var(--accent); background: #f5f5f5; font-weight: 700; }
+    .option-btn:active { background: var(--chip-bg); }
+    .step-skip { width: 100%; padding: 14px; background: none; border: none; color: var(--text2); font-size: 13px; cursor: pointer; margin-top: 6px; text-align: center; }
 
-    /* ── Form ────────────────────────────────────────────────── */
-    .form-group { margin-bottom: 12px; }
-    .form-label {
-      font-size: 11px; color: var(--text-2); margin-bottom: 5px;
-      display: block; font-weight: 500; letter-spacing: 0.025em;
-    }
-    .form-input {
-      width: 100%; padding: 11px 13px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 14px; background: var(--surface); color: var(--text);
-      outline: none; transition: border-color 0.2s;
-    }
-    .form-input:focus { border-color: var(--active); }
-    textarea.form-input { resize: none; min-height: 72px; }
+    /* From-photo attrs */
+    .attr-row { display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .attr-row:active { background: var(--chip-bg); }
+    .attr-label { width: 72px; font-size: 13px; color: var(--text2); flex-shrink: 0; }
+    .attr-value { flex: 1; font-size: 14px; }
+    .attr-arrow { color: #ccc; font-size: 16px; }
 
-    /* ── Card ────────────────────────────────────────────────── */
-    .card {
-      background: var(--surface); border-radius: var(--radius);
-      border: 1px solid var(--border); overflow: hidden;
-    }
-
-    /* ── Transaction row ─────────────────────────────────────── */
-    .tx-row {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 16px; border-bottom: 1px solid var(--border);
-      background: var(--surface); cursor: pointer;
-    }
-    .tx-row:last-child { border-bottom: none; }
-    .tx-thumb { width: 44px; height: 44px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #F0F0F0; }
-    .tx-name  { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tx-meta  { font-size: 11px; color: var(--text-2); margin-top: 2px; }
-    .tx-price { font-size: 14px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
-
-    /* ── Customer ────────────────────────────────────────────── */
-    .customer-card {
-      display: flex; align-items: center; gap: 12px;
-      padding: 13px 16px; background: var(--surface);
-      border-radius: var(--radius); border: 1px solid var(--border);
-      margin-bottom: 8px; cursor: pointer;
-    }
-    .customer-avatar {
-      width: 44px; height: 44px; border-radius: 50%;
-      background: var(--chip-bg); display: flex; align-items: center;
-      justify-content: center; font-size: 17px; font-weight: 600;
-      color: var(--text-2); flex-shrink: 0;
-    }
-
-    /* ── Quote step flow ─────────────────────────────────────── */
-    .step-nav {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 18px 4px; flex-shrink: 0;
-    }
-    .step-dots { display: flex; gap: 5px; align-items: center; }
-    .step-dot  {
-      width: 5px; height: 5px; border-radius: 50%;
-      background: var(--border); transition: all 0.22s;
-    }
-    .step-dot.done    { background: var(--text-3); }
-    .step-dot.current { background: var(--active); width: 14px; border-radius: 3px; }
-
-    .option-grid { display: grid; gap: 8px; }
-    .option-btn {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 14px 8px; border-radius: var(--radius-sm);
-      background: var(--surface); border: 1.5px solid var(--border);
-      cursor: pointer; text-align: center; transition: all 0.15s; min-height: 68px;
-    }
-    .option-btn:active { transform: scale(0.97); }
-    .option-btn.selected { border-color: var(--active); background: var(--active); color: #fff; }
-    .option-btn.selected .opt-sub { color: rgba(255,255,255,0.5); }
-    .opt-icon  { font-size: 18px; margin-bottom: 4px; line-height: 1; }
-    .opt-label { font-size: 12px; font-weight: 500; }
-    .opt-sub   { font-size: 10px; color: var(--text-2); margin-top: 2px; }
-
-    /* ── Quote home list ─────────────────────────────────────── */
-    .quote-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 13px 16px; border-bottom: 1px solid var(--border); cursor: pointer;
-    }
-    .quote-item:last-child { border-bottom: none; }
-    .quote-label { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .quote-price { font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--text-2); flex-shrink: 0; }
-
-    /* ── Price result card ───────────────────────────────────── */
-    .price-card {
-      margin: 0 16px 14px; background: var(--active);
-      border-radius: 16px; padding: 26px 20px 22px;
-      color: #fff; text-align: center;
-    }
-    .price-card-label  { font-size: 12px; opacity: 0.5; margin-bottom: 12px; letter-spacing: 0.04em; }
-    .price-card-range  { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
-    .price-card-num    { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
-    .price-card-sep    { font-size: 18px; opacity: 0.45; }
-    .price-card-source { font-size: 11px; opacity: 0.48; margin-top: 12px; }
-
-    /* ── Toast ───────────────────────────────────────────────── */
-    .toast {
-      position: absolute; bottom: 96px; left: 50%;
-      transform: translateX(-50%) translateY(10px);
-      background: rgba(18,18,18,0.9); backdrop-filter: blur(14px);
-      color: #fff; padding: 9px 18px; border-radius: 20px;
-      font-size: 13px; white-space: nowrap;
-      opacity: 0; transition: all 0.22s; z-index: 500; pointer-events: none;
-    }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-    /* ── Spinner ─────────────────────────────────────────────── */
-    .spinner {
-      width: 24px; height: 24px;
-      border: 2px solid var(--border); border-top-color: var(--text-2);
-      border-radius: 50%; animation: spin 0.7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Empty state ─────────────────────────────────────────── */
-    .empty {
-      display: flex; flex-direction: column; align-items: center;
-      gap: 10px; padding: 64px 24px; color: var(--text-2); text-align: center;
-    }
-    .empty-icon { font-size: 36px; opacity: 0.22; }
-    .empty-text { font-size: 14px; }
-    .empty-hint { font-size: 12px; color: var(--text-3); }
-
-    /* ── Tag pill ────────────────────────────────────────────── */
-    .tag { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px;
-           border-radius: 6px; font-size: 11px; font-weight: 500;
-           background: var(--chip-bg); color: var(--text-2); }
-    .tag-outline { background: transparent; border: 1px solid var(--border); }
-
-    /* ── Bench bar ───────────────────────────────────────────── */
-    .bench-bar  { height: 3px; background: var(--chip-bg); border-radius: 2px; overflow: hidden; flex: 1; }
-    .bench-fill { height: 100%; background: var(--active); border-radius: 2px; }
-
-    /* ── Phase dots ──────────────────────────────────────────── */
-    .phase-dots { display: flex; gap: 5px; justify-content: center; margin-bottom: 16px; }
-    .phase-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all 0.25s; }
-    .phase-dot.active { background: var(--active); width: 16px; border-radius: 3px; }
-
-    /* ── Animations ──────────────────────────────────────────── */
-    @keyframes slideUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes fadeIn  { from { opacity:0; }                             to { opacity:1; }                          }
-    .slide-up { animation: slideUp 0.22s ease; }
-    .fade-in  { animation: fadeIn  0.18s ease; }
-
-    /* ── Section label ───────────────────────────────────────── */
-    .section-label {
-      font-size: 11px; font-weight: 600; color: var(--text-2);
-      letter-spacing: 0.04em; padding: 14px 16px 8px; text-transform: uppercase;
-    }
+    /* Result */
+    .result-top { padding: 20px 16px 16px; border-bottom: 1px solid var(--border); }
+    .result-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .price-range { font-size: 26px; font-weight: 700; margin: 4px 0; }
+    .price-note { font-size: 12px; color: var(--text2); margin-top: 4px; }
+    .result-photos { padding: 14px 16px; }
+    .result-photos h3 { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    .result-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; border-radius: 4px; background: #f0f0f0; }
+    .no-estimate { padding: 20px 0; color: var(--text2); font-size: 14px; line-height: 1.6; }
   </style>
 </head>
 <body>
 <div id="root"></div>
-
+<script src="/js/vendor/react.min.js"></script>
+<script src="/js/vendor/react-dom.min.js"></script>
+<script src="/js/vendor/babel.min.js"></script>
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef } = React;
 
-// ═══ Constants ═══════════════════════════════════════════════════════════════
-const CATEGORIES   = ['戒指','手鏈','墜子','耳釘','項鏈','胸針','手鐲','其他'];
-const STONE_SIZES  = ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉以上'];
-const STONE_SHAPES = ['圓形','橢圓形','水滴形','心形','方形','長方形','馬眼形','枕形','花形','不規則','無主石'];
-const GEMSTONES    = ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','紫水晶','珍珠','翡翠','其他彩寶','無寶石'];
-const COLORS       = ['紅色','粉紅色','橙色','黃色','綠色','藍綠色','藍色','紫色','白色','無色透明','黑色','棕色','多色'];
-const STYLES = [
-  { value:'無鑽',           label:'A  無鑽',  desc:'純金屬，無鑽石' },
-  { value:'簡約(5顆鑽內)',  label:'B  簡約',  desc:'5顆鑽以內' },
-  { value:'輕奢(20顆鑽內)', label:'C  輕奢',  desc:'20顆鑽以內' },
-  { value:'豪鑲滿鑲鑽',    label:'D  豪鑲',  desc:'全鑽設計' },
+/* ─── Config ──────────────────────────────────────────── */
+const CFG = {
+  category:    { label: '品項',  values: ['手鏈','墜子','耳釘','項鏈','胸針','戒指','手鐲','其他'] },
+  gemstone:    { label: '寶石',  values: ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','珍珠','翡翠','其他彩寶','無寶石'] },
+  stone_shape: { label: '形狀',  values: ['橢圓形','圓形','水滴形','心形','方形','長方形','馬眼形','枕形','花形','不規則','無主石'] },
+  stone_size:  { label: '大小',  values: ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉以上'] },
+  style:       { label: '款式',  values: ['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','豪鑲滿鑲鑽'] },
+  color:       { label: '顏色',  values: ['紅色','粉紅色','橙色','黃色','綠色','藍色','紫色','白色','無色透明','黑色','多色'] },
+};
+
+const QUOTE_STEPS = [
+  { field: 'category',    label: '選品項',   canSkip: false },
+  { field: 'stone_size',  label: '主石大小', canSkip: false },
+  { field: 'stone_shape', label: '主石形狀', canSkip: false },
+  { field: 'style',       label: '款式等級', canSkip: false },
+  { field: 'gemstone',    label: '寶石種類', canSkip: true  },
 ];
-const STYLE_LABEL = Object.fromEntries(STYLES.map(s => [s.value, s.label]));
 
-const CAT_ICONS = {
-  '戒指':'💍','手鏈':'📿','墜子':'💎','耳釘':'◈',
-  '項鏈':'○','胸針':'✦','手鐲':'◯','其他':'◆',
-};
-const SHAPE_SYM = {
-  '圓形':'●','橢圓形':'⬬','水滴形':'▼','心形':'♥',
-  '方形':'■','長方形':'▬','馬眼形':'◆','枕形':'▪',
-  '花形':'✿','不規則':'∿','無主石':'○',
-};
-const COLOR_HEX = {
-  '紅色':'#E05252','粉紅色':'#F06090','橙色':'#F09050',
-  '黃色':'#E8C840','綠色':'#4CAF7D','藍綠色':'#3CBCB8',
-  '藍色':'#5B8FE8','紫色':'#9B72CF','白色':'#DEDEDE',
-  '無色透明':'#F0F0F0','黑色':'#333','棕色':'#9B7A5A','多色':'#999',
-};
-
-// ═══ API ═════════════════════════════════════════════════════════════════════
-const api = {
-  get:  p     => fetch(p).then(r => r.ok ? r.json() : Promise.reject(r)),
-  post: (p,b) => fetch(p,{ method:'POST',   headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }).then(r=>r.ok?r.json():Promise.reject(r)),
-  put:  (p,b) => fetch(p,{ method:'PUT',    headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }).then(r=>r.ok?r.json():Promise.reject(r)),
-  del:  p     => fetch(p,{ method:'DELETE' }).then(r=>r.ok?r.json():Promise.reject(r)),
-};
-
-// ═══ useToast ════════════════════════════════════════════════════════════════
-function useToast() {
-  const [toast, setToast] = useState({ msg:'', show:false });
-  const tid = useRef(null);
-  const showToast = useCallback(msg => {
-    clearTimeout(tid.current);
-    setToast({ msg, show:true });
-    tid.current = setTimeout(() => setToast(s => ({ ...s, show:false })), 2200);
-  }, []);
-  return { toast, showToast };
-}
-
-// ═══ SVG Icons ═══════════════════════════════════════════════════════════════
-const IconGrid = () => (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
-    <rect x="2" y="2" width="8" height="8" rx="2"/>
-    <rect x="12" y="2" width="8" height="8" rx="2"/>
-    <rect x="2" y="12" width="8" height="8" rx="2"/>
-    <rect x="12" y="12" width="8" height="8" rx="2"/>
-  </svg>
-);
-const IconChat = () => (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
-    <path d="M11 2.5C6.58 2.5 3 5.63 3 9.5c0 1.9.8 3.62 2.1 4.87L4.5 18l4.16-1.02A8.5 8.5 0 0011 17.5c4.42 0 8-3.13 8-7s-3.58-8-8-8z"/>
-  </svg>
-);
-const IconList = () => (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
-    <rect x="3" y="4.5" width="16" height="2" rx="1"/>
-    <rect x="3" y="10"  width="16" height="2" rx="1"/>
-    <rect x="3" y="15.5" width="11" height="2" rx="1"/>
-  </svg>
-);
-const IconPerson = () => (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
-    <circle cx="11" cy="7.5" r="3.5"/>
-    <path fillRule="evenodd" d="M11 13c-3.87 0-7 2.46-7 5.5h14c0-3.04-3.13-5.5-7-5.5z"/>
-  </svg>
-);
-
-// ═══ JewelryPhoto ════════════════════════════════════════════════════════════
-function JewelryPhoto({ photo, style: s, className }) {
-  const [err, setErr] = useState(false);
-  const src = photo?.filename ? `/static/thumb/${photo.filename}` : null;
-  if (src && !err)
-    return <img src={src} style={s} className={className} onError={() => setErr(true)} alt="" />;
+/* ─── Icons ───────────────────────────────────────────── */
+function IconBrowse() {
   return (
-    <div style={{ ...s, display:'flex', alignItems:'center', justifyContent:'center',
-                  background:'#EBEBEB', fontSize:22 }} className={className}>
-      {CAT_ICONS[photo?.category] || '💎'}
-    </div>
+    <svg viewBox="0 0 24 24" style={{width:22,height:22,stroke:'currentColor',fill:'none',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round'}}>
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  );
+}
+function IconQuote() {
+  return (
+    <svg viewBox="0 0 24 24" style={{width:22,height:22,stroke:'currentColor',fill:'none',strokeWidth:1.8,strokeLinecap:'round',strokeLinejoin:'round'}}>
+      <circle cx="12" cy="12" r="9"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="15" x2="12.01" y2="15"/>
+    </svg>
   );
 }
 
-// ═══ BottomSheet ═════════════════════════════════════════════════════════════
-function BottomSheet({ title, onClose, children }) {
+/* ─── Sheet ───────────────────────────────────────────── */
+function Sheet({ title, onClose, children }) {
   return (
-    <div className="sheet-overlay" onClick={onClose}>
-      <div className="sheet-body hide-scroll" onClick={e => e.stopPropagation()}>
+    <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="sheet">
         <div className="sheet-handle" />
-        <div className="sheet-title">{title}</div>
-        {children}
+        <div className="sheet-header">
+          <span className="sheet-title">{title}</span>
+          <button className="sheet-close" onClick={onClose}>×</button>
+        </div>
+        <div className="sheet-body">{children}</div>
       </div>
     </div>
   );
 }
 
-// ═══ FilterRow ═══════════════════════════════════════════════════════════════
-const FILTER_DEFS = [
-  { key:'category',    label:'品項', opts:CATEGORIES,             display: v => v },
-  { key:'gemstone',    label:'寶石', opts:GEMSTONES,              display: v => v },
-  { key:'stone_shape', label:'形狀', opts:STONE_SHAPES,           display: v => (SHAPE_SYM[v]||'') + ' ' + v },
-  { key:'stone_size',  label:'大小', opts:STONE_SIZES,            display: v => v },
-  { key:'color',       label:'顏色', opts:COLORS,                 display: v => v },
-  { key:'style',       label:'款式', opts:STYLES.map(s=>s.value), display: v => STYLE_LABEL[v]||v },
-];
-
-function FilterRow({ filters, onChange }) {
-  const [sheet, setSheet] = useState(null);
-  const def = FILTER_DEFS.find(d => d.key === sheet);
-  const hasActive = Object.values(filters).some(Boolean);
-
+/* ─── Filter sheet ────────────────────────────────────── */
+function FilterSheet({ field, current, onSelect, onClose }) {
+  const cfg = CFG[field];
   return (
-    <>
-      <div className="filter-row hide-scroll">
-        {hasActive && (
-          <button className="chip clear" onClick={() => onChange({})}>清除</button>
-        )}
-        {FILTER_DEFS.map(d => {
-          const v = filters[d.key];
-          return (
-            <button key={d.key} className={`chip ${v ? 'active' : ''}`} onClick={() => setSheet(d.key)}>
-              {v ? d.display(v) : `${d.label} ▾`}
-            </button>
-          );
-        })}
-      </div>
-
-      {sheet && def && (
-        <BottomSheet title={def.label} onClose={() => setSheet(null)}>
-          <div className="sheet-options">
-            {filters[sheet] && (
-              <button className="chip clear btn-sm"
-                onClick={() => { onChange({ ...filters, [sheet]: null }); setSheet(null); }}>
-                清除篩選
-              </button>
-            )}
-            {def.opts.map(opt => (
-              <button key={opt}
-                className={`chip ${filters[sheet] === opt ? 'active' : ''}`}
-                onClick={() => { onChange({ ...filters, [sheet]: opt }); setSheet(null); }}
-                style={{ gap:5 }}>
-                {sheet === 'color' && COLOR_HEX[opt] && (
-                  <span className="chip-dot" style={{ background:COLOR_HEX[opt], border:'1px solid rgba(0,0,0,0.1)' }} />
-                )}
-                {sheet === 'stone_shape' && SHAPE_SYM[opt] && <span>{SHAPE_SYM[opt]}</span>}
-                {sheet === 'style' ? (STYLE_LABEL[opt] || opt) : opt}
-              </button>
-            ))}
-          </div>
-        </BottomSheet>
+    <Sheet title={'選擇' + cfg.label} onClose={onClose}>
+      {current && (
+        <div className="sheet-item clear-item" onClick={() => { onSelect(null); onClose(); }}>
+          清除篩選（顯示全部）
+        </div>
       )}
-    </>
+      {cfg.values.map(v => (
+        <div key={v} className={'sheet-item' + (current === v ? ' selected' : '')}
+          onClick={() => { onSelect(v); onClose(); }}>
+          <span>{v}</span>
+          {current === v && <span style={{color:'var(--accent)'}}>✓</span>}
+        </div>
+      ))}
+    </Sheet>
   );
 }
 
-// ═══ Photo Detail Modal ═══════════════════════════════════════════════════════
-function PhotoDetailModal({ photo, onClose, onUseForQuote, onFindSimilar }) {
-  const attrs = [
-    photo.category, photo.gemstone, photo.stone_shape,
-    photo.stone_size, photo.color, STYLE_LABEL[photo.style] || photo.style,
-  ].filter(v => v && v !== '未定' && v !== '無寶石');
-
+/* ─── Photo detail sheet ──────────────────────────────── */
+function PhotoDetail({ photo, onClose, onSimilar, onQuote }) {
+  const tags = [photo.category, photo.gemstone, photo.stone_shape, photo.stone_size, photo.style, photo.color, photo.material]
+    .filter(v => v && v !== '未定');
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-body" style={{ maxHeight:'88%', paddingTop:0 }} onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle" />
-        <div style={{ borderRadius:14, overflow:'hidden', aspectRatio:'1', background:'#EBEBEB', marginBottom:14 }}>
-          <JewelryPhoto photo={photo} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-        </div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:18 }}>
-          {attrs.map((a,i) => <span key={i} className="tag">{a}</span>)}
-          {photo.price_estimate_low > 0 && (
-            <span className="tag" style={{ background:'#F0F0F0', fontWeight:600 }}>
-              NT${(photo.price_estimate_low/10000).toFixed(1)}–{(photo.price_estimate_high/10000).toFixed(1)}萬
-            </span>
-          )}
-        </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button className="btn btn-secondary btn-full" onClick={onFindSimilar}>找相似款</button>
-          <button className="btn btn-primary btn-full" onClick={onUseForQuote}>用此估價</button>
-        </div>
+    <Sheet title="款式詳情" onClose={onClose}>
+      <img className="detail-img" src={photo.full_url} alt="" loading="lazy" />
+      <div className="detail-tags">
+        {tags.map((t, i) => <span key={i} className="tag">{t}</span>)}
+        {photo.price_band && <span className="tag" style={{color:'var(--text2)'}}>{photo.price_band}</span>}
       </div>
-    </div>
+      <div className="detail-actions">
+        <button className="btn btn-outline" onClick={() => { onClose(); onSimilar(photo); }}>找相似</button>
+        <button className="btn btn-primary" onClick={() => { onClose(); onQuote(photo); }}>用此估價</button>
+      </div>
+    </Sheet>
   );
 }
 
-// ═══ Browse Screen ════════════════════════════════════════════════════════════
-function BrowseScreen({ onUseForQuote }) {
-  const [filters, setFilters] = useState({});
-  const [photos, setPhotos]   = useState([]);
-  const [page, setPage]       = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [detail, setDetail]   = useState(null);
-  const [similar, setSimilar] = useState(null);
-  const sentinelRef           = useRef(null);
-  const filtersRef            = useRef(filters);
-  filtersRef.current          = filters;
+/* ─── Similar sheet ───────────────────────────────────── */
+function SimilarSheet({ anchor, onClose, onSelectPhoto }) {
+  const [items, setItems] = useState(null);
+  useEffect(() => {
+    fetch('/api/photos/' + anchor.id + '/similar?limit=12')
+      .then(r => r.json())
+      .then(d => setItems(d.similar || []))
+      .catch(() => setItems([]));
+  }, [anchor.id]);
+  return (
+    <Sheet title={'相似款 · ' + (anchor.category || '')} onClose={onClose}>
+      {items === null
+        ? <div className="loading-row">載入中…</div>
+        : items.length === 0
+          ? <div className="empty-state">找不到相似款</div>
+          : <div className="similar-grid">
+              {items.map(p => (
+                <img key={p.id} src={p.thumb_url} alt="" loading="lazy"
+                  onClick={() => { onClose(); onSelectPhoto(p); }} />
+              ))}
+            </div>
+      }
+    </Sheet>
+  );
+}
 
-  const buildQuery = useCallback((f, p) => {
-    const params = new URLSearchParams({ page: p });
-    Object.entries(f).forEach(([k, v]) => { if (v) params.set(k, v); });
-    return `/api/photos?${params}`;
-  }, []);
+/* ─── Browse tab ──────────────────────────────────────── */
+function BrowseTab({ onQuote }) {
+  const [photos, setPhotos]     = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [filters, setFilters]   = useState({});
+  const [openFilter, setOpenF]  = useState(null);
+  const [detail, setDetail]     = useState(null);
+  const [similar, setSimilar]   = useState(null);
 
-  const load = useCallback(async (f, p, reset = false) => {
-    if (loading) return;
+  // Refs so IntersectionObserver never needs to be recreated
+  const loadingRef  = useRef(false);
+  const pageRef     = useRef(1);
+  const hasMoreRef  = useRef(true);
+  const filtersRef  = useRef({});
+  const sentinelRef = useRef(null);
+  const fetchRef    = useRef(null);
+
+  // Define fetch function, update fetchRef every render
+  const doFetch = async () => {
+    if (loadingRef.current || !hasMoreRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     try {
-      const data = await api.get(buildQuery(f, p));
+      const qs = new URLSearchParams({ page: pageRef.current, sort: 'random' });
+      Object.entries(filtersRef.current).forEach(([k, v]) => v && qs.set(k, v));
+      const res  = await fetch('/api/photos?' + qs);
+      const data = await res.json();
       const list = data.photos || [];
-      setPhotos(prev => reset ? list : [...prev, ...list]);
-      setHasMore(data.has_more);
-      setPage(data.page + 1);
-    } catch {}
-    setLoading(false);
-  }, [loading, buildQuery]);
+      if (pageRef.current === 1) setPhotos(list);
+      else setPhotos(prev => [...prev, ...list]);
+      hasMoreRef.current = !!data.has_more;
+      pageRef.current += 1;
+    } catch(e) {
+      hasMoreRef.current = false;
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
+    }
+  };
+  fetchRef.current = doFetch;
 
+  // Observer: set up once, empty deps → never recreated → no infinite loop
   useEffect(() => {
-    setSimilar(null); setPhotos([]); setPage(1); setHasMore(true);
-    load(filters, 1, true);
-  }, [JSON.stringify(filters)]);
-
-  useEffect(() => {
-    if (!sentinelRef.current) return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting && hasMore && !loading) load(filtersRef.current, page); },
-      { threshold: 0.1 }
+      ([e]) => { if (e.isIntersecting) fetchRef.current?.(); },
+      { rootMargin: '300px' }
     );
-    obs.observe(sentinelRef.current);
+    obs.observe(sentinel);
     return () => obs.disconnect();
-  }, [hasMore, loading, page, load]);
+  }, []);
 
-  const loadSimilar = async photo => {
-    setLoading(true); setSimilar(photo); setDetail(null);
-    try {
-      const data = await api.get(`/api/photos/${photo.id}/similar?limit=18`);
-      setPhotos(Array.isArray(data) ? data : (data.similar || data.results || []));
-      setHasMore(false);
-    } catch { setPhotos([]); }
-    setLoading(false);
+  // Initial load
+  useEffect(() => { fetchRef.current?.(); }, []);
+
+  const applyFilter = (field, value) => {
+    const next = { ...filtersRef.current };
+    if (value) next[field] = value; else delete next[field];
+    filtersRef.current = next;
+    setFilters({ ...next });
+    pageRef.current    = 1;
+    hasMoreRef.current = true;
+    loadingRef.current = false;
+    setPhotos([]);
+    fetchRef.current?.();
   };
 
-  const clearSimilar = () => {
-    setSimilar(null); setPhotos([]); setPage(1); setHasMore(true);
-    load(filters, 1, true);
+  const clearAll = () => {
+    filtersRef.current = {};
+    setFilters({});
+    pageRef.current    = 1;
+    hasMoreRef.current = true;
+    loadingRef.current = false;
+    setPhotos([]);
+    fetchRef.current?.();
   };
 
-  const hasFilters = Object.values(filters).some(Boolean);
+  const hasFilters = Object.keys(filters).length > 0;
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', flex:1, paddingBottom:80, overflow:'hidden' }}>
-      <div className="nav-bar">
-        <div className="nav-title">{similar ? '相似款式' : '找款'}</div>
-        {similar
-          ? <button className="nav-btn-ghost" onClick={clearSimilar}>← 返回</button>
-          : null}
-      </div>
-
-      {!similar && <FilterRow filters={filters} onChange={setFilters} />}
-
-      <div className="scroll-view hide-scroll">
-        {!loading && photos.length > 0 && (
-          <div style={{ padding:'6px 16px 4px', fontSize:11, color:'var(--text-3)' }}>
-            {similar
-              ? `與「${similar.category||''}」相似 · ${photos.length} 件`
-              : `${photos.length} 件${hasFilters ? '符合篩選' : ''}`}
-          </div>
+    <div className="screen">
+      <div className="filter-row">
+        {Object.entries(CFG).map(([field, cfg]) => (
+          <button key={field}
+            className={'chip' + (filters[field] ? ' active' : '')}
+            onClick={() => setOpenF(field)}>
+            {filters[field] || cfg.label} {filters[field] ? '✕' : '▾'}
+          </button>
+        ))}
+        {hasFilters && (
+          <button className="chip-clear" onClick={clearAll}>清除全部</button>
         )}
-
-        {loading && photos.length === 0 ? (
-          <div style={{ display:'flex', justifyContent:'center', paddingTop:80 }}>
-            <div className="spinner" />
-          </div>
-        ) : photos.length === 0 && !loading ? (
-          <div className="empty">
-            <div className="empty-icon">🔍</div>
-            <div className="empty-text">{hasFilters ? '沒有符合條件的照片' : '尚無珠寶照片'}</div>
-          </div>
-        ) : (
-          <div className="photo-grid">
-            {photos.map(p => {
-              const label = [
-                p.category && p.category !== '未定' ? p.category : null,
-                p.gemstone && p.gemstone !== '無寶石' && p.gemstone !== '未定' ? p.gemstone : null,
-              ].filter(Boolean).join(' · ');
-              return (
-                <div key={p.id} className="photo-cell" onClick={() => setDetail(p)}>
-                  <JewelryPhoto photo={p} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                  {label && (
-                    <div className="photo-cell-info">
-                      <div className="photo-cell-label">{label}</div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div ref={sentinelRef} style={{ height:56, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          {loading && photos.length > 0 && <div className="spinner" style={{ width:20, height:20 }} />}
-          {!hasMore && photos.length > 0 && (
-            <span style={{ fontSize:11, color:'var(--text-3)' }}>共 {photos.length} 件</span>
-          )}
-        </div>
       </div>
 
-      {detail && (
-        <PhotoDetailModal
-          photo={detail}
-          onClose={() => setDetail(null)}
-          onFindSimilar={() => loadSimilar(detail)}
-          onUseForQuote={() => { onUseForQuote(detail); setDetail(null); }}
-        />
-      )}
-    </div>
-  );
-}
-
-// ═══ Quote Screen ══════════════════════════════════════════════════════════════
-const QUOTE_STEPS = 5;
-
-function StepNav({ current }) {
-  return (
-    <div className="step-nav">
-      <div className="step-dots">
-        {Array.from({ length: QUOTE_STEPS }).map((_, i) => (
-          <div key={i} className={`step-dot ${i < current - 1 ? 'done' : i === current - 1 ? 'current' : ''}`} />
-        ))}
-      </div>
-      <span style={{ fontSize:11, color:'var(--text-3)', fontWeight:500 }}>{current} / {QUOTE_STEPS}</span>
-    </div>
-  );
-}
-
-function Step1Category({ value, onChange }) {
-  return (
-    <div style={{ padding:'0 16px' }}>
-      <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>選品項</div>
-      <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:16 }}>要估哪類珠寶？</div>
-      <div className="option-grid" style={{ gridTemplateColumns:'repeat(4,1fr)' }}>
-        {CATEGORIES.map(cat => (
-          <button key={cat} className={`option-btn ${value===cat?'selected':''}`} onClick={() => onChange(cat)}>
-            <div className="opt-icon">{CAT_ICONS[cat]||'💎'}</div>
-            <div className="opt-label">{cat}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Step2Size({ value, onChange }) {
-  return (
-    <div style={{ padding:'0 16px' }}>
-      <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>主石大小</div>
-      <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:16 }}>主要寶石的克拉數</div>
-      <div className="option-grid" style={{ gridTemplateColumns:'repeat(3,1fr)' }}>
-        {STONE_SIZES.map(sz => (
-          <button key={sz} className={`option-btn ${value===sz?'selected':''}`} onClick={() => onChange(sz)}>
-            <div className="opt-label" style={{ fontSize:13 }}>{sz}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Step3Shape({ value, onChange }) {
-  return (
-    <div style={{ padding:'0 16px' }}>
-      <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>主石形狀</div>
-      <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:16 }}>寶石的切割形狀</div>
-      <div className="option-grid" style={{ gridTemplateColumns:'repeat(4,1fr)' }}>
-        {STONE_SHAPES.map(sh => (
-          <button key={sh} className={`option-btn ${value===sh?'selected':''}`} onClick={() => onChange(sh)}>
-            <div className="opt-icon">{SHAPE_SYM[sh]||'◆'}</div>
-            <div className="opt-label">{sh}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Step4Style({ value, onChange }) {
-  return (
-    <div style={{ padding:'0 16px' }}>
-      <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>款式等級</div>
-      <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:16 }}>鑲嵌工藝複雜程度</div>
-      <div className="option-grid" style={{ gridTemplateColumns:'1fr 1fr' }}>
-        {STYLES.map(s => (
-          <button key={s.value}
-            className={`option-btn ${value===s.value?'selected':''}`}
-            style={{ padding:'16px 12px', alignItems:'flex-start', textAlign:'left' }}
-            onClick={() => onChange(s.value)}>
-            <div className="opt-label" style={{ fontSize:14, fontWeight:600 }}>{s.label}</div>
-            <div className="opt-sub" style={{ marginTop:5, lineHeight:1.4 }}>{s.desc}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Step5Gemstone({ gemstone, color, onChangeGemstone, onChangeColor }) {
-  return (
-    <div style={{ padding:'0 16px' }}>
-      <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>寶石與顏色</div>
-      <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:14 }}>選填，可提升估價精準度</div>
-
-      <div style={{ fontSize:11, fontWeight:600, marginBottom:8, color:'var(--text-2)', textTransform:'uppercase', letterSpacing:'0.04em' }}>寶石種類</div>
-      <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:20 }}>
-        {GEMSTONES.map(g => (
-          <button key={g} className={`chip ${gemstone===g?'active':''}`}
-            onClick={() => onChangeGemstone(gemstone===g ? null : g)}>
-            {g}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ fontSize:11, fontWeight:600, marginBottom:8, color:'var(--text-2)', textTransform:'uppercase', letterSpacing:'0.04em' }}>顏色</div>
-      <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-        {COLORS.map(c => (
-          <button key={c} className={`chip ${color===c?'active':''}`}
-            onClick={() => onChangeColor(color===c ? null : c)} style={{ gap:5 }}>
-            <span className="chip-dot" style={{ background:COLOR_HEX[c]||'#999', border:'1px solid rgba(0,0,0,0.1)' }} />
-            {c}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function QuoteResult({ data, result, onSaveAsTx, onReset }) {
-  const summaryParts = [
-    data.category, data.stone_size, data.stone_shape,
-    data.gemstone, STYLE_LABEL[data.style]||data.style, data.color,
-  ].filter(Boolean);
-
-  const fmt = n => n >= 10000
-    ? `${(n/10000).toFixed(1)}萬`
-    : n.toLocaleString();
-
-  return (
-    <div className="slide-up">
-      {/* Summary chips */}
-      <div style={{ padding:'4px 16px 12px', display:'flex', flexWrap:'wrap', gap:5 }}>
-        {summaryParts.map((p,i) => (
-          <span key={i} className="tag">{p}</span>
-        ))}
-      </div>
-
-      {/* Price card */}
-      {result?.estimated ? (
-        <div className="price-card">
-          <div className="price-card-label">參考成交區間</div>
-          <div className="price-card-range">
-            <div className="price-card-num">NT${fmt(result.price_low)}</div>
-            <div className="price-card-sep">–</div>
-            <div className="price-card-num">{fmt(result.price_high)}</div>
-          </div>
-          <div className="price-card-source">參考 {result.sample_count} 筆成交紀錄 · {result.source}</div>
-        </div>
-      ) : (
-        <div style={{ margin:'0 16px 14px' }} className="card">
-          <div className="empty" style={{ padding:'28px 16px' }}>
-            <div className="empty-icon" style={{ fontSize:28 }}>📊</div>
-            <div className="empty-text">{result?.message || '成交紀錄不足，無法推估'}</div>
-            <div className="empty-hint">新增成交紀錄後可自動估價</div>
-          </div>
-        </div>
-      )}
-
-      {/* Matching photos */}
-      {result?.matching_photos?.length > 0 && (
-        <div style={{ padding:'0 16px 12px' }}>
-          <div className="section-label">相似款式參考（{result.matching_photos.length} 件）</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:3 }}>
-            {result.matching_photos.slice(0,9).map((p,i) => (
-              <div key={p.id||i} style={{ aspectRatio:'1', borderRadius:8, overflow:'hidden', background:'#EBEBEB' }}>
-                <JewelryPhoto photo={p} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+      <div className="photo-grid-wrap">
+        <div className="photo-grid">
+          {photos.map(p => (
+            <div key={p.id} className="photo-card" onClick={() => setDetail(p)}>
+              <img src={p.thumb_url} alt="" loading="lazy" />
+              <div className="photo-card-label">
+                {[p.category, p.gemstone].filter(v => v && v !== '未定').join(' · ')}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div style={{ padding:'4px 16px 0', display:'flex', gap:8 }}>
-        <button className="btn btn-secondary" style={{ flex:1 }} onClick={onReset}>重新估價</button>
-        <button className="btn btn-primary"   style={{ flex:1 }} onClick={onSaveAsTx}>新增成交</button>
-      </div>
-    </div>
-  );
-}
-
-function FieldSelectSheet({ field, value, onChange, onClose }) {
-  const optMap = {
-    category:    CATEGORIES,
-    stone_size:  STONE_SIZES,
-    stone_shape: STONE_SHAPES,
-    style:       STYLES.map(s => s.value),
-    gemstone:    GEMSTONES,
-    color:       COLORS,
-  };
-  const titles = {
-    category:'選品項', stone_size:'選主石大小', stone_shape:'選主石形狀',
-    style:'選款式', gemstone:'選寶石（選填）', color:'選顏色（選填）',
-  };
-  const opts = optMap[field] || [];
-  const display = opt => {
-    if (field === 'style')       return STYLES.find(s=>s.value===opt)?.label + '  ' + STYLES.find(s=>s.value===opt)?.desc || opt;
-    if (field === 'stone_shape') return (SHAPE_SYM[opt]||'') + ' ' + opt;
-    if (field === 'category')    return (CAT_ICONS[opt]||'') + ' ' + opt;
-    return opt;
-  };
-  return (
-    <div className="sheet-overlay" onClick={onClose}>
-      <div className="sheet" onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle" />
-        <div className="sheet-title">{titles[field]}</div>
-        <div className="sheet-body">
-          {opts.map(opt => (
-            <div key={opt} className={'sheet-opt' + (value === opt ? ' active' : '')}
-              onClick={() => onChange(opt)}>
-              {display(opt)}
             </div>
           ))}
         </div>
+        {loading && <div className="loading-row">載入中…</div>}
+        {!loading && photos.length === 0 && !hasMoreRef.current && (
+          <div className="empty-state">
+            沒有符合條件的照片<br/>
+            <span style={{fontSize:12}}>試著移除部分篩選條件</span>
+          </div>
+        )}
+        <div ref={sentinelRef} className="sentinel" />
       </div>
+
+      {openFilter && (
+        <FilterSheet field={openFilter} current={filters[openFilter] || null}
+          onSelect={v => applyFilter(openFilter, v)}
+          onClose={() => setOpenF(null)} />
+      )}
+
+      {detail && !similar && (
+        <PhotoDetail photo={detail}
+          onClose={() => setDetail(null)}
+          onSimilar={p => { setDetail(null); setSimilar(p); }}
+          onQuote={p => { setDetail(null); onQuote(p); }} />
+      )}
+
+      {similar && (
+        <SimilarSheet anchor={similar}
+          onClose={() => setSimilar(null)}
+          onSelectPhoto={p => { setSimilar(null); setDetail(p); }} />
+      )}
     </div>
   );
 }
 
-function QuoteScreen({ initialData, onClearInitial, showToast }) {
-  const [step, setStep]           = useState(null);
-  const [data, setData]           = useState({});
-  const [result, setResult]       = useState(null);
-  const [loading, setLoading]     = useState(false);
-  const [recentQuotes, setRecentQuotes] = useState([]);
-  const [showNewTx, setShowNewTx] = useState(false);
-  const [sheetField, setSheetField] = useState(null);
+/* ─── Attr edit sheet (from-photo step) ──────────────── */
+function AttrEditSheet({ field, current, onSelect, onClose }) {
+  const cfg = CFG[field];
+  if (!cfg) return null;
+  return (
+    <Sheet title={'修改' + cfg.label} onClose={onClose}>
+      {current && (
+        <div className="sheet-item clear-item" onClick={() => { onSelect(null); onClose(); }}>
+          清除（不限定）
+        </div>
+      )}
+      {cfg.values.map(v => (
+        <div key={v} className={'sheet-item' + (current === v ? ' selected' : '')}
+          onClick={() => { onSelect(v); onClose(); }}>
+          <span>{v}</span>
+          {current === v && <span style={{color:'var(--accent)'}}>✓</span>}
+        </div>
+      ))}
+    </Sheet>
+  );
+}
 
-  const runEstimateWith = useCallback(async (d) => {
-    setLoading(true); setStep('result');
-    try {
-      const params = new URLSearchParams();
-      Object.entries(d).forEach(([k, v]) => { if (v) params.set(k, v); });
-      const res = await api.get(`/api/quotes/estimate-by-attrs?${params}`);
-      setResult(res);
-      setRecentQuotes(prev => [{
-        data: { ...d }, result: res,
-        time: new Date().toLocaleDateString('zh-TW', { month:'numeric', day:'numeric' }),
-      }, ...prev.slice(0, 9)]);
-    } catch { setResult({ estimated:false, message:'網路錯誤，請再試', matching_photos:[] }); }
-    setLoading(false);
-  }, []);
+/* ─── Quote tab ───────────────────────────────────────── */
+function QuoteTab({ initData, onClearInit }) {
+  const [step,      setStep]      = useState('home');
+  const [data,      setData]      = useState({});
+  const [result,    setResult]    = useState(null);
+  const [fetching,  setFetching]  = useState(false);
+  const [editField, setEditField] = useState(null);
 
   useEffect(() => {
-    if (!initialData) return;
-    setData(initialData);
-    onClearInitial?.();
-    // 從照片來的 → 顯示照片 + 讓店員自己確認/調整屬性
-    if (initialData.photo_url) {
+    if (initData) {
+      setData(initData);
       setStep('from-photo');
-    } else {
-      const firstMissing =
-        !initialData.category    ? 1 :
-        !initialData.stone_size  ? 2 :
-        !initialData.stone_shape ? 3 :
-        !initialData.style       ? 4 : 5;
-      setStep(firstMissing);
+      setResult(null);
     }
-  }, [initialData]);
+  }, [initData]);
 
-  const set = (k, v) => setData(d => ({ ...d, [k]: v }));
-
-  const startNew = () => { setData({}); setResult(null); setStep(1); };
+  const startNew = () => {
+    setData({}); setResult(null); setStep(0); onClearInit?.();
+  };
 
   const goBack = () => {
-    if (step === 1 || step === null) { setStep(null); setData({}); }
-    else if (step === 'result')      { setStep(null); }
-    else if (step === 'from-photo')  { setStep(null); setData({}); }
-    else                             { setStep(s => s - 1); }
+    if (step === 'from-photo')                     { setStep('home'); setData({}); onClearInit?.(); }
+    else if (step === 'result')                    { setStep(QUOTE_STEPS.length - 1); }
+    else if (typeof step === 'number' && step > 0) { setStep(step - 1); }
+    else                                           { setStep('home'); }
   };
 
-  const goNext = () => {
-    if (step < QUOTE_STEPS) setStep(s => s + 1);
-    else runEstimateWith(data);
+  const choose = (field, value) => {
+    const next = { ...data, [field]: value };
+    setData(next);
+    const idx = typeof step === 'number' ? step : 0;
+    if (idx + 1 < QUOTE_STEPS.length) setStep(idx + 1);
+    else runEstimate(next);
   };
 
-  const runEstimate = () => runEstimateWith(data);
-
-  const canNext = () => {
-    if (step === 1) return !!data.category;
-    if (step === 2) return !!data.stone_size;
-    if (step === 3) return !!data.stone_shape;
-    if (step === 4) return !!data.style;
-    return true;
+  const runEstimate = async (d) => {
+    setFetching(true);
+    setStep('result');
+    try {
+      const qs = new URLSearchParams();
+      Object.entries(d || data).forEach(([k, v]) => v && qs.set(k, v));
+      const res = await fetch('/api/quotes/estimate-by-attrs?' + qs);
+      setResult(await res.json());
+    } catch(e) {
+      setResult({ estimated: false, message: '網路錯誤', matching_photos: [] });
+    } finally {
+      setFetching(false);
+    }
   };
 
-  const summaryLabel = [data.category, data.stone_size, data.stone_shape, STYLE_LABEL[data.style]||data.style]
-    .filter(Boolean).join(' · ');
+  const fmt = n => n ? 'NT$' + n.toLocaleString() : '—';
 
-  // ── Home view ──
-  if (step === null) {
-    return (
-      <div style={{ display:'flex', flexDirection:'column', flex:1, paddingBottom:80 }}>
-        <div className="nav-bar">
-          <div className="nav-title">估價</div>
+  /* Home */
+  if (step === 'home') return (
+    <div className="screen">
+      <div className="quote-wrap">
+        <div className="quote-hero">
+          <h2>估 價</h2>
+          <p>依款式特徵快速估算參考價格</p>
         </div>
-        <div className="scroll-view hide-scroll" style={{ padding:'6px 16px' }}>
-          <button className="btn btn-primary btn-full"
-            style={{ marginBottom:24, height:52, fontSize:15, borderRadius:14 }}
-            onClick={startNew}>
-            ＋ 開始新估價
-          </button>
-
-          {recentQuotes.length > 0 && (
-            <>
-              <div className="section-label" style={{ padding:'0 0 8px' }}>最近估價</div>
-              <div className="card">
-                {recentQuotes.map((q, i) => {
-                  const label = [q.data.category, q.data.stone_size, q.data.gemstone, STYLE_LABEL[q.data.style]||q.data.style]
-                    .filter(Boolean).join(' · ');
-                  return (
-                    <div key={i} className="quote-item"
-                      onClick={() => { setData(q.data); setResult(q.result); setStep('result'); }}>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div className="quote-label">{label || '未命名估價'}</div>
-                        <div style={{ fontSize:11, color:'var(--text-3)', marginTop:2 }}>{q.time}</div>
-                      </div>
-                      {q.result?.estimated && (
-                        <div className="quote-price">
-                          {(q.result.price_low/10000).toFixed(1)}–{(q.result.price_high/10000).toFixed(1)}萬
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {recentQuotes.length === 0 && (
-            <div className="empty" style={{ padding:'40px 0' }}>
-              <div className="empty-icon">💬</div>
-              <div className="empty-text">選擇條件，30秒找相似案例估價</div>
-            </div>
-          )}
-        </div>
+        <button className="quote-big-btn" onClick={startNew}>＋ 開始估價</button>
       </div>
-    );
-  }
+    </div>
+  );
 
-  // ── From-Photo view ── 照片釘頂，下方調屬性，確認再估
+  /* From-photo */
   if (step === 'from-photo') {
-    const FIELD_DEFS = [
-      { key:'category',    label:'品項',     required:true  },
-      { key:'stone_size',  label:'主石大小',  required:true  },
-      { key:'stone_shape', label:'主石形狀',  required:true  },
-      { key:'style',       label:'款式',     required:true  },
-      { key:'gemstone',    label:'寶石',     required:false },
-      { key:'color',       label:'顏色',     required:false },
-    ];
-    const displayVal = (k, v) => {
-      if (!v) return null;
-      if (k === 'style')       return STYLE_LABEL[v] || v;
-      if (k === 'stone_shape') return (SHAPE_SYM[v]||'') + ' ' + v;
-      return v;
-    };
-    const canEstimate = !!(data.category && data.stone_size && data.stone_shape && data.style);
+    const attrFields = ['category','gemstone','stone_shape','stone_size','style','color'];
     return (
-      <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
-        <div className="nav-bar">
-          <button className="nav-btn-ghost" onClick={goBack}>← 返回</button>
-          <div className="nav-title" style={{ flex:1, textAlign:'center' }}>用此估價</div>
-          <div style={{ width:44 }} />
-        </div>
-
-        {/* 參考照片 */}
-        {data.photo_url && (
-          <div style={{ padding:'0 16px 12px', flexShrink:0 }}>
-            <img src={data.photo_url} alt=""
-              style={{ width:'100%', aspectRatio:'4/3', objectFit:'cover', borderRadius:12, background:'#eee' }} />
+      <div className="screen">
+        <div className="quote-wrap">
+          <div className="step-header">
+            <button className="step-back" onClick={goBack}>←</button>
+            <div className="step-info">
+              <div className="step-num">以照片估價</div>
+              <div className="step-title">確認款式屬性</div>
+            </div>
           </div>
-        )}
-
-        {/* 屬性欄位 */}
-        <div className="scroll-view hide-scroll" style={{ padding:'0 16px', paddingBottom:100 }}>
-          <div className="card" style={{ margin:0, overflow:'hidden' }}>
-            {FIELD_DEFS.map((f, i) => {
-              const val = data[f.key];
-              const disp = displayVal(f.key, val);
-              return (
-                <div key={f.key}
-                  onClick={() => setSheetField(f.key)}
-                  style={{
-                    display:'flex', alignItems:'center', padding:'14px 0',
-                    borderBottom: i < FIELD_DEFS.length-1 ? '1px solid var(--border)' : 'none',
-                    cursor:'pointer', gap:12,
-                  }}>
-                  <span style={{ width:72, fontSize:13, color:'var(--text-3)', flexShrink:0 }}>
-                    {f.label}{!f.required && <span style={{ fontSize:11 }}>（選填）</span>}
-                  </span>
-                  <span style={{ flex:1, fontSize:15, fontWeight: disp ? 500 : 400,
-                    color: disp ? 'var(--text)' : '#bbb' }}>
-                    {disp || '請選擇'}
-                  </span>
-                  <span style={{ color:'var(--text-3)', fontSize:18, lineHeight:1 }}>›</span>
-                </div>
-              );
-            })}
+          {data.photo_url && (
+            <img src={data.photo_url}
+              style={{width:'100%',maxHeight:'50vw',objectFit:'cover',display:'block',background:'#f0f0f0'}}
+              alt="" />
+          )}
+          {attrFields.filter(f => CFG[f]).map(f => (
+            <div key={f} className="attr-row" onClick={() => setEditField(f)}>
+              <span className="attr-label">{CFG[f].label}</span>
+              <span className="attr-value">{data[f] || <span style={{color:'var(--text2)'}}>—</span>}</span>
+              <span className="attr-arrow">›</span>
+            </div>
+          ))}
+          <div style={{padding:'14px 16px 28px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <button className="btn btn-outline" onClick={goBack}>返回</button>
+            <button className="btn btn-primary" onClick={() => runEstimate(data)}>開始估價</button>
           </div>
         </div>
-
-        {/* 估價按鈕 */}
-        <div style={{
-          position:'absolute', bottom:80, left:0, right:0,
-          padding:'10px 16px', background:'rgba(245,245,245,0.96)', backdropFilter:'blur(14px)',
-          borderTop:'1px solid var(--border)',
-        }}>
-          <button className="btn btn-primary btn-full"
-            style={{ height:50, opacity: canEstimate ? 1 : 0.38, fontSize:16 }}
-            disabled={!canEstimate}
-            onClick={() => runEstimateWith(data)}>
-            開始估價
-          </button>
-        </div>
-
-        {sheetField && (
-          <FieldSelectSheet
-            field={sheetField} value={data[sheetField]}
-            onChange={v => { set(sheetField, v); setSheetField(null); }}
-            onClose={() => setSheetField(null)}
-          />
+        {editField && (
+          <AttrEditSheet field={editField} current={data[editField] || null}
+            onSelect={v => setData(prev => { const n={...prev}; if(v) n[editField]=v; else delete n[editField]; return n; })}
+            onClose={() => setEditField(null)} />
         )}
       </div>
     );
   }
 
-  // ── Result view ──
+  /* Step */
+  if (typeof step === 'number') {
+    const s = QUOTE_STEPS[step];
+    const values = CFG[s.field]?.values || [];
+    return (
+      <div className="screen">
+        <div className="quote-wrap">
+          <div className="step-header">
+            <button className="step-back" onClick={goBack}>←</button>
+            <div className="step-info">
+              <div className="step-num">{'步驟 ' + (step + 1) + ' / ' + QUOTE_STEPS.length}</div>
+              <div className="step-title">{s.label}</div>
+            </div>
+          </div>
+          <div className="step-body">
+            <div className="option-grid">
+              {values.map(v => (
+                <button key={v}
+                  className={'option-btn' + (data[s.field] === v ? ' selected' : '')}
+                  onClick={() => choose(s.field, v)}>
+                  {v}
+                </button>
+              ))}
+            </div>
+            {s.canSkip && (
+              <button className="step-skip" onClick={() => {
+                if (step + 1 < QUOTE_STEPS.length) setStep(step + 1);
+                else runEstimate(data);
+              }}>略過 →</button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* Result */
   if (step === 'result') {
+    const tags = ['category','stone_size','stone_shape','style','gemstone','color']
+      .filter(k => data[k]).map(k => data[k]);
     return (
-      <div style={{ display:'flex', flexDirection:'column', flex:1, paddingBottom:80 }}>
-        <div className="nav-bar">
-          <button className="nav-btn-ghost" onClick={goBack}>← 返回</button>
-          <div style={{ flex:1 }}>
-            <div className="nav-title" style={{ textAlign:'center' }}>估價結果</div>
-            {summaryLabel && <div className="nav-sub" style={{ textAlign:'center' }}>{summaryLabel}</div>}
-          </div>
-          <div style={{ width:44 }} />
-        </div>
-        <div className="scroll-view hide-scroll">
-          {loading ? (
-            <div style={{ display:'flex', justifyContent:'center', paddingTop:80 }}>
-              <div className="spinner" />
+      <div className="screen">
+        <div className="quote-wrap">
+          <div className="result-top">
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:14}}>
+              <button className="step-back" onClick={goBack}>←</button>
+              <span style={{fontWeight:600,fontSize:16}}>估價結果</span>
             </div>
-          ) : (
-            <QuoteResult
-              data={data} result={result}
-              onReset={() => { setStep(null); setData({}); setResult(null); }}
-              onSaveAsTx={() => setShowNewTx(true)}
-            />
+            <div className="result-chips">
+              {tags.map((t, i) => <span key={i} className="tag">{t}</span>)}
+            </div>
+            {fetching
+              ? <div className="loading-row">計算中…</div>
+              : result?.estimated
+                ? <>
+                    <div className="price-range">{fmt(result.price_low)} ~ {fmt(result.price_high)}</div>
+                    <div className="price-note">參考 {result.sample_count} 筆歷史成交 · {result.source}</div>
+                  </>
+                : <div className="no-estimate">{result?.message || '成交紀錄不足，無法推估'}</div>
+            }
+          </div>
+          {result?.matching_photos?.length > 0 && (
+            <div className="result-photos">
+              <h3>相似參考款（{result.matching_photos.length} 張）</h3>
+              <div className="result-grid">
+                {result.matching_photos.map(p => (
+                  <img key={p.id} src={'/static/thumb/' + p.filename} alt="" loading="lazy" />
+                ))}
+              </div>
+            </div>
           )}
+          <div style={{padding:'16px 16px 28px'}}>
+            <button className="quote-big-btn" style={{margin:0,width:'100%'}} onClick={startNew}>
+              重新估價
+            </button>
+          </div>
         </div>
-        {showNewTx && (
-          <TxEditModal
-            tx={{
-              item_name:  summaryLabel,
-              category:   data.category,
-              gemstone:   data.gemstone,
-              stone_spec: [data.stone_size, data.stone_shape].filter(Boolean).join(' '),
-              price:      result?.estimated ? Math.round((result.price_low + result.price_high) / 2) : '',
-            }}
-            onSave={async form => {
-              try { await api.post('/api/transactions', form); showToast('已新增成交紀錄'); }
-              catch { showToast('新增失敗'); }
-              setShowNewTx(false);
-            }}
-            onClose={() => setShowNewTx(false)}
-          />
-        )}
       </div>
     );
   }
 
-  // ── Step view ──
-  return (
-    <div style={{ display:'flex', flexDirection:'column', flex:1, paddingBottom:80 }}>
-      <div className="nav-bar">
-        <button className="nav-btn-ghost" onClick={goBack}>
-          {step === 1 ? '取消' : '← 返回'}
-        </button>
-        <div style={{ flex:1 }} />
-      </div>
-      <StepNav current={step} />
-
-      <div className="scroll-view hide-scroll" style={{ paddingBottom:100 }}>
-        {step === 1 && <Step1Category value={data.category}   onChange={v => set('category', v)} />}
-        {step === 2 && <Step2Size     value={data.stone_size}  onChange={v => set('stone_size', v)} />}
-        {step === 3 && <Step3Shape    value={data.stone_shape} onChange={v => set('stone_shape', v)} />}
-        {step === 4 && <Step4Style    value={data.style}       onChange={v => set('style', v)} />}
-        {step === 5 && (
-          <Step5Gemstone
-            gemstone={data.gemstone} color={data.color}
-            onChangeGemstone={v => set('gemstone', v)}
-            onChangeColor={v => set('color', v)}
-          />
-        )}
-      </div>
-
-      <div style={{
-        position:'absolute', bottom:80, left:0, right:0,
-        padding:'10px 16px', background:'rgba(245,245,245,0.96)', backdropFilter:'blur(14px)',
-        borderTop:'1px solid var(--border)', display:'flex', gap:8,
-      }}>
-        {step === 5 && (
-          <button className="btn btn-secondary" style={{ flex:1 }} onClick={runEstimate}>
-            跳過 → 估價
-          </button>
-        )}
-        <button
-          className="btn btn-primary"
-          style={{ flex:2, opacity: canNext() ? 1 : 0.38 }}
-          onClick={goNext}
-          disabled={!canNext()}>
-          {step === QUOTE_STEPS ? '開始估價' : '下一步 →'}
-        </button>
-      </div>
-    </div>
-  );
+  return null;
 }
 
-// ═══ Transaction Edit Modal ═══════════════════════════════════════════════════
-function TxEditModal({ tx, onSave, onClose }) {
-  const isNew = !tx?.id;
-  const [form, setForm] = useState({
-    item_name:    tx?.item_name    || '',
-    category:     tx?.category     || '',
-    material:     tx?.material     || '',
-    gemstone:     tx?.gemstone     || '',
-    stone_spec:   tx?.stone_spec   || '',
-    metal_weight: tx?.metal_weight || '',
-    price:        tx?.price        || '',
-    sale_date:    tx?.sale_date    || new Date().toISOString().slice(0,10),
-    notes:        tx?.notes        || '',
-    client_name:  tx?.client_name  || '',
-  });
-  const set = (k,v) => setForm(f => ({ ...f, [k]:v }));
-
-  const handleSave = () => {
-    if (!form.item_name.trim()) return;
-    const price = parseInt(form.price);
-    if (isNaN(price) || price <= 0) return;
-    onSave({ ...form, price, metal_weight: form.metal_weight ? parseFloat(form.metal_weight) : null });
-  };
-
-  const F = ({ k, label, opts={} }) => (
-    <div className="form-group">
-      <label className="form-label">{label}</label>
-      <input className="form-input" value={form[k]} placeholder={opts.placeholder||''} type={opts.type||'text'}
-        onChange={e => set(k, e.target.value)} />
-    </div>
-  );
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-body" onClick={e => e.stopPropagation()}>
-        <div className="sheet-handle" />
-        <div style={{ fontSize:16, fontWeight:600, marginBottom:16 }}>{isNew ? '新增成交記錄' : '編輯成交記錄'}</div>
-        <F k="item_name" label="品名 *" opts={{ placeholder:'例：玫瑰金藍寶石墜子' }} />
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-          <F k="category"     label="品類"       opts={{ placeholder:'墜子 / 戒指…' }} />
-          <F k="material"     label="材質"       opts={{ placeholder:'18K金 / 鉑金…' }} />
-          <F k="gemstone"     label="寶石"       opts={{ placeholder:'藍寶石 / 鑽石…' }} />
-          <F k="stone_spec"   label="石材規格"   opts={{ placeholder:'3ct 水滴形…' }} />
-          <F k="metal_weight" label="金重 (g)"   opts={{ placeholder:'3.2', type:'number' }} />
-          <F k="price"        label="成交價 NT$ *" opts={{ placeholder:'280000', type:'number' }} />
-          <F k="sale_date"    label="成交日期"   opts={{ type:'date' }} />
-          <F k="client_name"  label="客戶名稱"   opts={{ placeholder:'選填' }} />
-        </div>
-        <F k="notes" label="備註" opts={{ placeholder:'備忘…' }} />
-        <div style={{ display:'flex', gap:8, marginTop:8 }}>
-          <button className="btn btn-primary"   style={{ flex:1 }} onClick={handleSave}>儲存</button>
-          <button className="btn btn-secondary" onClick={onClose}>取消</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ═══ Transactions Screen ══════════════════════════════════════════════════════
-function TransactionsScreen({ showToast }) {
-  const [txList, setTxList]   = useState([]);
-  const [benchmarks, setBM]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editTx, setEditTx]   = useState(null);
-  const [showNew, setShowNew] = useState(false);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const [txs, bms] = await Promise.all([
-        api.get('/api/transactions'),
-        api.get('/api/transactions/benchmarks'),
-      ]);
-      setTxList(Array.isArray(txs) ? txs : []);
-      setBM(Array.isArray(bms) ? bms : []);
-    } catch {}
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const save = async form => {
-    try {
-      if (editTx?.id) {
-        const u = await api.put(`/api/transactions/${editTx.id}`, form);
-        setTxList(p => p.map(t => t.id === u.id ? u : t));
-        showToast('已更新');
-      } else {
-        const c = await api.post('/api/transactions', form);
-        setTxList(p => [c, ...p]);
-        showToast('已新增');
-      }
-    } catch { showToast('操作失敗'); }
-    setEditTx(null); setShowNew(false);
-  };
-
-  const del = async id => {
-    try {
-      await api.del(`/api/transactions/${id}`);
-      setTxList(p => p.filter(t => t.id !== id));
-      setEditTx(null); showToast('已刪除');
-    } catch {}
-  };
-
-  const maxAvg = benchmarks.length ? Math.max(...benchmarks.map(b => b.avg_price)) : 1;
-
-  return (
-    <div style={{ display:'flex', flexDirection:'column', flex:1, paddingBottom:80 }}>
-      <div className="nav-bar">
-        <div className="nav-title">成交紀錄</div>
-        <button className="nav-btn" onClick={() => setShowNew(true)}>＋ 新增</button>
-      </div>
-
-      <div className="scroll-view hide-scroll">
-        {benchmarks.length > 0 && (
-          <div style={{ background:'var(--surface)', padding:'14px 16px', marginBottom:8, borderBottom:'1px solid var(--border)' }}>
-            <div className="section-label" style={{ padding:'0 0 10px' }}>材質均價參考</div>
-            {benchmarks.slice(0,5).map(b => (
-              <div key={b.material} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:9 }}>
-                <div style={{ fontSize:12, color:'var(--text-2)', width:56, flexShrink:0 }}>{b.material}</div>
-                <div className="bench-bar">
-                  <div className="bench-fill" style={{ width:`${(b.avg_price/maxAvg)*100}%` }} />
-                </div>
-                <div style={{ fontSize:11, color:'var(--text-2)', width:62, textAlign:'right', flexShrink:0 }}>
-                  {b.avg_price >= 10000 ? `${(b.avg_price/10000).toFixed(1)}萬` : b.avg_price.toLocaleString()}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {loading ? (
-          <div style={{ display:'flex', justifyContent:'center', paddingTop:60 }}>
-            <div className="spinner" />
-          </div>
-        ) : txList.length === 0 ? (
-          <div className="empty">
-            <div className="empty-icon">📋</div>
-            <div className="empty-text">尚無成交記錄</div>
-          </div>
-        ) : (
-          <div className="card" style={{ margin:'0 16px', borderRadius:12 }}>
-            {txList.map(tx => (
-              <div key={tx.id} className="tx-row" onClick={() => setEditTx(tx)}>
-                <div className="tx-thumb">
-                  {tx.photo_id
-                    ? <JewelryPhoto photo={{ filename:tx.filename, category:tx.category }} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                    : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>
-                        {CAT_ICONS[tx.category]||'💎'}
-                      </div>
-                  }
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div className="tx-name">{tx.item_name}</div>
-                  <div className="tx-meta">
-                    {[tx.material, tx.gemstone, tx.stone_spec].filter(Boolean).join(' · ')}
-                    {tx.sale_date && <span> · {tx.sale_date}</span>}
-                  </div>
-                </div>
-                <div className="tx-price">NT${tx.price.toLocaleString()}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {(showNew || editTx) && (
-        <TxEditModal tx={editTx||null} onSave={save} onClose={() => { setEditTx(null); setShowNew(false); }} />
-      )}
-      {editTx && (
-        <div style={{ position:'absolute', bottom:100, left:0, right:0, display:'flex', justifyContent:'center', zIndex:400 }}>
-          <button className="btn btn-danger" onClick={() => del(editTx.id)}>刪除此記錄</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ═══ Customers Screen ══════════════════════════════════════════════════════════
-const STYLE_PROFILES = [
-  { id:'classic',  emoji:'✨', name:'古典璀璨', desc:'鑽石、K金、典雅',  tags:['古典','鑽石','K金'] },
-  { id:'natural',  emoji:'🍃', name:'自然靈動', desc:'有機形態、彩寶',   tags:['自然','彩寶','有機'] },
-  { id:'romantic', emoji:'🌹', name:'浪漫玫瑰', desc:'玫瑰金、心形',     tags:['浪漫','玫瑰金','心形'] },
-  { id:'modern',   emoji:'◆',  name:'現代簡約', desc:'幾何、白金、極簡', tags:['現代','簡約','白金'] },
-];
-
-function DiscoveryFlowModal({ customer, staff, onClose, onSave, showToast }) {
-  const [phase, setPhase]                 = useState(0);
-  const [selectedStyles, setSelectedStyles] = useState([]);
-  const [photos, setPhotos]               = useState([]);
-  const [likedIds, setLikedIds]           = useState([]);
-  const [inferredTags, setInferredTags]   = useState([]);
-  const [lineId, setLineId]               = useState(customer.line_id||'');
-  const [loadingPhotos, setLoadingPhotos] = useState(false);
-
-  const toggle = id => setSelectedStyles(p => p.includes(id) ? p.filter(s=>s!==id) : [...p,id]);
-
-  const goPhase1 = async () => {
-    if (!selectedStyles.length) { showToast('請選擇至少一種風格'); return; }
-    setLoadingPhotos(true);
-    try {
-      const data = await api.get('/api/photos?limit=12');
-      setPhotos(Array.isArray(data) ? data : (data.photos||[]));
-    } catch { setPhotos([]); }
-    setLoadingPhotos(false); setPhase(1);
-  };
-
-  const goPhase2 = () => {
-    if (!likedIds.length) { showToast('請選擇至少一張喜愛的照片'); return; }
-    const tags = selectedStyles.flatMap(sid => STYLE_PROFILES.find(s=>s.id===sid)?.tags||[]);
-    setInferredTags([...new Set(tags)].slice(0,6)); setPhase(2);
-  };
-
-  const handleSave = async () => {
-    try {
-      await onSave({ liked_photo_ids:likedIds, tags:inferredTags, line_id:lineId||null, staff_id:staff.id, notes:`風格：${selectedStyles.join(',')}` });
-      showToast('偏好已儲存 ✓'); onClose();
-    } catch { showToast('儲存失敗'); }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-body" style={{ maxHeight:'88%' }} onClick={e=>e.stopPropagation()}>
-        <div className="sheet-handle" />
-        <div className="phase-dots">
-          {[0,1,2].map(i => <div key={i} className={`phase-dot ${phase===i?'active':''}`} />)}
-        </div>
-
-        {phase === 0 && (
-          <>
-            <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>選擇偏好風格</div>
-            <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:14 }}>幫 {customer.name} 選擇可能喜歡的風格（可多選）</div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:18 }}>
-              {STYLE_PROFILES.map(s => (
-                <button key={s.id} className={`option-btn ${selectedStyles.includes(s.id)?'selected':''}`}
-                  style={{ padding:'14px 10px', alignItems:'flex-start', textAlign:'left' }}
-                  onClick={() => toggle(s.id)}>
-                  <div style={{ fontSize:22, marginBottom:6 }}>{s.emoji}</div>
-                  <div className="opt-label" style={{ fontSize:13 }}>{s.name}</div>
-                  <div className="opt-sub">{s.desc}</div>
-                </button>
-              ))}
-            </div>
-            <button className="btn btn-primary btn-full" onClick={goPhase1}>看推薦款式 →</button>
-          </>
-        )}
-
-        {phase === 1 && (
-          <>
-            <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>選擇喜愛款式</div>
-            <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:12 }}>點選喜歡的款式（可多選）</div>
-            {loadingPhotos ? (
-              <div style={{ display:'flex', justifyContent:'center', padding:40 }}><div className="spinner" /></div>
-            ) : (
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:6, marginBottom:14 }}>
-                {photos.map(p => (
-                  <div key={p.id} style={{
-                    position:'relative', borderRadius:8, overflow:'hidden', aspectRatio:'1', cursor:'pointer',
-                    border: likedIds.includes(p.id) ? '2.5px solid var(--active)' : '2.5px solid transparent',
-                  }}
-                    onClick={() => setLikedIds(prev => prev.includes(p.id) ? prev.filter(id=>id!==p.id) : [...prev,p.id])}>
-                    <JewelryPhoto photo={p} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                    {likedIds.includes(p.id) && (
-                      <div style={{ position:'absolute', top:4, right:5, fontSize:14, color:'var(--active)' }}>♥</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            <div style={{ display:'flex', gap:8 }}>
-              <button className="btn btn-secondary" onClick={() => setPhase(0)}>← 返回</button>
-              <button className="btn btn-primary" style={{ flex:1 }} onClick={goPhase2}>確認偏好 →</button>
-            </div>
-          </>
-        )}
-
-        {phase === 2 && (
-          <>
-            <div style={{ fontSize:16, fontWeight:600, marginBottom:4 }}>確認偏好標籤</div>
-            <div style={{ fontSize:13, color:'var(--text-2)', marginBottom:12 }}>
-              選了 {likedIds.length} 款，推斷偏好如下
-            </div>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:14 }}>
-              {inferredTags.map(t => (
-                <button key={t} className="chip active" onClick={() => setInferredTags(p=>p.filter(x=>x!==t))}>
-                  {t} ✕
-                </button>
-              ))}
-            </div>
-            <div className="form-group">
-              <label className="form-label">LINE ID（選填）</label>
-              <input className="form-input" placeholder="@lineId" value={lineId} onChange={e=>setLineId(e.target.value)} />
-            </div>
-            <div style={{ display:'flex', gap:8 }}>
-              <button className="btn btn-secondary" onClick={() => setPhase(1)}>← 返回</button>
-              <button className="btn btn-primary" style={{ flex:1 }} onClick={handleSave}>儲存偏好 ✓</button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CustomerDetailModal({ customer, staff, onClose, showToast, onUpdated }) {
-  const [detail, setDetail]           = useState(null);
-  const [showDiscovery, setShowDiscovery] = useState(false);
-  const [loading, setLoading]         = useState(true);
-
-  useEffect(() => {
-    api.get(`/api/customers/${customer.id}`)
-      .then(d => { setDetail(d); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [customer.id]);
-
-  const removeTag = async tag => {
-    try {
-      await api.del(`/api/customers/${customer.id}/tags/${encodeURIComponent(tag)}`);
-      setDetail(d => ({ ...d, tags: d.tags.filter(t=>t!==tag) }));
-    } catch {}
-  };
-
-  const handleDiscoverySave = async sessionData => {
-    const result = await api.post(`/api/customers/${customer.id}/sessions`, sessionData);
-    setDetail(result.customer); onUpdated?.(result.customer);
-  };
-
-  const handleDelete = async () => {
-    try {
-      await api.del(`/api/customers/${customer.id}`);
-      showToast('客戶已刪除'); onUpdated?.(null); onClose();
-    } catch { showToast('刪除失敗'); }
-  };
-
-  return (
-    <>
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-body" style={{ maxHeight:'90%' }} onClick={e=>e.stopPropagation()}>
-          <div className="sheet-handle" />
-          {loading ? (
-            <div style={{ display:'flex', justifyContent:'center', padding:40 }}><div className="spinner" /></div>
-          ) : detail ? (
-            <>
-              <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:16 }}>
-                <div className="customer-avatar" style={{ width:52, height:52, fontSize:20 }}>
-                  {detail.name[0]}
-                </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:17, fontWeight:600 }}>{detail.name}</div>
-                  {detail.line_id && <div style={{ fontSize:11, color:'var(--text-2)' }}>LINE: {detail.line_id}</div>}
-                  {detail.phone  && <div style={{ fontSize:11, color:'var(--text-2)' }}>{detail.phone}</div>}
-                </div>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowDiscovery(true)}>探索偏好</button>
-              </div>
-
-              {detail.tags?.length > 0 && (
-                <div style={{ marginBottom:14 }}>
-                  <div className="section-label" style={{ padding:'0 0 6px' }}>偏好標籤</div>
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
-                    {detail.tags.map(t => (
-                      <button key={t} className="chip active btn-sm" style={{ fontSize:11 }} onClick={() => removeTag(t)}>
-                        {t} ✕
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {detail.favorites?.length > 0 && (
-                <div style={{ marginBottom:14 }}>
-                  <div className="section-label" style={{ padding:'0 0 8px' }}>喜愛款式（{detail.favorites.length}）</div>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:5 }}>
-                    {detail.favorites.slice(0,8).map(f => (
-                      <div key={f.photo_id} style={{ aspectRatio:'1', borderRadius:8, overflow:'hidden', background:'#EBEBEB' }}>
-                        <JewelryPhoto photo={{ filename:f.filename, category:f.category }} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ fontSize:11, color:'var(--text-2)', marginBottom:14 }}>
-                服務次數：{detail.session_count} 次
-              </div>
-
-              <button className="btn btn-danger btn-full" onClick={handleDelete}>刪除客戶</button>
-            </>
-          ) : (
-            <div className="empty"><div className="empty-text">載入失敗</div></div>
-          )}
-        </div>
-      </div>
-
-      {showDiscovery && detail && (
-        <DiscoveryFlowModal
-          customer={detail} staff={staff}
-          onClose={() => setShowDiscovery(false)}
-          onSave={handleDiscoverySave}
-          showToast={showToast}
-        />
-      )}
-    </>
-  );
-}
-
-function AddCustomerModal({ onClose, onAdded }) {
-  const [form, setForm] = useState({ name:'', line_id:'', phone:'', notes:'' });
-  const set = (k,v) => setForm(f=>({...f,[k]:v}));
-  const handleAdd = async () => {
-    if (!form.name.trim()) return;
-    try { const c = await api.post('/api/customers', form); onAdded(c); onClose(); } catch {}
-  };
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-body" onClick={e=>e.stopPropagation()}>
-        <div className="sheet-handle" />
-        <div style={{ fontSize:16, fontWeight:600, marginBottom:14 }}>新增客戶</div>
-        {[['name','姓名 *','客戶姓名'],['line_id','LINE ID','@lineId'],['phone','電話','09xx-xxx-xxx']].map(([k,l,p]) => (
-          <div key={k} className="form-group">
-            <label className="form-label">{l}</label>
-            <input className="form-input" autoFocus={k==='name'} value={form[k]} placeholder={p} onChange={e=>set(k,e.target.value)} />
-          </div>
-        ))}
-        <div className="form-group">
-          <label className="form-label">備註</label>
-          <textarea className="form-input" value={form.notes} onChange={e=>set('notes',e.target.value)} placeholder="備忘…" />
-        </div>
-        <div style={{ display:'flex', gap:8, marginTop:8 }}>
-          <button className="btn btn-primary"   style={{ flex:1 }} onClick={handleAdd}>新增</button>
-          <button className="btn btn-secondary" onClick={onClose}>取消</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CustomersScreen({ staff, showToast }) {
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState('');
-  const [selected, setSelected]   = useState(null);
-  const [showAdd, setShowAdd]     = useState(false);
-
-  const load = async (q='') => {
-    setLoading(true);
-    try {
-      const url = q ? `/api/customers?q=${encodeURIComponent(q)}` : '/api/customers';
-      setCustomers(await api.get(url));
-    } catch { setCustomers([]); }
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const handleSearch = e => {
-    const q = e.target.value; setSearch(q);
-    const t = setTimeout(() => load(q), 300);
-    return () => clearTimeout(t);
-  };
-
-  const handleUpdated = u => {
-    if (!u) { setCustomers(p => p.filter(c => c.id !== selected?.id)); setSelected(null); }
-    else setCustomers(p => p.map(c => c.id===u.id ? { ...c,...u } : c));
-  };
-
-  return (
-    <div style={{ display:'flex', flexDirection:'column', flex:1, paddingBottom:80 }}>
-      <div className="nav-bar">
-        <div className="nav-title">客戶</div>
-        <button className="nav-btn" onClick={() => setShowAdd(true)}>＋ 新增</button>
-      </div>
-
-      <div style={{ padding:'0 16px 10px', flexShrink:0 }}>
-        <input className="form-input" placeholder="搜尋姓名、LINE、標籤…"
-          value={search} onChange={handleSearch}
-          style={{ background:'var(--surface)' }} />
-      </div>
-
-      <div className="scroll-view hide-scroll" style={{ padding:'0 16px' }}>
-        {loading ? (
-          <div style={{ display:'flex', justifyContent:'center', paddingTop:40 }}><div className="spinner" /></div>
-        ) : customers.length === 0 ? (
-          <div className="empty">
-            <div className="empty-icon">👤</div>
-            <div className="empty-text">{search ? '找不到符合客戶' : '尚無客戶資料'}</div>
-          </div>
-        ) : customers.map(c => (
-          <div key={c.id} className="customer-card" onClick={() => setSelected(c)}>
-            <div className="customer-avatar">{c.name[0]}</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:14, fontWeight:500 }}>{c.name}</div>
-              {c.line_id && <div style={{ fontSize:11, color:'var(--text-2)' }}>LINE: {c.line_id}</div>}
-              <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:5 }}>
-                {(c.tags||[]).slice(0,4).map(t => (
-                  <span key={t} className="tag tag-outline">{t}</span>
-                ))}
-              </div>
-            </div>
-            {c.fav_count > 0 && (
-              <div style={{ flexShrink:0, textAlign:'right' }}>
-                <div style={{ fontSize:11, color:'var(--text-3)' }}>♥ {c.fav_count}</div>
-                {c.last_fav_filename && (
-                  <div style={{ width:38, height:38, borderRadius:6, overflow:'hidden', marginTop:4, background:'#EBEBEB' }}>
-                    <JewelryPhoto photo={{ filename:c.last_fav_filename }} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {selected && (
-        <CustomerDetailModal
-          customer={selected} staff={staff}
-          onClose={() => setSelected(null)}
-          showToast={showToast}
-          onUpdated={handleUpdated}
-        />
-      )}
-      {showAdd && (
-        <AddCustomerModal
-          onClose={() => setShowAdd(false)}
-          onAdded={c => setCustomers(p => [c,...p])}
-        />
-      )}
-    </div>
-  );
-}
-
-// ═══ App ══════════════════════════════════════════════════════════════════════
-const TABS = [
-  { label:'找款', Icon:IconGrid   },
-  { label:'估價', Icon:IconChat   },
-  { label:'成交', Icon:IconList   },
-  { label:'客戶', Icon:IconPerson },
-];
-
+/* ─── App ─────────────────────────────────────────────── */
 function App() {
-  const [tab, setTab]                     = useState(0);
-  const [quoteInitData, setQuoteInitData] = useState(null);
-  const { toast, showToast }              = useToast();
-  const staff                             = { id:1, name:'店員' };
+  const [tab,       setTab]      = useState(0);
+  const [quoteInit, setQuoteInit] = useState(null);
 
-  const handleUseForQuote = photo => {
-    setQuoteInitData({
-      photo_url:   photo.thumb_url   || photo.full_url || null,
+  const handleQuote = photo => {
+    setQuoteInit({
+      photo_url:   photo.full_url || photo.thumb_url || null,
       category:    photo.category    || null,
       stone_shape: photo.stone_shape || null,
       stone_size:  photo.stone_size  || null,
@@ -1736,43 +613,25 @@ function App() {
   };
 
   return (
-    <div id="app-root">
-      <div className="phone-frame">
-        <div className="dynamic-island" />
-        <div className="status-bar">
-          <span>9:41</span>
-          <span style={{ letterSpacing:2, fontSize:10 }}>●●●</span>
-        </div>
-
-        <div className="screen" style={{ paddingTop:54 }}>
-          {tab === 0 && <BrowseScreen onUseForQuote={handleUseForQuote} />}
-          {tab === 1 && (
-            <QuoteScreen
-              initialData={quoteInitData}
-              onClearInitial={() => setQuoteInitData(null)}
-              showToast={showToast}
-            />
-          )}
-          {tab === 2 && <TransactionsScreen showToast={showToast} />}
-          {tab === 3 && <CustomersScreen staff={staff} showToast={showToast} />}
-
-          <div className="tab-bar">
-            {TABS.map((t, i) => (
-              <button key={i} className={`tab-item ${tab===i?'active':''}`} onClick={() => setTab(i)}>
-                <div className="tab-icon"><t.Icon /></div>
-                <div>{t.label}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={`toast ${toast.show?'show':''}`}>{toast.msg}</div>
+    <React.Fragment>
+      <div className="nav">
+        <span className="nav-title">JewelryDB</span>
       </div>
-    </div>
+      {tab === 0 && <BrowseTab onQuote={handleQuote} />}
+      {tab === 1 && <QuoteTab initData={quoteInit} onClearInit={() => setQuoteInit(null)} />}
+      <div className="tab-bar">
+        <button className={'tab-btn' + (tab === 0 ? ' active' : '')} onClick={() => setTab(0)}>
+          <IconBrowse /><span>找款</span>
+        </button>
+        <button className={'tab-btn' + (tab === 1 ? ' active' : '')} onClick={() => setTab(1)}>
+          <IconQuote /><span>估價</span>
+        </button>
+      </div>
+    </React.Fragment>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.render(React.createElement(App), document.getElementById('root'));
 </script>
 </body>
 </html>
