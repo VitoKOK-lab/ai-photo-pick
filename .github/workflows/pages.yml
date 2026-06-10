@@ -1,0 +1,35 @@
+name: Deploy 設計稿 to GitHub Pages
+
+on:
+  push:
+    branches: ["claude/serene-cori-t1l2vw"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Upload 設計稿
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/mockups
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
