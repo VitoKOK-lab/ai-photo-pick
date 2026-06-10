@@ -1648,7 +1648,7 @@ function FavoritesScreen({ staff, showToast }) {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 function App() {
-  const [staff, setStaff] = useState(null);
+  const [staff] = useState({ id: 1, name: '店員' });
   const [tab, setTab] = useState(0);
   const { toast, showToast } = useToast();
 
@@ -1668,32 +1668,21 @@ function App() {
           <span>●●●</span>
         </div>
 
-        {!staff ? (
-          <StaffSelectScreen onSelect={setStaff} />
-        ) : (
-          <div className="screen" style={{ paddingTop: 54 }}>
-            {tab === 0 && <HomeScreen staff={staff} showToast={showToast} />}
-            {tab === 1 && <StatsScreen />}
-            {tab === 2 && <TransactionsScreen showToast={showToast} />}
-            {tab === 3 && <FavoritesScreen staff={staff} showToast={showToast} />}
+        <div className="screen" style={{ paddingTop: 54 }}>
+          {tab === 0 && <HomeScreen staff={staff} showToast={showToast} />}
+          {tab === 1 && <StatsScreen />}
+          {tab === 2 && <TransactionsScreen showToast={showToast} />}
+          {tab === 3 && <FavoritesScreen staff={staff} showToast={showToast} />}
 
-            <div className="tab-bar">
-              {TABS.map((t, i) => (
-                <button key={i} className={`tab-item ${tab === i ? 'active' : ''}`} onClick={() => setTab(i)}>
-                  <div className="tab-icon">{t.icon}</div>
-                  <div className="tab-label">{t.label}</div>
-                </button>
-              ))}
-            </div>
-
-            {/* Staff switcher */}
-            <button
-              onClick={() => setStaff(null)}
-              style={{ position:'absolute', top:58, right:16, fontSize:10, color:'var(--text-light)', zIndex:60 }}>
-              {staff.name} ↩
-            </button>
+          <div className="tab-bar">
+            {TABS.map((t, i) => (
+              <button key={i} className={`tab-item ${tab === i ? 'active' : ''}`} onClick={() => setTab(i)}>
+                <div className="tab-icon">{t.icon}</div>
+                <div className="tab-label">{t.label}</div>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Toast */}
         <div className={`toast ${toast.show ? 'show' : ''}`}>{toast.msg}</div>
