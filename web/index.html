@@ -840,6 +840,44 @@ function QuoteResult({ data, result, onSaveAsTx, onReset }) {
   );
 }
 
+function FieldSelectSheet({ field, value, onChange, onClose }) {
+  const optMap = {
+    category:    CATEGORIES,
+    stone_size:  STONE_SIZES,
+    stone_shape: STONE_SHAPES,
+    style:       STYLES.map(s => s.value),
+    gemstone:    GEMSTONES,
+    color:       COLORS,
+  };
+  const titles = {
+    category:'選品項', stone_size:'選主石大小', stone_shape:'選主石形狀',
+    style:'選款式', gemstone:'選寶石（選填）', color:'選顏色（選填）',
+  };
+  const opts = optMap[field] || [];
+  const display = opt => {
+    if (field === 'style')       return STYLES.find(s=>s.value===opt)?.label + '  ' + STYLES.find(s=>s.value===opt)?.desc || opt;
+    if (field === 'stone_shape') return (SHAPE_SYM[opt]||'') + ' ' + opt;
+    if (field === 'category')    return (CAT_ICONS[opt]||'') + ' ' + opt;
+    return opt;
+  };
+  return (
+    <div className="sheet-overlay" onClick={onClose}>
+      <div className="sheet" onClick={e => e.stopPropagation()}>
+        <div className="sheet-handle" />
+        <div className="sheet-title">{titles[field]}</div>
+        <div className="sheet-body">
+          {opts.map(opt => (
+            <div key={opt} className={'sheet-opt' + (value === opt ? ' active' : '')}
+              onClick={() => onChange(opt)}>
+              {display(opt)}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QuoteScreen({ initialData, onClearInitial, showToast }) {
   const [step, setStep]           = useState(null);
   const [data, setData]           = useState({});
@@ -847,6 +885,7 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
   const [loading, setLoading]     = useState(false);
   const [recentQuotes, setRecentQuotes] = useState([]);
   const [showNewTx, setShowNewTx] = useState(false);
+  const [sheetField, setSheetField] = useState(null);
 
   const runEstimateWith = useCallback(async (d) => {
     setLoading(true); setStep('result');
@@ -867,15 +906,12 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
     if (!initialData) return;
     setData(initialData);
     onClearInitial?.();
-    // 照片已有屬性 → 直接估價，不用再選一遍
-    const hasCore = initialData.category && initialData.stone_size &&
-                    initialData.stone_shape && initialData.style;
-    if (hasCore) {
-      runEstimateWith(initialData);
+    // 從照片來的 → 顯示照片 + 讓店員自己確認/調整屬性
+    if (initialData.photo_url) {
+      setStep('from-photo');
     } else {
-      // 缺部分資料 → 跳到第一個空白步驟
       const firstMissing =
-        !initialData.category   ? 1 :
+        !initialData.category    ? 1 :
         !initialData.stone_size  ? 2 :
         !initialData.stone_shape ? 3 :
         !initialData.style       ? 4 : 5;
@@ -890,6 +926,7 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
   const goBack = () => {
     if (step === 1 || step === null) { setStep(null); setData({}); }
     else if (step === 'result')      { setStep(null); }
+    else if (step === 'from-photo')  { setStep(null); setData({}); }
     else                             { setStep(s => s - 1); }
   };
 
@@ -958,6 +995,92 @@ function QuoteScreen({ initialData, onClearInitial, showToast }) {
             </div>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // ── From-Photo view ── 照片釘頂，下方調屬性，確認再估
+  if (step === 'from-photo') {
+    const FIELD_DEFS = [
+      { key:'category',    label:'品項',     required:true  },
+      { key:'stone_size',  label:'主石大小',  required:true  },
+      { key:'stone_shape', label:'主石形狀',  required:true  },
+      { key:'style',       label:'款式',     required:true  },
+      { key:'gemstone',    label:'寶石',     required:false },
+      { key:'color',       label:'顏色',     required:false },
+    ];
+    const displayVal = (k, v) => {
+      if (!v) return null;
+      if (k === 'style')       return STYLE_LABEL[v] || v;
+      if (k === 'stone_shape') return (SHAPE_SYM[v]||'') + ' ' + v;
+      return v;
+    };
+    const canEstimate = !!(data.category && data.stone_size && data.stone_shape && data.style);
+    return (
+      <div style={{ display:'flex', flexDirection:'column', flex:1 }}>
+        <div className="nav-bar">
+          <button className="nav-btn-ghost" onClick={goBack}>← 返回</button>
+          <div className="nav-title" style={{ flex:1, textAlign:'center' }}>用此估價</div>
+          <div style={{ width:44 }} />
+        </div>
+
+        {/* 參考照片 */}
+        {data.photo_url && (
+          <div style={{ padding:'0 16px 12px', flexShrink:0 }}>
+            <img src={data.photo_url} alt=""
+              style={{ width:'100%', aspectRatio:'4/3', objectFit:'cover', borderRadius:12, background:'#eee' }} />
+          </div>
+        )}
+
+        {/* 屬性欄位 */}
+        <div className="scroll-view hide-scroll" style={{ padding:'0 16px', paddingBottom:100 }}>
+          <div className="card" style={{ margin:0, overflow:'hidden' }}>
+            {FIELD_DEFS.map((f, i) => {
+              const val = data[f.key];
+              const disp = displayVal(f.key, val);
+              return (
+                <div key={f.key}
+                  onClick={() => setSheetField(f.key)}
+                  style={{
+                    display:'flex', alignItems:'center', padding:'14px 0',
+                    borderBottom: i < FIELD_DEFS.length-1 ? '1px solid var(--border)' : 'none',
+                    cursor:'pointer', gap:12,
+                  }}>
+                  <span style={{ width:72, fontSize:13, color:'var(--text-3)', flexShrink:0 }}>
+                    {f.label}{!f.required && <span style={{ fontSize:11 }}>（選填）</span>}
+                  </span>
+                  <span style={{ flex:1, fontSize:15, fontWeight: disp ? 500 : 400,
+                    color: disp ? 'var(--text)' : '#bbb' }}>
+                    {disp || '請選擇'}
+                  </span>
+                  <span style={{ color:'var(--text-3)', fontSize:18, lineHeight:1 }}>›</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 估價按鈕 */}
+        <div style={{
+          position:'absolute', bottom:80, left:0, right:0,
+          padding:'10px 16px', background:'rgba(245,245,245,0.96)', backdropFilter:'blur(14px)',
+          borderTop:'1px solid var(--border)',
+        }}>
+          <button className="btn btn-primary btn-full"
+            style={{ height:50, opacity: canEstimate ? 1 : 0.38, fontSize:16 }}
+            disabled={!canEstimate}
+            onClick={() => runEstimateWith(data)}>
+            開始估價
+          </button>
+        </div>
+
+        {sheetField && (
+          <FieldSelectSheet
+            field={sheetField} value={data[sheetField]}
+            onChange={v => { set(sheetField, v); setSheetField(null); }}
+            onClose={() => setSheetField(null)}
+          />
+        )}
       </div>
     );
   }
@@ -1601,6 +1724,7 @@ function App() {
 
   const handleUseForQuote = photo => {
     setQuoteInitData({
+      photo_url:   photo.thumb_url   || photo.full_url || null,
       category:    photo.category    || null,
       stone_shape: photo.stone_shape || null,
       stone_size:  photo.stone_size  || null,

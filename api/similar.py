@@ -81,9 +81,12 @@ def find_similar(
         raise HTTPException(status_code=404, detail="Anchor embedding not found")
     anchor_embedding = anchor_chroma["embeddings"][0]
 
+    # 查足夠多結果確保能找到同品項：最多 300 筆，至少 1 筆
+    total = collection.count()
+    n_query = max(1, min(total - 1, 300))
     chroma_result = collection.query(
         query_embeddings=[anchor_embedding],
-        n_results=51,  # +1 因為包含自己
+        n_results=n_query,
     )
 
     candidate_ids = []
