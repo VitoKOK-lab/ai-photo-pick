@@ -1,0 +1,83 @@
+<!DOCTYPE html><html lang="zh-TW"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>訂單詳情(規格) · 客服訂單追蹤</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./mock.css"></head><body>
+<div class="mockbar">設計稿 · 規格品訂單 · <a href="./index.html">回總覽</a> · <a href="./order-custom.html">看訂製品版本 →</a></div>
+
+<div class="detail">
+  <h2>陳怡君 <span class="om-ordno">20260531160234640</span> <span class="sl-link">🔗 到 SHOPLINE 叫單</span></h2>
+  <p class="sub">0931-555-777 · 藍寶石墜子 18吋 · NT$22,569</p>
+  <div class="om-due-bar late">規格 · 出貨期限 2026-06-09（已逾期 1 天）</div>
+
+  <!-- 規格流程步驟 -->
+  <div class="flow">
+    <span class="step done">待處理</span>
+    <span class="step now">大陸-備貨/拍照</span>
+    <span class="step">大陸-打包出貨</span>
+    <span class="step">已寄台灣(在途)</span>
+    <span class="step">台灣-品管出貨</span>
+    <span class="step">已完成</span>
+  </div>
+
+  <div class="om-cols">
+    <!-- 左：進度操作 -->
+    <div class="om-left">
+      <div class="grid2">
+        <div class="field"><label>品項類型（決定出貨期）</label>
+          <select><option>規格</option><option>訂製</option></select></div>
+        <div class="field"><label>目前進度</label>
+          <select><option>待處理</option><option selected>大陸-備貨/拍照</option><option>大陸-打包出貨</option><option>已寄台灣(在途)</option><option>台灣-品管出貨</option><option>已完成</option></select></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>負責人</label><input value="深圳-阿明"></div>
+        <div class="field"><label>異常類型</label>
+          <select><option>欠石</option><option selected>缺貨待採購</option><option>客訴</option></select></div>
+      </div>
+      <div class="field"><label>下一步動作</label><input value="缺藍寶，已請深圳採購，回貨後拍照"></div>
+      <div class="field"><label>預計出貨/完成日（自訂）</label><input type="date" value="2026-06-13"></div>
+      <div class="field check-row"><input type="checkbox" checked><label style="margin:0;">標為異常（整列變紅，優先看）</label></div>
+      <div class="field return-box"><label>退貨簽核</label>
+        <div class="ret-wrap"><button class="btn btn-sm">＋ 申請退貨簽核</button></div></div>
+      <div class="field"><label>SHOPLINE 原始資料</label>
+        <div id="om-raw"><div><b>訂單號碼</b>: #20260531160234640</div><div><b>付款狀態</b>: 已付款</div><div><b>送貨狀態</b>: 備貨中</div><div><b>商品名稱</b>: 藍寶石墜子</div><div><b>收件人</b>: 陳怡君</div></div></div>
+    </div>
+
+    <!-- 右：購物旅程 -->
+    <div class="om-right">
+      <div class="om-right-head"><strong>購物旅程</strong><button class="btn btn-sm">👤 客人歷史</button></div>
+      <div class="timeline">
+        <div class="tl-item tl-sys"><div class="tl-dot">⚙</div><div class="tl-body">
+          <div class="tl-meta"><span>2026-05-31 16:02</span><span class="tl-actor">系統</span></div>
+          <div class="tl-text">客人下單</div></div></div>
+        <div class="tl-item tl-sys"><div class="tl-dot">⚙</div><div class="tl-body">
+          <div class="tl-meta"><span>2026-05-31 16:03</span><span class="tl-actor">系統</span></div>
+          <div class="tl-text">完成付款</div></div></div>
+        <div class="tl-item tl-staff"><div class="tl-dot">✔</div><div class="tl-body">
+          <div class="tl-meta"><span>2026-06-01 10:15</span><span class="tl-actor">深圳-阿明</span></div>
+          <div class="tl-text">進度 → 大陸-備貨/拍照</div></div></div>
+        <div class="tl-item tl-ret"><div class="tl-dot">🔴</div><div class="tl-body">
+          <div class="tl-meta"><span>2026-06-02 09:30</span><span class="tl-actor">深圳-阿明</span></div>
+          <div class="tl-text">標記異常：缺貨待採購（藍寶缺貨）</div></div></div>
+        <div class="tl-item tl-cust"><div class="tl-dot">🗣</div><div class="tl-body">
+          <div class="tl-meta"><span>2026-06-03 14:20</span><span class="tl-actor">陳怡君</span></div>
+          <div class="tl-text">客人問：大概什麼時候能出貨？</div></div></div>
+        <div class="tl-item tl-staff"><div class="tl-dot">✔</div><div class="tl-body">
+          <div class="tl-meta"><span>2026-06-03 14:45</span><span class="tl-actor">台灣-阿May</span></div>
+          <div class="tl-text">已回覆客人：藍寶採購中，預計 6/13 出貨</div></div></div>
+      </div>
+      <div class="addnote">
+        <div class="who-toggle"><button class="wt active">員工做了/說了</button><button class="wt">客人說了</button></div>
+        <textarea placeholder="例：已 LINE 客人告知 6/13 出貨"></textarea>
+        <button class="btn btn-gold btn-sm">加入旅程</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-actions">
+    <button class="btn btn-gold">儲存進度</button>
+    <button class="btn">關閉</button>
+    <span class="grow"></span>
+    <button class="btn btn-danger">移入封存</button>
+  </div>
+</div></body></html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html><html lang="zh-TW"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>交接班 · 客服訂單追蹤</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./mock.css"></head><body>
+<div class="mockbar">設計稿 · 交接班 · <a href="./index.html">回總覽</a></div>
+<div class="topbar"><span class="back">← 返回</span><h1>客服訂單追蹤</h1></div>
+<div class="tabs"><button class="tab">訂單看板</button><button class="tab active">交接班</button></div>
+
+<div class="wrap" style="max-width:760px;">
+  <div class="ho-form">
+    <h2 style="font-size:16px;margin-bottom:12px;">寫一筆交班記錄</h2>
+    <div class="grid2">
+      <div class="field"><label>交班人</label><input value="台灣-阿May"></div>
+      <div class="field"><label>接班人</label><input placeholder="接手的人"></div>
+    </div>
+    <div class="field"><label>要特別盯的單號</label><input value="20260605103, 20260531160"></div>
+    <div class="field"><label>叮嚀（卡在哪、聯絡客人了沒、下一步）</label>
+      <textarea>林雅婷那張欠石，已 LINE 通知客人會延一週，等工廠 6/15 換貨。</textarea></div>
+    <button class="btn btn-gold">送出交班</button>
+  </div>
+
+  <h2 style="font-size:16px;margin:0 0 10px 2px;">最近交班記錄</h2>
+  <div class="ho-item">
+    <div class="ho-head"><span class="date">2026-06-09</span>
+      <span class="muted">台灣-阿May → 深圳-小美</span>
+      <span class="ack-badge">✓ 已接收</span></div>
+    <div class="ho-watch">盯：20260531160, 20260607112</div>
+    <div class="ho-note">陳怡君藍寶採購中，客人已知 6/13 出貨，回貨記得拍照。</div>
+  </div>
+  <div class="ho-item">
+    <div class="ho-head"><span class="date">2026-06-08</span>
+      <span class="muted">深圳-阿明 → 台灣-阿May</span>
+      <button class="btn btn-sm" style="margin-left:auto;">我已接收</button></div>
+    <div class="ho-note">王碩芬成品照已寄，等客人回覆確認。</div>
+  </div>
+</div></body></html>

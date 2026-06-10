@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="zh-TW"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>設定 · 客服訂單追蹤</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./mock.css"></head><body>
+<div class="mockbar">設計稿 · 設定頁（新畫面）· <a href="./index.html">回總覽</a></div>
+<div class="topbar"><span class="back">← 返回</span><h1>設定</h1></div>
+
+<div class="wrap">
+  <div class="set-card">
+    <h3>規格品流程關卡</h3>
+    <p class="hint">出貨期 14 天。員工在訂單上用單一下拉選「目前到哪」。拖曳可排序，點 × 可刪。</p>
+    <div>
+      <span class="stage-chip">待處理 <span class="x">×</span></span>
+      <span class="stage-chip">大陸-備貨/拍照 <span class="x">×</span></span>
+      <span class="stage-chip">大陸-打包出貨 <span class="x">×</span></span>
+      <span class="stage-chip">已寄台灣(在途) <span class="x">×</span></span>
+      <span class="stage-chip">台灣-品管出貨 <span class="x">×</span></span>
+      <span class="stage-chip">已完成 <span class="x">×</span></span>
+      <span class="stage-chip" style="background:var(--gold-bg);color:var(--gold-deep);">＋ 新增關卡</span>
+    </div>
+    <div class="grid2" style="margin-top:14px;max-width:360px;">
+      <div class="field"><label>出貨期（天）</label><input value="14"></div>
+      <div class="field"><label>判斷關鍵字</label><input placeholder="（規格為預設，免填）"></div>
+    </div>
+  </div>
+
+  <div class="set-card">
+    <h3>訂製品流程關卡</h3>
+    <p class="hint">出貨期 45 天。比規格多「待客人確認圖」與「成品照待客人確認」兩道寄客人確認關卡。</p>
+    <div>
+      <span class="stage-chip">待處理 <span class="x">×</span></span>
+      <span class="stage-chip">待客人確認圖 <span class="x">×</span></span>
+      <span class="stage-chip">金工製作中 <span class="x">×</span></span>
+      <span class="stage-chip">成品照待客人確認 <span class="x">×</span></span>
+      <span class="stage-chip">大陸-打包出貨 <span class="x">×</span></span>
+      <span class="stage-chip">已寄台灣(在途) <span class="x">×</span></span>
+      <span class="stage-chip">台灣-品管出貨 <span class="x">×</span></span>
+      <span class="stage-chip">已完成 <span class="x">×</span></span>
+      <span class="stage-chip" style="background:var(--gold-bg);color:var(--gold-deep);">＋ 新增關卡</span>
+    </div>
+    <div class="grid2" style="margin-top:14px;max-width:360px;">
+      <div class="field"><label>出貨期（天）</label><input value="45"></div>
+      <div class="field"><label>判斷關鍵字</label><input value="訂製, 客製, 3D, 客訂"></div>
+    </div>
+  </div>
+
+  <div class="set-card">
+    <h3>歸檔規則</h3>
+    <p class="hint">已完成（送達）後，過了退換貨期就自動移入封存資料庫。</p>
+    <div class="field" style="max-width:200px;"><label>退換貨期（天）</label><input value="7"></div>
+  </div>
+
+  <div class="set-card">
+    <h3>SHOPLINE 後台連結</h3>
+    <p class="hint">看板每張單的 🔗 會用訂單號到後台搜尋。</p>
+    <div class="field"><label>店家代號</label><input value="tzgrotw251"></div>
+  </div>
+
+  <div class="set-card">
+    <h3>通行碼</h3>
+    <p class="hint">只有知道通行碼的人能進系統。改了之後，大家要用新通行碼重新進入。</p>
+    <div class="field" style="max-width:320px;"><label>存取通行碼</label><input type="password" value="••••••••••"></div>
+  </div>
+
+  <button class="btn btn-gold">儲存設定</button>
+</div></body></html>

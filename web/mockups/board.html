@@ -1,0 +1,111 @@
+<!DOCTYPE html><html lang="zh-TW"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>主看板 · 客服訂單追蹤</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./mock.css"></head><body>
+<div class="mockbar">設計稿 · <a href="./index.html">回總覽</a> · 點任一列 → <a href="./order-spec.html">看訂單詳情</a></div>
+
+<div class="topbar">
+  <span class="back">← 返回</span>
+  <h1>客服訂單追蹤</h1>
+  <span class="grow"></span>
+  <span class="last-import">最後更新：2026-06-10 09:20</span>
+  <label class="whoami"><span>我是</span><input value="台灣-阿May"></label>
+  <button class="btn btn-sm">↻ 重新整理</button>
+  <button class="btn btn-gold btn-sm">⬆ 上傳 SHOPLINE 報表</button>
+</div>
+
+<div class="tabs">
+  <button class="tab active">訂單看板</button>
+  <button class="tab">交接班</button>
+</div>
+
+<div class="wrap" style="background:#fff;border-radius:0 12px 12px 12px;">
+  <div class="dash">
+    <div class="dash-card active"><div class="num">126</div><div class="label">進行中訂單</div></div>
+    <div class="dash-card c-risk"><div class="num">4</div><div class="label">🔴 異常待處理</div></div>
+    <div class="dash-card c-overdue"><div class="num">9</div><div class="label">🟠 逾期未出貨</div></div>
+    <div class="dash-card c-payment"><div class="num">12</div><div class="label">🟡 快到期(3天內)</div></div>
+  </div>
+
+  <div class="toolbar">
+    <button class="chip active">全部進行中</button>
+    <button class="chip">🔴 異常</button>
+    <button class="chip">🟠 逾期未出</button>
+    <button class="chip">🟡 快到期</button>
+    <button class="chip">📦 已封存</button>
+    <span class="grow"></span>
+    <input class="search" placeholder="搜尋訂單號 / 客戶 / 商品 / 電話…">
+  </div>
+
+  <div class="table-card">
+    <table>
+      <thead><tr>
+        <th>訂單號</th><th>客戶</th><th>品項</th><th class="hide-sm">商品</th>
+        <th>目前進度</th><th>出貨期限</th><th class="hide-sm">最後處理</th><th>旗標</th>
+      </tr></thead>
+      <tbody>
+        <tr class="row-risk">
+          <td class="ordno">20260605103<span class="sl-link">🔗</span></td>
+          <td class="cust">林雅婷</td>
+          <td><span class="type-badge tb-custom">訂製</span></td>
+          <td class="hide-sm truncate">訂製-綠碧璽戒指 港圍14</td>
+          <td><span class="pill">金工製作中</span></td>
+          <td><div class="due-wrap"><span class="due-date">2026-06-18</span><span class="due-tag due-late">逾期2天</span></div></td>
+          <td class="hide-sm">深圳-小美</td>
+          <td><span class="flag flag-risk">🔴 欠石</span></td>
+        </tr>
+        <tr class="row-overdue">
+          <td class="ordno">20260531160<span class="sl-link">🔗</span></td>
+          <td class="cust">陳怡君</td>
+          <td><span class="type-badge tb-std">規格</span></td>
+          <td class="hide-sm truncate">藍寶石墜子</td>
+          <td><span class="pill">大陸-備貨/拍照</span></td>
+          <td><div class="due-wrap"><span class="due-date">2026-06-09</span><span class="due-tag due-late">逾期1天</span></div></td>
+          <td class="hide-sm">深圳-阿明</td>
+          <td><span class="flag flag-overdue">🟠 逾期</span></td>
+        </tr>
+        <tr>
+          <td class="ordno">20260607112<span class="sl-link">🔗</span></td>
+          <td class="cust">王碩芬</td>
+          <td><span class="type-badge tb-custom">訂製</span></td>
+          <td class="hide-sm truncate">訂製925銀鑲綠碧璽</td>
+          <td><span class="pill">成品照待客人確認</span></td>
+          <td><div class="due-wrap"><span class="due-date">2026-06-12</span><span class="due-tag due-soon">剩2天</span></div></td>
+          <td class="hide-sm">深圳-小美</td>
+          <td><span class="flag flag-soon">🟡 快到期</span></td>
+        </tr>
+        <tr>
+          <td class="ordno">20260608090<span class="sl-link">🔗</span></td>
+          <td class="cust">張婉容</td>
+          <td><span class="type-badge tb-std">規格</span></td>
+          <td class="hide-sm truncate">瑪瑙晶洞、母親節套組</td>
+          <td><span class="pill">已寄台灣(在途)</span></td>
+          <td><div class="due-wrap"><span class="due-date">2026-06-22</span><span class="due-tag">剩12天</span></div></td>
+          <td class="hide-sm">台灣-阿May</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td class="ordno">20260608120<span class="sl-link">🔗</span></td>
+          <td class="cust">楊淑珍</td>
+          <td><span class="type-badge tb-std">規格</span></td>
+          <td class="hide-sm truncate">倫敦藍拓帕方枕裸石×3</td>
+          <td><span class="pill">台灣-品管出貨</span></td>
+          <td><div class="due-wrap"><span class="due-date">2026-06-20</span><span class="due-tag">剩10天</span></div></td>
+          <td class="hide-sm">台灣-阿May</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td class="ordno">20260609141<span class="sl-link">🔗</span></td>
+          <td class="cust">許素清</td>
+          <td><span class="type-badge tb-custom">訂製</span></td>
+          <td class="hide-sm truncate">訂製-鑽石對戒</td>
+          <td><span class="pill">待客人確認圖</span></td>
+          <td><div class="due-wrap"><span class="due-date">2026-07-24</span><span class="due-tag">剩44天</span></div></td>
+          <td class="hide-sm muted">—</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div></body></html>
