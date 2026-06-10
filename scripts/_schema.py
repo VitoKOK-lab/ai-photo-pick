@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS photos (
     material TEXT, material_confidence REAL,
     stone_shape TEXT, stone_shape_confidence REAL,
     stone_size TEXT, stone_size_confidence REAL,
+    gemstone TEXT, gemstone_confidence REAL,
     style TEXT, style_confidence REAL,
     price_estimate_low INTEGER, price_estimate_high INTEGER,
     price_source TEXT, price_band TEXT,
