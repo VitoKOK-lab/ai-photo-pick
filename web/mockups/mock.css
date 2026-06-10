@@ -195,6 +195,27 @@ tbody tr:hover { background: #FCFAF7; }
 .more summary:hover { color: var(--gold-deep); }
 .tl-h { font-size: 14px; margin: 20px 0 8px; font-weight: 700; }
 
+/* ── 員工首頁 / 今日待辦（一上班照著清，做完不被客訴）── */
+.staff-home { max-width: 600px; margin: 0 auto; padding: 16px 16px 48px; }
+.greet { padding: 6px 4px 18px; }
+.greet .hello { font-size: 23px; font-weight: 700; }
+.greet .hello-sub { font-size: 14px; color: var(--ink-2); margin-top: 5px; }
+.greet .hello-sub b { color: var(--ink); }
+.greet .hello-sub b.danger { color: var(--risk); }
+.wl-section { margin-bottom: 22px; }
+.wl-title { font-size: 14px; font-weight: 700; margin: 0 2px 10px; color: var(--ink-2); }
+.wl-title.risk { color: var(--risk); }
+.wl-card { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+.wl-card.risk { border-color: #f3c9c5; background: #FFF7F6; }
+.wl-main { flex: 1; min-width: 0; }
+.wl-cust { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wl-why { font-size: 13px; color: var(--risk); margin-top: 5px; }
+.wl-do { font-size: 14px; margin-top: 3px; }
+.wl-do b { color: var(--gold-deep); }
+.wl-go { white-space: nowrap; }
+.wl-done { text-align: center; background: var(--ok-bg); color: var(--ok); font-weight: 700; padding: 15px; border-radius: 12px; font-size: 14px; }
+.wl-allorders { display: block; text-align: center; color: var(--ink-3); font-size: 13px; margin-top: 18px; }
+
 /* Handover */
 .ho-form { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 18px; }
 .ho-item { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }

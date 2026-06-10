@@ -1,0 +1,76 @@
+<!DOCTYPE html><html lang="zh-TW"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>員工首頁 · 今日待辦</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./mock.css"></head><body>
+<div class="mockbar">設計稿（假資料）· <b>員工首頁：一上班照著清，做完不被客訴</b> · <a href="./menu.html">🎨 所有畫面</a></div>
+
+<div class="topbar">
+  <h1>客服訂單追蹤</h1>
+  <span class="grow"></span>
+  <span class="userchip">👤 深圳-阿明<span class="role">員工</span><a href="./index.html">登出</a></span>
+</div>
+
+<div class="staff-home">
+  <div class="greet">
+    <div class="hello">早安，阿明 👋</div>
+    <div class="hello-sub">6/10（二）· 你今天有 <b>5</b> 件要處理，其中 <b class="danger">2 件急（可能被客訴）</b></div>
+  </div>
+
+  <!-- 系統把最該先做、最可能被客訴的排最前 -->
+  <div class="wl-section">
+    <div class="wl-title risk">🔴 急 · 可能被客訴（先做這些）</div>
+
+    <div class="wl-card risk">
+      <div class="wl-main">
+        <div class="wl-cust">陳怡君 <span class="type-badge tb-std">規格</span> <span class="due-tag due-late">逾期1天</span></div>
+        <div class="wl-why">⚠ 客人問了出貨時間，到現在還沒回</div>
+        <div class="wl-do">👉 該做：<b>回覆客人</b> ＋ 推進「備貨」</div>
+      </div>
+      <a class="btn btn-gold wl-go" href="./order-staff.html">處理 ›</a>
+    </div>
+
+    <div class="wl-card risk">
+      <div class="wl-main">
+        <div class="wl-cust">王碩芬 <span class="type-badge tb-custom">訂製</span> <span class="due-tag due-soon">剩2天</span></div>
+        <div class="wl-why">⚠ 成品照寄出 3 天，客人還沒確認</div>
+        <div class="wl-do">👉 該做：<b>催客人確認成品照</b></div>
+      </div>
+      <a class="btn btn-gold wl-go" href="./order-staff.html">處理 ›</a>
+    </div>
+  </div>
+
+  <!-- 今天該推進的（不急但別積） -->
+  <div class="wl-section">
+    <div class="wl-title">🟠 今天該推進（3）</div>
+
+    <div class="wl-card">
+      <div class="wl-main">
+        <div class="wl-cust">林雅婷 <span class="type-badge tb-custom">訂製</span></div>
+        <div class="wl-do">👉 金工完成 → <b>對圖品管、拍成品照</b></div>
+      </div>
+      <a class="btn wl-go" href="./order-staff.html">處理 ›</a>
+    </div>
+
+    <div class="wl-card">
+      <div class="wl-main">
+        <div class="wl-cust">張婉容 <span class="type-badge tb-std">規格</span></div>
+        <div class="wl-do">👉 已備貨 → <b>拍照（出貨備查）</b></div>
+      </div>
+      <a class="btn wl-go" href="./order-staff.html">處理 ›</a>
+    </div>
+
+    <div class="wl-card">
+      <div class="wl-main">
+        <div class="wl-cust">楊淑珍 <span class="type-badge tb-std">規格</span></div>
+        <div class="wl-do">👉 已拍照 → <b>打包出貨寄台灣</b></div>
+      </div>
+      <a class="btn wl-go" href="./order-staff.html">處理 ›</a>
+    </div>
+  </div>
+
+  <div class="wl-done">✅ 清完上面這些，今天就穩了 — 不會有客人來追、不會被客訴</div>
+
+  <a class="wl-allorders" href="./board.html">需要找其他單 / 查客人？看全部訂單 →</a>
+</div>
+</body></html>
