@@ -38,12 +38,28 @@ def _load_workflow() -> dict:
 
 
 WORKFLOW = _load_workflow()
-TRACK_STATUSES = WORKFLOW.get("stages", ["待處理", "已完成"])
 RISK_TYPES = WORKFLOW.get("risk_types", ["其他"])
+RETURN_STATUSES = WORKFLOW.get("return_statuses", ["待簽核", "已核准", "已駁回"])
 PRODUCT_TYPES = WORKFLOW.get("product_types", {"規格": {"sla_days": 14}})
 DEFAULT_PRODUCT_TYPE = WORKFLOW.get("default_product_type", "規格")
 # 已完成後幾天自動封存（退換貨期）
 ARCHIVE_AFTER_COMPLETE_DAYS = int(WORKFLOW.get("archive_after_complete_days", 7))
+
+
+def _type_cfg(product_type: str) -> dict:
+    return PRODUCT_TYPES.get(product_type) or PRODUCT_TYPES.get(DEFAULT_PRODUCT_TYPE, {})
+
+
+def _stages_for(product_type: str) -> list:
+    return _type_cfg(product_type).get("stages", ["待處理", "已完成"])
+
+
+# 所有品項關卡的聯集（搜尋/驗證/相容用）
+TRACK_STATUSES = []
+for _pt in PRODUCT_TYPES:
+    for _s in _stages_for(_pt):
+        if _s not in TRACK_STATUSES:
+            TRACK_STATUSES.append(_s)
 
 
 def _detect_product_type(item_summary: str) -> str:
@@ -57,8 +73,7 @@ def _detect_product_type(item_summary: str) -> str:
 
 
 def _sla_days(product_type: str) -> int:
-    cfg = PRODUCT_TYPES.get(product_type) or PRODUCT_TYPES.get(DEFAULT_PRODUCT_TYPE, {})
-    return int(cfg.get("sla_days", 14))
+    return int(_type_cfg(product_type).get("sla_days", 14))
 
 # SHOPLINE 狀態關鍵字 → 判斷用（涵蓋實際匯出報表的用語）
 _PAID_KEYWORDS = ["已付款", "已收款", "付款完成", "paid"]
@@ -84,6 +99,10 @@ _EXTRA_COLUMNS = {
     "last_handler": "TEXT",
     "customer_id": "TEXT",
     "completed_at": "TEXT",
+    "return_status": "TEXT",
+    "return_reason": "TEXT",
+    "return_signed_by": "TEXT",
+    "return_signed_at": "TEXT",
 }
 
 
@@ -167,6 +186,12 @@ class EventCreate(BaseModel):
     actor: Optional[str] = None         # 員工名 或 客人名
     actor_type: Optional[str] = "staff"  # staff / customer
     occurred_at: Optional[str] = None   # 預設現在
+
+
+class ReturnAction(BaseModel):
+    action: str                         # request 申請 / approve 核准 / reject 駁回 / cancel 取消
+    by: Optional[str] = None            # 操作/簽核人
+    reason: Optional[str] = None        # 退貨原因（申請時）
 
 
 class HandoverCreate(BaseModel):
@@ -258,15 +283,19 @@ def _resolve_columns(fieldnames: List[str], mapping: dict) -> dict:
     return resolved
 
 
-def _initial_track_status(payment: str, shipping: str, order_status: str) -> str:
-    """依 SHOPLINE 狀態，落到簡化後的單一進度下拉。"""
+def _initial_track_status(payment: str, shipping: str, order_status: str,
+                          product_type: str = None) -> str:
+    """依 SHOPLINE 狀態 + 品項，落到該品項流程的初始關卡。"""
+    stages = _stages_for(product_type or DEFAULT_PRODUCT_TYPE)
     if _contains_any(order_status, ["已完成", "completed"]) or \
        _contains_any(shipping, _COMPLETED_KEYWORDS):
         return "已完成"
     if _contains_any(shipping, ["已發貨", "發貨中", "已出貨", "已寄出", "配送中", "運送中", "shipped"]):
-        return "已寄台灣(在途)"
+        return "已寄台灣(在途)" if "已寄台灣(在途)" in stages else stages[-1]
     if _contains_any(shipping, ["備貨中", "處理中", "理貨"]) or _contains_any(payment, _PAID_KEYWORDS):
-        return "大陸-備貨/製作中"
+        initial = _type_cfg(product_type or DEFAULT_PRODUCT_TYPE).get("initial_paid")
+        if initial in stages:
+            return initial
     return "待處理"
 
 
@@ -425,7 +454,7 @@ async def import_report(file: UploadFile = File(...)):
                  o["order_date"], o["total"], o["item_summary"],
                  order_status, payment, shipping,
                  ptype, sla, due_ship,
-                 _initial_track_status(payment, shipping, order_status),
+                 _initial_track_status(payment, shipping, order_status, ptype),
                  _today() if shipped_now else None,
                  _today() if completed_now else None,
                  1 if closed else 0,
@@ -709,6 +738,52 @@ def add_event(order_id: int, body: EventCreate):
     return {"ok": True, "timeline": timeline}
 
 
+@router.post("/orders/{order_id}/return")
+def return_signoff(order_id: int, body: ReturnAction):
+    """退貨簽核：申請 → 主管核准/駁回。每步都記錄誰、何時並寫進購物旅程。"""
+    conn = _conn()
+    row = conn.execute("SELECT * FROM cs_orders WHERE id=?", (order_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Order not found")
+    who = (body.by or "").strip() or "員工"
+    action = body.action
+    status = row["return_status"]
+    signed_by = row["return_signed_by"]
+    signed_at = row["return_signed_at"]
+    reason = row["return_reason"]
+
+    if action == "request":
+        status, reason = "待簽核", (body.reason or reason or "")
+        signed_by = signed_at = None
+        _log_event(conn, order_id, "staff", who, "return",
+                   f"申請退貨簽核" + (f"：{reason}" if reason else ""))
+    elif action == "approve":
+        status, signed_by, signed_at = "已核准", who, _now()
+        _log_event(conn, order_id, "staff", who, "return", "✅ 退貨已核准")
+    elif action == "reject":
+        status, signed_by, signed_at = "已駁回", who, _now()
+        _log_event(conn, order_id, "staff", who, "return",
+                   "❌ 退貨已駁回" + (f"：{body.reason}" if body.reason else ""))
+    elif action == "cancel":
+        status = signed_by = signed_at = reason = None
+        _log_event(conn, order_id, "staff", who, "return", "撤銷退貨申請")
+    else:
+        conn.close()
+        raise HTTPException(400, "action 需為 request/approve/reject/cancel")
+
+    conn.execute(
+        """UPDATE cs_orders SET return_status=?, return_reason=?, return_signed_by=?,
+               return_signed_at=?, last_handler=?, updated_at=CURRENT_TIMESTAMP WHERE id=?""",
+        (status, reason, signed_by, signed_at, who, order_id),
+    )
+    conn.commit()
+    out = _decorate(conn.execute("SELECT * FROM cs_orders WHERE id=?", (order_id,)).fetchone())
+    out["timeline"] = _timeline(conn, order_id)
+    conn.close()
+    return out
+
+
 @router.get("/customers/history")
 def customer_history(customer_id: Optional[str] = Query(None),
                      phone: Optional[str] = Query(None),
@@ -760,7 +835,9 @@ def meta():
     """前端下拉選單與外部連結設定用。"""
     return {
         "track_statuses": TRACK_STATUSES,
+        "stages_by_type": {k: _stages_for(k) for k in PRODUCT_TYPES},
         "risk_types": RISK_TYPES,
+        "return_statuses": RETURN_STATUSES,
         "product_types": {k: _sla_days(k) for k in PRODUCT_TYPES},
         "archive_after_complete_days": ARCHIVE_AFTER_COMPLETE_DAYS,
         "due_soon_days": DUE_SOON_DAYS,

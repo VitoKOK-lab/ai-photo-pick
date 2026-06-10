@@ -118,6 +118,56 @@ function fillSelect(sel, options, value) {
   sel.innerHTML = options.map(o => `<option value="${esc(o)}"${o === value ? " selected" : ""}>${esc(o)}</option>`).join("");
 }
 
+// 進度下拉依品項顯示對應關卡
+function fillStages(ptype, value) {
+  const stages = (META.stages_by_type && META.stages_by_type[ptype]) || META.track_statuses;
+  const opts = stages.includes(value) || !value ? stages : [value, ...stages];
+  fillSelect($("om-status"), opts, value || stages[0]);
+}
+
+// 退貨簽核區塊
+function renderReturn(o) {
+  const box = $("om-return");
+  const st = o.return_status;
+  if (!st) {
+    box.className = "ret-wrap";
+    box.innerHTML = `<button class="btn btn-sm" data-ret="request">＋ 申請退貨簽核</button>`;
+  } else if (st === "待簽核") {
+    box.className = "ret-wrap ret-pending";
+    box.innerHTML = `<div class="ret-line">🟠 <b>退貨待簽核</b>${o.return_reason ? "・" + esc(o.return_reason) : ""}</div>
+      <div class="ret-actions">
+        <button class="btn btn-sm btn-gold" data-ret="approve">✔ 核准退貨</button>
+        <button class="btn btn-sm btn-danger" data-ret="reject">✘ 駁回</button>
+        <button class="btn btn-sm" data-ret="cancel">撤銷</button>
+      </div>`;
+  } else {
+    const ok = st === "已核准";
+    box.className = "ret-wrap " + (ok ? "ret-ok" : "ret-rej");
+    box.innerHTML = `<div class="ret-line">${ok ? "✅" : "❌"} <b>退貨${esc(st)}</b>
+      ${o.return_signed_by ? "・簽核：" + esc(o.return_signed_by) : ""}
+      ${o.return_signed_at ? "（" + esc(o.return_signed_at) + "）" : ""}</div>
+      <div class="ret-actions"><button class="btn btn-sm" data-ret="cancel">撤銷/重來</button></div>`;
+  }
+  box.querySelectorAll("[data-ret]").forEach(b =>
+    b.addEventListener("click", () => doReturn(b.dataset.ret)));
+}
+
+async function doReturn(action) {
+  if (!currentOrder) return;
+  let reason = null;
+  if (action === "request") {
+    reason = prompt("退貨原因（可留空）："); if (reason === null) return;
+  }
+  if (action === "reject") {
+    reason = prompt("駁回原因（可留空）："); if (reason === null) return;
+  }
+  const o = await jpost(`/api/cs/orders/${currentOrder.id}/return`,
+    { action, by: me() || null, reason });
+  currentOrder = { ...currentOrder, ...o };
+  renderReturn(o);
+  renderTimeline(o.timeline);
+}
+
 function renderTimeline(events) {
   if (!events || !events.length) {
     $("om-timeline").innerHTML = `<div class="tl-empty">還沒有任何記錄</div>`;
@@ -157,8 +207,9 @@ async function openOrder(id) {
   } else { bar.className = "om-due-bar"; bar.textContent = ""; }
 
   fillSelect($("om-ptype"), Object.keys(META.product_types || { 規格: 14, 訂製: 45 }), o.product_type || "規格");
-  fillSelect($("om-status"), META.track_statuses, o.track_status);
+  fillStages(o.product_type || "規格", o.track_status);
   fillSelect($("om-risktype"), ["", ...META.risk_types], o.risk_type || "");
+  renderReturn(o);
   $("om-owner").value = o.owner || "";
   $("om-next").value = o.next_action || "";
   $("om-due").value = o.due_date || "";
@@ -325,6 +376,8 @@ function bind() {
   $("om-archive").addEventListener("click", archiveOrder);
   $("om-addnote").addEventListener("click", addNote);
   $("om-history").addEventListener("click", showHistory);
+  // 改品項 → 進度下拉換成該品項的關卡
+  $("om-ptype").addEventListener("change", () => fillStages($("om-ptype").value, $("om-status").value));
   $("hist-close").addEventListener("click", () => $("history-modal").classList.add("hidden"));
   document.querySelectorAll(".who-toggle .wt").forEach(b =>
     b.addEventListener("click", () => {

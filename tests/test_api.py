@@ -281,8 +281,8 @@ class TestCSImport:
         _import(client)
         rows = client.get("/api/cs/orders?view=all").json()
         by_no = {o["order_number"]: o for o in rows}
-        assert by_no["20260601002"]["track_status"] == "待處理"            # 未付款
-        assert by_no["20260601001"]["track_status"] == "大陸-備貨/製作中"   # 已付款未出貨
+        assert by_no["20260601002"]["track_status"] == "待處理"          # 未付款
+        assert by_no["20260601001"]["track_status"] == "大陸-備貨/拍照"   # 已付款未出貨(規格)
         # 只追未完成：一進來就已出貨的單直接封存、不佔看板
         assert by_no["20260601003"]["shipped_at"] is not None
         assert by_no["20260601003"]["archived"] == 1
@@ -412,10 +412,10 @@ class TestCSWorkflow:
         assert any(k == "system" and "下單" in c for k, c in kinds)
         # 推進進度 → 自動記錄誰、做了什麼
         client.put(f"/api/cs/orders/{oid}", json={
-            "track_status": "大陸-拍照打包", "handler": "深圳-阿明"})
+            "track_status": "大陸-打包出貨", "handler": "深圳-阿明"})
         o = client.get(f"/api/cs/orders/{oid}").json()
         assert o["last_handler"] == "深圳-阿明"
-        assert any(e["kind"] == "stage" and "大陸-拍照打包" in e["content"]
+        assert any(e["kind"] == "stage" and "大陸-打包出貨" in e["content"]
                    and e["actor"] == "深圳-阿明" for e in o["timeline"])
 
     def test_add_customer_message(self, client):
@@ -440,6 +440,29 @@ class TestCSWorkflow:
         # 出貨期限較近的排前面（S2 訂製到期 6/15 早於 S1 規格 6/22）
         nums = [o["order_number"] for o in active]
         assert nums.index("S2") < nums.index("S1")
+
+    def test_stages_differ_by_product_type(self, client):
+        meta = client.get("/api/cs/meta").json()
+        sbt = meta["stages_by_type"]
+        # 訂製品才有「成品照待客人確認」這道寄客人確認的關卡
+        assert "成品照待客人確認" in sbt["訂製"]
+        assert "成品照待客人確認" not in sbt["規格"]
+
+    def test_return_signoff_flow(self, client):
+        _import(client, WORKFLOW_CSV)
+        oid = client.get("/api/cs/orders?view=all&q=S1").json()[0]["id"]
+        # 申請 → 待簽核
+        r = client.post(f"/api/cs/orders/{oid}/return",
+                        json={"action": "request", "by": "客服-小芳", "reason": "尺寸不合"})
+        assert r.json()["return_status"] == "待簽核"
+        # 主管核准 → 記錄簽核人/時間 + 旅程
+        r = client.post(f"/api/cs/orders/{oid}/return",
+                        json={"action": "approve", "by": "店長-阿德"})
+        o = r.json()
+        assert o["return_status"] == "已核准"
+        assert o["return_signed_by"] == "店長-阿德"
+        assert o["return_signed_at"]
+        assert any(e["kind"] == "return" and "核准" in e["content"] for e in o["timeline"])
 
 
 class TestCSHandover:

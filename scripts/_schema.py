@@ -187,6 +187,10 @@ CREATE TABLE IF NOT EXISTS cs_orders (
     risk_type TEXT,                      -- 異常類型
     notes TEXT,
     customer_id TEXT,                    -- SHOPLINE 顧客 ID（串客人歷史用）
+    return_status TEXT,                  -- 退貨簽核：待簽核/已核准/已駁回（NULL=無退貨）
+    return_reason TEXT,                  -- 退貨原因
+    return_signed_by TEXT,               -- 簽核人
+    return_signed_at TEXT,               -- 簽核時間
     shipped_at TEXT,                     -- 首次偵測到已出貨的日期（YYYY-MM-DD）
     completed_at TEXT,                   -- 首次偵測到已完成（送達）的日期，退換貨期由此起算
     archived INTEGER DEFAULT 0,          -- 0=在看板上, 1=已封存進資料庫

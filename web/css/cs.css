@@ -220,6 +220,14 @@ tbody tr:last-child td { border-bottom: none; }
 .who-toggle .wt.active { border-color: var(--gold); background: var(--gold-bg); color: var(--gold-deep); font-weight: 600; }
 .addnote textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; min-height: 48px; resize: vertical; margin-bottom: 6px; }
 
+/* 退貨簽核 */
+.ret-wrap { border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.ret-wrap.ret-pending { border-color: var(--overdue); background: var(--overdue-bg); }
+.ret-wrap.ret-ok { border-color: var(--ok); background: #eef6ee; }
+.ret-wrap.ret-rej { border-color: var(--risk); background: var(--risk-bg); }
+.ret-line { font-size: 13px; margin-bottom: 8px; }
+.ret-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
 /* 客人歷史 */
 .hist-list { max-height: 60vh; overflow-y: auto; }
 .hist-item { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
