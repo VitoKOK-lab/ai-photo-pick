@@ -3,21 +3,20 @@
 <title>主看板 · 客服訂單追蹤</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./mock.css"></head><body>
-<div class="mockbar">設計稿 · <a href="./index.html">回總覽</a> · 點任一列 → <a href="./order-spec.html">看訂單詳情</a></div>
+<div class="mockbar">設計稿（假資料）· <a href="./menu.html">🎨 所有畫面</a> · 點任一列看訂單詳情</div>
 
 <div class="topbar">
-  <span class="back">← 返回</span>
+  <a class="back" href="./index.html">← 返回</a>
   <h1>客服訂單追蹤</h1>
   <span class="grow"></span>
-  <span class="last-import">最後更新：2026-06-10 09:20</span>
+  <span class="auto-import" title="SHOPLINE 訂單每日定時自動匯入">🔄 自動匯入：今天 09:00 ✓ · 下次 18:00</span>
   <label class="whoami"><span>我是</span><input value="台灣-阿May"></label>
   <button class="btn btn-sm">↻ 重新整理</button>
-  <button class="btn btn-gold btn-sm">⬆ 上傳 SHOPLINE 報表</button>
 </div>
 
 <div class="tabs">
   <button class="tab active">訂單看板</button>
-  <button class="tab">交接班</button>
+  <a class="tab" href="./handover.html">交接班</a>
 </div>
 
 <div class="wrap" style="background:#fff;border-radius:0 12px 12px 12px;">
@@ -45,7 +44,7 @@
         <th>目前進度</th><th>出貨期限</th><th class="hide-sm">最後處理</th><th>旗標</th>
       </tr></thead>
       <tbody>
-        <tr class="row-risk">
+        <tr class="row-risk" onclick="location.href='./order-custom.html'">
           <td class="ordno">20260605103<span class="sl-link">🔗</span></td>
           <td class="cust">林雅婷</td>
           <td><span class="type-badge tb-custom">訂製</span></td>
@@ -55,17 +54,17 @@
           <td class="hide-sm">深圳-小美</td>
           <td><span class="flag flag-risk">🔴 欠石</span></td>
         </tr>
-        <tr class="row-overdue">
+        <tr class="row-overdue" onclick="location.href='./order-spec.html'">
           <td class="ordno">20260531160<span class="sl-link">🔗</span></td>
           <td class="cust">陳怡君</td>
           <td><span class="type-badge tb-std">規格</span></td>
           <td class="hide-sm truncate">藍寶石墜子</td>
-          <td><span class="pill">大陸-備貨/拍照</span></td>
+          <td><span class="pill">大陸-備貨</span></td>
           <td><div class="due-wrap"><span class="due-date">2026-06-09</span><span class="due-tag due-late">逾期1天</span></div></td>
           <td class="hide-sm">深圳-阿明</td>
           <td><span class="flag flag-overdue">🟠 逾期</span></td>
         </tr>
-        <tr>
+        <tr onclick="location.href='./order-custom.html'">
           <td class="ordno">20260607112<span class="sl-link">🔗</span></td>
           <td class="cust">王碩芬</td>
           <td><span class="type-badge tb-custom">訂製</span></td>
@@ -75,7 +74,7 @@
           <td class="hide-sm">深圳-小美</td>
           <td><span class="flag flag-soon">🟡 快到期</span></td>
         </tr>
-        <tr>
+        <tr onclick="location.href='./order-spec.html'">
           <td class="ordno">20260608090<span class="sl-link">🔗</span></td>
           <td class="cust">張婉容</td>
           <td><span class="type-badge tb-std">規格</span></td>
@@ -85,7 +84,7 @@
           <td class="hide-sm">台灣-阿May</td>
           <td>—</td>
         </tr>
-        <tr>
+        <tr onclick="location.href='./order-spec.html'">
           <td class="ordno">20260608120<span class="sl-link">🔗</span></td>
           <td class="cust">楊淑珍</td>
           <td><span class="type-badge tb-std">規格</span></td>
@@ -95,7 +94,7 @@
           <td class="hide-sm">台灣-阿May</td>
           <td>—</td>
         </tr>
-        <tr>
+        <tr onclick="location.href='./order-custom.html'">
           <td class="ordno">20260609141<span class="sl-link">🔗</span></td>
           <td class="cust">許素清</td>
           <td><span class="type-badge tb-custom">訂製</span></td>

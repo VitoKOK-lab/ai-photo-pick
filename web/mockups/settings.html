@@ -3,16 +3,17 @@
 <title>設定 · 客服訂單追蹤</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./mock.css"></head><body>
-<div class="mockbar">設計稿 · 設定頁（新畫面）· <a href="./index.html">回總覽</a></div>
-<div class="topbar"><span class="back">← 返回</span><h1>設定</h1></div>
+<div class="mockbar">設計稿（假資料）· 設定頁（新畫面）· <a href="./menu.html">🎨 所有畫面</a></div>
+<div class="topbar"><a class="back" href="./board.html">← 返回</a><h1>設定</h1></div>
 
 <div class="wrap">
   <div class="set-card">
     <h3>規格品流程關卡</h3>
-    <p class="hint">出貨期 14 天。員工在訂單上用單一下拉選「目前到哪」。拖曳可排序，點 × 可刪。</p>
+    <p class="hint">出貨期 14 天。備貨與拍照分開，拍照在打包前（出貨備查用）。拖曳可排序，點 × 可刪。</p>
     <div>
       <span class="stage-chip">待處理 <span class="x">×</span></span>
-      <span class="stage-chip">大陸-備貨/拍照 <span class="x">×</span></span>
+      <span class="stage-chip">大陸-備貨 <span class="x">×</span></span>
+      <span class="stage-chip">大陸-拍照(出貨備查) <span class="x">×</span></span>
       <span class="stage-chip">大陸-打包出貨 <span class="x">×</span></span>
       <span class="stage-chip">已寄台灣(在途) <span class="x">×</span></span>
       <span class="stage-chip">台灣-品管出貨 <span class="x">×</span></span>
@@ -27,9 +28,10 @@
 
   <div class="set-card">
     <h3>訂製品流程關卡</h3>
-    <p class="hint">出貨期 45 天。比規格多「待客人確認圖」與「成品照待客人確認」兩道寄客人確認關卡。</p>
+    <p class="hint">出貨期 45 天。含畫 3D 圖；比規格多「畫3D圖／待客人確認圖／成品照待客人確認」等寄客人確認關卡。</p>
     <div>
       <span class="stage-chip">待處理 <span class="x">×</span></span>
+      <span class="stage-chip">畫3D圖 <span class="x">×</span></span>
       <span class="stage-chip">待客人確認圖 <span class="x">×</span></span>
       <span class="stage-chip">金工製作中 <span class="x">×</span></span>
       <span class="stage-chip">成品照待客人確認 <span class="x">×</span></span>
@@ -49,6 +51,16 @@
     <h3>歸檔規則</h3>
     <p class="hint">已完成（送達）後，過了退換貨期就自動移入封存資料庫。</p>
     <div class="field" style="max-width:200px;"><label>退換貨期（天）</label><input value="7"></div>
+  </div>
+
+  <div class="set-card">
+    <h3>自動匯入時間</h3>
+    <p class="hint">系統每天會在這些時間自動把 SHOPLINE 訂單拉進來，平常不用手動上傳。</p>
+    <div>
+      <span class="stage-chip">09:00 <span class="x">×</span></span>
+      <span class="stage-chip">18:00 <span class="x">×</span></span>
+      <span class="stage-chip" style="background:var(--gold-bg);color:var(--gold-deep);">＋ 新增時間</span>
+    </div>
   </div>
 
   <div class="set-card">

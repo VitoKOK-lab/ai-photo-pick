@@ -3,16 +3,17 @@
 <title>訂單詳情(訂製) · 客服訂單追蹤</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./mock.css"></head><body>
-<div class="mockbar">設計稿 · 訂製品訂單（含成品照確認 + 退貨已核准）· <a href="./index.html">回總覽</a></div>
+<div class="mockbar">設計稿（假資料）· 訂製品訂單（含畫3D圖、成品照確認、退貨已核准）· <a href="./menu.html">🎨 所有畫面</a></div>
 
 <div class="detail">
   <h2>鍾明珠 <span class="om-ordno">20260501144400804</span> <span class="sl-link">🔗 到 SHOPLINE 叫單</span></h2>
   <p class="sub">0927-327-270 · 訂製925白K手鏈 18公分 · NT$17,900</p>
   <div class="om-due-bar soon">訂製 · 出貨期限 2026-06-15（還剩 5 天）</div>
 
-  <!-- 訂製流程步驟 -->
+  <!-- 訂製流程步驟（含畫3D圖；成品照即寄客人確認的美照） -->
   <div class="flow">
     <span class="step done">待處理</span>
+    <span class="step done">畫3D圖</span>
     <span class="step done">待客人確認圖</span>
     <span class="step done">金工製作中</span>
     <span class="step now">成品照待客人確認</span>
@@ -28,7 +29,7 @@
         <div class="field"><label>品項類型（決定出貨期）</label>
           <select><option>規格</option><option selected>訂製</option></select></div>
         <div class="field"><label>目前進度</label>
-          <select><option>待處理</option><option>待客人確認圖</option><option>金工製作中</option><option selected>成品照待客人確認</option><option>大陸-打包出貨</option><option>已寄台灣(在途)</option><option>台灣-品管出貨</option><option>已完成</option></select></div>
+          <select><option>待處理</option><option>畫3D圖</option><option>待客人確認圖</option><option>金工製作中</option><option selected>成品照待客人確認</option><option>大陸-打包出貨</option><option>已寄台灣(在途)</option><option>台灣-品管出貨</option><option>已完成</option></select></div>
       </div>
       <div class="grid2">
         <div class="field"><label>負責人</label><input value="深圳-小美"></div>
@@ -50,7 +51,7 @@
     </div>
 
     <div class="om-right">
-      <div class="om-right-head"><strong>購物旅程</strong><button class="btn btn-sm">👤 客人歷史</button></div>
+      <div class="om-right-head"><strong>購物旅程</strong><a class="btn btn-sm" href="./history.html">👤 客人歷史</a></div>
       <div class="timeline">
         <div class="tl-item tl-sys"><div class="tl-dot">⚙</div><div class="tl-body">
           <div class="tl-meta"><span>2026-05-01 12:44</span><span class="tl-actor">系統</span></div>
@@ -81,7 +82,7 @@
 
   <div class="detail-actions">
     <button class="btn btn-gold">儲存進度</button>
-    <button class="btn">關閉</button>
+    <a class="btn" href="./board.html">關閉</a>
     <span class="grow"></span>
     <button class="btn btn-danger">移入封存</button>
   </div>

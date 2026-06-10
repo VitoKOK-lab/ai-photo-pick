@@ -1,20 +1,31 @@
 <!DOCTYPE html><html lang="zh-TW"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>上傳報表 · 客服訂單追蹤</title>
+<title>自動匯入 · 客服訂單追蹤</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./mock.css"></head><body>
-<div class="mockbar">設計稿 · 上傳 SHOPLINE 報表 · <a href="./index.html">回總覽</a></div>
+<div class="mockbar">設計稿（假資料）· 自動匯入（取代手動上傳）· <a href="./menu.html">🎨 所有畫面</a></div>
 <div class="import-card">
-  <h2 style="font-size:18px;">上傳 SHOPLINE 報表</h2>
-  <p style="font-size:13px;color:var(--ink-2);margin-top:6px;">一天兩次：從 SHOPLINE 匯出訂單報表（.xls 或 .csv），拖到下面或點選檔案。系統會自動合併同單多列、去重，只把沒見過的新單寫進看板。</p>
-  <div class="dropzone">📄 把報表檔拖到這裡，或<u>點擊選擇檔案</u><br><span style="font-size:12px;">支援 .xls / .csv</span></div>
-  <div class="import-result">
-    讀取 2,313 列（合併為 953 張訂單）　→<br>
-    新增 <b>18</b> 筆新單，更新 935 筆，封存 7 筆。<br>
-    <span style="color:var(--ok);">✓ 欄位全部對應成功</span>
+  <h2 style="font-size:18px;">SHOPLINE 自動匯入</h2>
+  <p style="font-size:13px;color:var(--ink-2);margin-top:6px;">系統每天定時自動把 SHOPLINE 訂單拉進看板，自動合併同單多列、去重，只新增沒見過的單。平常你不用做任何事。</p>
+
+  <div class="om-due-bar ok" style="margin-top:16px;">🔄 自動匯入運作中 · 今天 09:00 成功（新增 18 筆）· 下次 18:00</div>
+
+  <div class="field"><label>每日自動匯入時間</label>
+    <div><span class="stage-chip">09:00 <span class="x">×</span></span><span class="stage-chip">18:00 <span class="x">×</span></span>
+    <span class="stage-chip" style="background:var(--gold-bg);color:var(--gold-deep);">＋ 新增時間</span></div>
   </div>
-  <div style="display:flex;gap:10px;margin-top:16px;">
-    <button class="btn btn-gold">開始匯入</button>
-    <button class="btn">關閉</button>
+
+  <h3 style="font-size:14px;margin:18px 0 6px;">最近匯入記錄</h3>
+  <div class="hist-item"><div class="hist-top"><b>2026-06-10 09:00</b> <span class="pill" style="background:var(--ok-bg);color:var(--ok);">成功</span></div>
+    <div class="hist-sub muted">讀取 2,313 列 → 合併 953 張 · 新增 18、更新 935、封存 7</div></div>
+  <div class="hist-item"><div class="hist-top"><b>2026-06-09 18:00</b> <span class="pill" style="background:var(--ok-bg);color:var(--ok);">成功</span></div>
+    <div class="hist-sub muted">新增 9、更新 940、封存 5</div></div>
+
+  <h3 style="font-size:14px;margin:18px 0 6px;">手動補匯（備用，平常用不到）</h3>
+  <div class="dropzone" style="padding:20px;">萬一自動匯入沒跑，可手動把報表檔拖到這裡補上<br><span style="font-size:12px;">支援 .xls / .csv</span></div>
+
+  <div style="display:flex;gap:10px;margin-top:14px;">
+    <button class="btn btn-gold">立即匯入一次</button>
+    <a class="btn" href="./board.html">關閉</a>
   </div>
 </div></body></html>

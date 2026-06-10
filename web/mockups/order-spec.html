@@ -3,17 +3,18 @@
 <title>訂單詳情(規格) · 客服訂單追蹤</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./mock.css"></head><body>
-<div class="mockbar">設計稿 · 規格品訂單 · <a href="./index.html">回總覽</a> · <a href="./order-custom.html">看訂製品版本 →</a></div>
+<div class="mockbar">設計稿（假資料）· 規格品訂單 · <a href="./menu.html">🎨 所有畫面</a> · <a href="./order-custom.html">看訂製品版本 →</a></div>
 
 <div class="detail">
   <h2>陳怡君 <span class="om-ordno">20260531160234640</span> <span class="sl-link">🔗 到 SHOPLINE 叫單</span></h2>
   <p class="sub">0931-555-777 · 藍寶石墜子 18吋 · NT$22,569</p>
   <div class="om-due-bar late">規格 · 出貨期限 2026-06-09（已逾期 1 天）</div>
 
-  <!-- 規格流程步驟 -->
+  <!-- 規格流程步驟（備貨、拍照分開；拍照在打包前） -->
   <div class="flow">
     <span class="step done">待處理</span>
-    <span class="step now">大陸-備貨/拍照</span>
+    <span class="step now">大陸-備貨</span>
+    <span class="step">大陸-拍照(出貨備查)</span>
     <span class="step">大陸-打包出貨</span>
     <span class="step">已寄台灣(在途)</span>
     <span class="step">台灣-品管出貨</span>
@@ -27,7 +28,7 @@
         <div class="field"><label>品項類型（決定出貨期）</label>
           <select><option>規格</option><option>訂製</option></select></div>
         <div class="field"><label>目前進度</label>
-          <select><option>待處理</option><option selected>大陸-備貨/拍照</option><option>大陸-打包出貨</option><option>已寄台灣(在途)</option><option>台灣-品管出貨</option><option>已完成</option></select></div>
+          <select><option>待處理</option><option selected>大陸-備貨</option><option>大陸-拍照(出貨備查)</option><option>大陸-打包出貨</option><option>已寄台灣(在途)</option><option>台灣-品管出貨</option><option>已完成</option></select></div>
       </div>
       <div class="grid2">
         <div class="field"><label>負責人</label><input value="深圳-阿明"></div>
@@ -45,7 +46,7 @@
 
     <!-- 右：購物旅程 -->
     <div class="om-right">
-      <div class="om-right-head"><strong>購物旅程</strong><button class="btn btn-sm">👤 客人歷史</button></div>
+      <div class="om-right-head"><strong>購物旅程</strong><a class="btn btn-sm" href="./history.html">👤 客人歷史</a></div>
       <div class="timeline">
         <div class="tl-item tl-sys"><div class="tl-dot">⚙</div><div class="tl-body">
           <div class="tl-meta"><span>2026-05-31 16:02</span><span class="tl-actor">系統</span></div>
@@ -76,7 +77,7 @@
 
   <div class="detail-actions">
     <button class="btn btn-gold">儲存進度</button>
-    <button class="btn">關閉</button>
+    <a class="btn" href="./board.html">關閉</a>
     <span class="grow"></span>
     <button class="btn btn-danger">移入封存</button>
   </div>
