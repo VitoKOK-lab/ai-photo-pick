@@ -40,6 +40,9 @@ button { font-family: inherit; cursor: pointer; }
 .auto-import { font-size: 12px; color: var(--ok); background: var(--ok-bg); border: 1px solid #cfe8da; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
 .whoami { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); }
 .whoami input { width: 96px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; font-size: 13px; }
+.userchip { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.userchip .role { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--gold-bg); color: var(--gold-deep); }
+.userchip a { font-weight: 400; color: var(--ink-3); }
 
 /* Buttons */
 .btn { border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 9px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }

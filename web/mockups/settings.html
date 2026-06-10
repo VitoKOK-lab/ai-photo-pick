@@ -70,9 +70,33 @@
   </div>
 
   <div class="set-card">
-    <h3>通行碼</h3>
-    <p class="hint">只有知道通行碼的人能進系統。改了之後，大家要用新通行碼重新進入。</p>
-    <div class="field" style="max-width:320px;"><label>存取通行碼</label><input type="password" value="••••••••••"></div>
+    <h3>員工帳號（限主管）</h3>
+    <p class="hint">每位客服一組帳號登入，操作會自動署名。主管可新增、停用、重設密碼、設角色。離職的人按「停用」即可，不影響其他人。</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <thead><tr>
+        <th style="text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);color:var(--ink-3);font-size:12px;">姓名</th>
+        <th style="text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);color:var(--ink-3);font-size:12px;">帳號</th>
+        <th style="text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);color:var(--ink-3);font-size:12px;">角色</th>
+        <th style="text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);color:var(--ink-3);font-size:12px;">狀態</th>
+        <th style="border-bottom:1px solid var(--line);"></th>
+      </tr></thead>
+      <tbody>
+        <tr><td style="padding:9px 6px;">台灣-阿May</td><td style="padding:9px 6px;">amay</td>
+          <td style="padding:9px 6px;"><span class="type-badge tb-custom">主管</span></td>
+          <td style="padding:9px 6px;color:var(--ok);">啟用中</td>
+          <td style="padding:9px 6px;text-align:right;"><button class="btn btn-sm">重設密碼</button> <button class="btn btn-sm">停用</button></td></tr>
+        <tr><td style="padding:9px 6px;">深圳-小美</td><td style="padding:9px 6px;">xiaomei</td>
+          <td style="padding:9px 6px;"><span class="type-badge tb-std">員工</span></td>
+          <td style="padding:9px 6px;color:var(--ok);">啟用中</td>
+          <td style="padding:9px 6px;text-align:right;"><button class="btn btn-sm">重設密碼</button> <button class="btn btn-sm">停用</button></td></tr>
+        <tr><td style="padding:9px 6px;">深圳-阿明</td><td style="padding:9px 6px;">aming</td>
+          <td style="padding:9px 6px;"><span class="type-badge tb-std">員工</span></td>
+          <td style="padding:9px 6px;color:var(--ink-3);">已停用</td>
+          <td style="padding:9px 6px;text-align:right;"><button class="btn btn-sm">重新啟用</button></td></tr>
+      </tbody>
+    </table>
+    <button class="btn btn-gold btn-sm" style="margin-top:12px;">＋ 新增員工帳號</button>
+    <p class="hint" style="margin-top:10px;">「主管」可進設定頁、可核准退貨；「員工」只用看板處理訂單、不能核准退貨。</p>
   </div>
 
   <button class="btn btn-gold">儲存設定</button>
