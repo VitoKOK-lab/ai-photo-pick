@@ -18,7 +18,9 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config.settings import SQLITE_PATH, CONFIG_DIR
+from config.settings import (
+    SQLITE_PATH, CONFIG_DIR, SHOPLINE_HANDLE, SHOPLINE_ORDER_URL,
+)
 
 router = APIRouter(prefix="/api/cs", tags=["customer-service"])
 
@@ -506,10 +508,24 @@ def delete_order(order_id: int):
     return {"deleted": True}
 
 
+def shopline_order_url(order_number: str) -> str:
+    """組出連回 SHOPLINE 後台的訂單網址（找不到設定則回空字串）。"""
+    if not order_number or not SHOPLINE_ORDER_URL:
+        return ""
+    return (SHOPLINE_ORDER_URL
+            .replace("{handle}", SHOPLINE_HANDLE or "")
+            .replace("{order_number}", str(order_number)))
+
+
 @router.get("/meta")
 def meta():
-    """前端下拉選單用。"""
-    return {"track_statuses": TRACK_STATUSES, "risk_types": RISK_TYPES}
+    """前端下拉選單與外部連結設定用。"""
+    return {
+        "track_statuses": TRACK_STATUSES,
+        "risk_types": RISK_TYPES,
+        "shopline_order_url": SHOPLINE_ORDER_URL,
+        "shopline_handle": SHOPLINE_HANDLE,
+    }
 
 
 # ─── 交接班 ──────────────────────────────────────────────────────────────────

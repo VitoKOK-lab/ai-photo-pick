@@ -59,3 +59,14 @@ ALLOWED_ORIGINS = [
     for o in os.environ.get("JEWELRY_ALLOWED_ORIGINS", "").split(",")
     if o.strip()
 ] or ["*"]
+
+# ─── SHOPLINE 後台跳轉 ────────────────────────────────────────────────
+# 客服看板每張單可一鍵連回 SHOPLINE 後台叫出該筆訂單。
+# 店家代號取自匯出報表檔名前綴（例：tzgrotw251_orders_...）。
+SHOPLINE_HANDLE = os.environ.get("SHOPLINE_HANDLE", "tzgrotw251")
+# 訂單連結樣板，{order_number} 會被換成訂單號、{handle} 換成店號。
+# 預設用後台訂單搜尋（以訂單號搜），相容性最高；若你的後台網域不同，改這行即可。
+SHOPLINE_ORDER_URL = os.environ.get(
+    "SHOPLINE_ORDER_URL",
+    "https://admin.shoplineapp.com/admin/{handle}/orders?query_key=order_number&query_value={order_number}",
+)

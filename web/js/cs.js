@@ -40,6 +40,20 @@ async function loadDashboard() {
 
 function statusPill(s) { return `<span class="pill pill-status">${esc(s || "—")}</span>`; }
 
+// 組出連回 SHOPLINE 後台的訂單網址
+function shoplineUrl(orderNumber) {
+  const tpl = META.shopline_order_url;
+  if (!tpl || !orderNumber) return "";
+  return tpl.replace("{handle}", META.shopline_handle || "")
+            .replace("{order_number}", encodeURIComponent(orderNumber));
+}
+function shoplineLink(orderNumber, label) {
+  const url = shoplineUrl(orderNumber);
+  if (!url) return "";
+  return `<a class="sl-link" href="${esc(url)}" target="_blank" rel="noopener"
+    title="到 SHOPLINE 後台叫出這張單" onclick="event.stopPropagation()">${label || "🔗 SHOPLINE"}</a>`;
+}
+
 async function loadOrders() {
   const params = new URLSearchParams({ view: currentView });
   if (searchTerm) params.set("q", searchTerm);
@@ -55,8 +69,8 @@ async function loadOrders() {
     if (o.is_risk) flags.push(`<span class="flag flag-risk">🔴 ${esc(o.risk_type || "異常")}</span>`);
     if (o.overdue) flags.push(`<span class="flag flag-overdue">🟠 逾期</span>`);
     tr.innerHTML = `
-      <td class="ordno">${esc(o.order_number)}</td>
-      <td>${esc(o.customer_name || "—")}</td>
+      <td class="ordno">${esc(o.order_number)}${shoplineLink(o.order_number, "🔗")}</td>
+      <td class="cust">${esc(o.customer_name || "—")}</td>
       <td class="hide-sm truncate">${esc(o.item_summary || "—")}</td>
       <td>${statusPill(o.track_status)}</td>
       <td>${esc(o.owner || "—")}</td>
@@ -85,8 +99,11 @@ function fillSelect(sel, options, value) {
 async function openOrder(id) {
   const o = await api(`/api/cs/orders/${id}`);
   currentOrder = o;
-  $("om-title").textContent = o.order_number;
-  $("om-sub").textContent = [o.customer_name, o.phone, o.total].filter(Boolean).join(" · ");
+  // 真實姓名擺第一眼，後面接訂單號與一鍵跳回 SHOPLINE
+  $("om-title").innerHTML = `${esc(o.customer_name || "（無收件人）")}
+    <span class="om-ordno">${esc(o.order_number)}</span>
+    ${shoplineLink(o.order_number, "🔗 到 SHOPLINE 叫單")}`;
+  $("om-sub").textContent = [o.phone, o.item_summary, o.total].filter(Boolean).join(" · ");
   fillSelect($("om-status"), META.track_statuses, o.track_status);
   fillSelect($("om-risktype"), ["", ...META.risk_types], o.risk_type || "");
   $("om-owner").value = o.owner || "";
