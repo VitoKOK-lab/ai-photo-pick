@@ -228,6 +228,105 @@ def estimate_price(
     return {"estimated": True, **result}
 
 
+@router.get("/estimate-by-attrs")
+def estimate_by_attrs(
+    category:    Optional[str] = None,
+    stone_size:  Optional[str] = None,
+    stone_shape: Optional[str] = None,
+    style:       Optional[str] = None,
+    gemstone:    Optional[str] = None,
+    color:       Optional[str] = None,
+):
+    """
+    根據 5 個估價條件從 transactions + quotes 表推估價格區間。
+    同時回傳符合條件的參考照片。
+    """
+    conn = _conn()
+    cur = conn.cursor()
+
+    def _fetch_tx(where_clause, params) -> list[int]:
+        try:
+            cur.execute(f"SELECT price FROM transactions WHERE {where_clause}", params)
+            return [r[0] for r in cur.fetchall()]
+        except Exception:
+            return []
+
+    prices: list[int] = []
+    source: Optional[str] = None
+
+    # 由精到粗逐步嘗試
+    if not prices and category and gemstone and style:
+        prices = _fetch_tx("category=? AND gemstone=? AND style=?", [category, gemstone, style])
+        if prices: source = f"{category}+{gemstone}+{style}"
+
+    if not prices and category and gemstone:
+        prices = _fetch_tx("category=? AND gemstone=?", [category, gemstone])
+        if prices: source = f"{category}+{gemstone}"
+
+    if not prices and gemstone:
+        prices = _fetch_tx("gemstone=?", [gemstone])
+        if prices: source = f"gemstone={gemstone}"
+
+    if not prices and category:
+        prices = _fetch_tx("category=?", [category])
+        if prices: source = f"category={category}"
+
+    # 若 transactions 無資料，從 quotes 表嘗試
+    if not prices and gemstone:
+        try:
+            cur.execute("SELECT final_price FROM quotes WHERE gemstone=?", [gemstone])
+            prices = [r[0] for r in cur.fetchall()]
+            if prices: source = f"quotes:gemstone={gemstone}"
+        except Exception:
+            pass
+
+    # 查詢符合條件的參考照片
+    photo_wheres: list[str] = []
+    photo_params: list = []
+    for field, val in [
+        ("category",    category),
+        ("gemstone",    gemstone),
+        ("stone_shape", stone_shape),
+        ("style",       style),
+        ("color",       color),
+    ]:
+        if val:
+            photo_wheres.append(f"{field}=?")
+            photo_params.append(val)
+
+    photo_sql = ("WHERE " + " AND ".join(photo_wheres)) if photo_wheres else ""
+    try:
+        cur.execute(
+            f"SELECT id, filename, category, gemstone, color, style, stone_shape, stone_size "
+            f"FROM photos {photo_sql} ORDER BY RANDOM() LIMIT 12",
+            photo_params,
+        )
+        matching_photos = [dict(r) for r in cur.fetchall()]
+    except Exception:
+        matching_photos = []
+
+    conn.close()
+
+    if not prices:
+        return {
+            "estimated":      False,
+            "message":        "成交紀錄不足，無法推估",
+            "sample_count":   0,
+            "matching_photos": matching_photos,
+        }
+
+    low  = _percentile(prices, 0.25)
+    high = _percentile(prices, 0.75)
+    return {
+        "estimated":       True,
+        "price_low":       low,
+        "price_high":      high,
+        "sample_count":    len(prices),
+        "source":          source,
+        "matching_photos": matching_photos,
+    }
+
+
 @router.post("/batch-estimate")
 def batch_estimate(min_samples: int = Query(3, ge=1, description="最少需要幾筆報價才推估")):
     """

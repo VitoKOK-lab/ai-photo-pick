@@ -17,38 +17,50 @@ def _conn():
     conn.row_factory = sqlite3.Row
     return conn
 
+def _safe(row, key, default=None):
+    try:
+        return row[key]
+    except (IndexError, KeyError):
+        return default
+
 def _row_to_dict(row) -> dict:
     return {
-        "id": row["id"],
-        "filename": row["filename"],
-        "micro_url": f"/static/micro/{row['filename']}",
-        "thumb_url": f"/static/thumb/{row['filename']}",
-        "full_url": f"/static/full/{row['filename']}",
-        "color": row["color"],
-        "category": row["category"],
-        "material": row["material"],
-        "gemstone": row["gemstone"],
-        "diamond_status": row["diamond_status"],
-        "price_band": row["price_band"],
-        "price_estimate_low": row["price_estimate_low"],
+        "id":                  row["id"],
+        "filename":            row["filename"],
+        "micro_url":           f"/static/micro/{row['filename']}",
+        "thumb_url":           f"/static/thumb/{row['filename']}",
+        "full_url":            f"/static/full/{row['filename']}",
+        "color":               row["color"],
+        "category":            row["category"],
+        "material":            row["material"],
+        "gemstone":            row["gemstone"],
+        "style":               _safe(row, "style"),
+        "stone_shape":         _safe(row, "stone_shape"),
+        "stone_size":          _safe(row, "stone_size"),
+        "diamond_status":      _safe(row, "diamond_status"),
+        "price_band":          row["price_band"],
+        "price_estimate_low":  row["price_estimate_low"],
         "price_estimate_high": row["price_estimate_high"],
-        "price_source": row["price_source"],
-        "view_count": row["view_count"],
-        "favorite_count": row["favorite_count"],
+        "price_source":        row["price_source"],
+        "view_count":          row["view_count"],
+        "favorite_count":      row["favorite_count"],
     }
 
 @router.get("")
 def list_photos(
-    color: Optional[str] = None,
-    category: Optional[str] = None,
-    material: Optional[str] = None,
+    color:        Optional[str] = None,
+    category:     Optional[str] = None,
+    material:     Optional[str] = None,
     diamond_status: Optional[str] = None,
-    gemstone: Optional[str] = None,
-    price_band: Optional[str] = None,
-    page: int = Query(1, ge=1),
-    sort: str = Query("random", pattern="^(random|newest|popular)$"),
+    gemstone:     Optional[str] = None,
+    price_band:   Optional[str] = None,
+    style:        Optional[str] = None,
+    stone_shape:  Optional[str] = None,
+    stone_size:   Optional[str] = None,
+    page:         int = Query(1, ge=1),
+    sort:         str = Query("random", pattern="^(random|newest|popular)$"),
     exclude_seen: bool = False,
-    session_id: Optional[str] = None,
+    session_id:   Optional[str] = None,
 ):
     wheres = []
     params = []
@@ -61,12 +73,15 @@ def list_photos(
                 wheres.append(f"{field} IN ({placeholders})")
                 params.extend(items)
 
-    add_in("color", color)
-    add_in("category", category)
-    add_in("material", material)
+    add_in("color",          color)
+    add_in("category",       category)
+    add_in("material",       material)
     add_in("diamond_status", diamond_status)
-    add_in("gemstone", gemstone)
-    add_in("price_band", price_band)
+    add_in("gemstone",       gemstone)
+    add_in("price_band",     price_band)
+    add_in("style",          style)
+    add_in("stone_shape",    stone_shape)
+    add_in("stone_size",     stone_size)
 
     if exclude_seen and session_id:
         wheres.append(
@@ -102,9 +117,9 @@ def list_photos(
 
     photos = [_row_to_dict(r) for r in rows]
     return {
-        "photos": photos,
-        "total": total,
-        "page": page,
+        "photos":   photos,
+        "total":    total,
+        "page":     page,
         "has_more": offset + len(photos) < total,
     }
 
