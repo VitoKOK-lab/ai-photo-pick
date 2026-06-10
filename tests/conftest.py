@@ -65,7 +65,8 @@ def tmp_db(tmp_path, monkeypatch):
 
     # patch 各 api 模組的 SQLITE_PATH（已在 import 時複製到 module namespace）
     for mod_name in ["api.photos", "api.events", "api.favorites",
-                     "api.locks", "api.stats", "api.quotes", "api.backup"]:
+                     "api.locks", "api.stats", "api.quotes", "api.backup",
+                     "api.customers", "api.transactions", "api.cs"]:
         import importlib
         mod = importlib.import_module(mod_name)
         if hasattr(mod, "SQLITE_PATH"):

@@ -243,3 +243,107 @@ class TestBackup:
         r = client.post("/api/backup/trigger")
         assert r.status_code == 409
         api.backup._backup_running = False
+
+
+# ─── Customer Service: 訂單追蹤 + 匯入 + 交接班 ───────────────
+SHOPLINE_CSV = (
+    "訂單號碼,收件人姓名,收件人電話,訂單成立日期,商品名稱,訂單總額,付款狀態,出貨狀態\n"
+    "20260601001,王小明,0912345678,2026-06-01,黑歐泊戒指,NT$22569,已付款,處理中\n"
+    "20260601002,李小華,0922333444,2026-06-01,紅寶石墜子,NT$58000,未付款,未出貨\n"
+    "20260601003,陳大文,0933555777,2026-06-01,證書套組,NT$12000,已付款,已出貨\n"
+)
+
+
+def _import(client, csv_text=SHOPLINE_CSV):
+    return client.post(
+        "/api/cs/import",
+        files={"file": ("shopline.csv", csv_text, "text/csv")},
+    )
+
+
+class TestCSImport:
+    def test_import_new_orders(self, client):
+        r = _import(client)
+        assert r.status_code == 200
+        d = r.json()
+        assert d["new"] == 3
+        assert d["updated"] == 0
+        assert "order_number" in d["columns_matched"]
+
+    def test_import_dedup(self, client):
+        _import(client)
+        r = _import(client)          # 同一份再匯入一次
+        d = r.json()
+        assert d["new"] == 0         # 不重複建單
+        assert d["updated"] == 3     # 只更新既有
+
+    def test_initial_track_status(self, client):
+        _import(client)
+        rows = client.get("/api/cs/orders?view=all").json()
+        by_no = {o["order_number"]: o for o in rows}
+        assert by_no["20260601002"]["track_status"] == "待付款"   # 未付款
+        assert by_no["20260601001"]["track_status"] == "製作中"   # 已付款未出貨
+        assert by_no["20260601003"]["shipped_at"] is not None     # 已出貨 → 記出貨日
+
+    def test_import_missing_order_column(self, client):
+        r = _import(client, "姓名,金額\n王小明,100\n")
+        assert r.status_code == 400
+
+
+class TestCSBoard:
+    def test_dashboard_counts(self, client):
+        _import(client)
+        d = client.get("/api/cs/dashboard").json()
+        assert d["active"] == 3
+        assert d["risk"] == 0
+
+    def test_update_and_risk_flag(self, client):
+        _import(client)
+        oid = client.get("/api/cs/orders?view=all").json()[0]["id"]
+        r = client.put(f"/api/cs/orders/{oid}", json={
+            "is_risk": True, "risk_type": "欠石", "owner": "深圳-阿明",
+            "next_action": "聯絡客人告知延期", "track_status": "售後處理中",
+        })
+        assert r.status_code == 200
+        assert r.json()["is_risk"] == 1
+        # 異常檢視應抓到它
+        risk = client.get("/api/cs/orders?view=risk").json()
+        assert any(o["id"] == oid for o in risk)
+        assert client.get("/api/cs/dashboard").json()["risk"] == 1
+
+    def test_overdue_flag(self, client):
+        _import(client)
+        oid = client.get("/api/cs/orders?view=all").json()[0]["id"]
+        client.put(f"/api/cs/orders/{oid}", json={"due_date": "2020-01-01"})
+        o = client.get(f"/api/cs/orders/{oid}").json()
+        assert o["overdue"] is True
+        assert any(x["id"] == oid for x in client.get("/api/cs/orders?view=overdue").json())
+
+    def test_search(self, client):
+        _import(client)
+        rows = client.get("/api/cs/orders?view=all&q=紅寶石").json()
+        assert len(rows) == 1
+        assert rows[0]["order_number"] == "20260601002"
+
+    def test_manual_archive_removes_from_board(self, client):
+        _import(client)
+        oid = client.get("/api/cs/orders?view=active").json()[0]["id"]
+        client.put(f"/api/cs/orders/{oid}", json={"archived": True})
+        active_ids = [o["id"] for o in client.get("/api/cs/orders?view=active").json()]
+        assert oid not in active_ids
+        archived_ids = [o["id"] for o in client.get("/api/cs/orders?view=archived").json()]
+        assert oid in archived_ids
+
+
+class TestCSHandover:
+    def test_create_and_ack(self, client):
+        r = client.post("/api/cs/handover", json={
+            "from_staff": "台灣-小美", "to_staff": "深圳-阿明",
+            "watch_orders": "20260601002", "note": "這張欠石，已通知客人延一週",
+        })
+        assert r.status_code == 201
+        hid = r.json()["id"]
+        assert r.json()["acked"] == 0
+        client.post(f"/api/cs/handover/{hid}/ack")
+        rows = client.get("/api/cs/handover").json()
+        assert rows[0]["acked"] == 1

@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS photos (
     color TEXT, color_confidence REAL,
     category TEXT, category_confidence REAL,
     material TEXT, material_confidence REAL,
+    gemstone TEXT, gemstone_confidence REAL,
+    diamond_status TEXT,
     stone_shape TEXT, stone_shape_confidence REAL,
     stone_size TEXT, stone_size_confidence REAL,
     style TEXT, style_confidence REAL,
@@ -159,4 +161,47 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE INDEX IF NOT EXISTS idx_tx_material ON transactions(material);
 CREATE INDEX IF NOT EXISTS idx_tx_gemstone ON transactions(gemstone);
 CREATE INDEX IF NOT EXISTS idx_tx_date     ON transactions(sale_date);
+
+-- ── 客服訂單追蹤（SHOPLINE 匯入 + 交接班）──────────────────────────────────
+CREATE TABLE IF NOT EXISTS cs_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_number TEXT NOT NULL UNIQUE,   -- SHOPLINE 訂單號碼（去重鍵）
+    customer_name TEXT,
+    phone TEXT,
+    order_date TEXT,                     -- 訂單成立日期（原文）
+    total TEXT,                          -- 訂單金額（原文）
+    item_summary TEXT,                   -- 商品名稱
+    sl_order_status TEXT,               -- SHOPLINE 訂單狀態（原文）
+    sl_payment_status TEXT,             -- SHOPLINE 付款狀態（原文）
+    sl_shipping_status TEXT,            -- SHOPLINE 出貨狀態（原文）
+    -- 內部追蹤欄位（同仁手動維護，匯入不覆蓋）
+    track_status TEXT DEFAULT '待處理',   -- 待付款/製作中/待出貨/寄送中/待交貨/售後處理中/已結案
+    owner TEXT,                          -- 目前負責人
+    next_action TEXT,                    -- 下一步動作
+    due_date TEXT,                       -- 預計出貨/完成日（YYYY-MM-DD）
+    is_risk INTEGER DEFAULT 0,           -- 異常旗標
+    risk_type TEXT,                      -- 異常類型
+    notes TEXT,
+    shipped_at TEXT,                     -- 首次偵測到已出貨的日期（YYYY-MM-DD）
+    archived INTEGER DEFAULT 0,          -- 0=在看板上, 1=已封存進資料庫
+    raw_json TEXT,                       -- 原始整列備份，不遺失任何欄位
+    first_imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_cs_orders_status   ON cs_orders(track_status);
+CREATE INDEX IF NOT EXISTS idx_cs_orders_archived ON cs_orders(archived);
+CREATE INDEX IF NOT EXISTS idx_cs_orders_risk     ON cs_orders(is_risk);
+
+CREATE TABLE IF NOT EXISTS cs_handovers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shift_date TEXT,                     -- 交班日期
+    from_staff TEXT,                     -- 交班人
+    to_staff TEXT,                       -- 接班人
+    watch_orders TEXT,                   -- 要特別盯的單號
+    note TEXT,                           -- 叮嚀
+    acked INTEGER DEFAULT 0,             -- 接班人已確認
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_cs_handovers_date ON cs_handovers(shift_date);
 """

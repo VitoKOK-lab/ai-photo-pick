@@ -1,0 +1,12 @@
+{
+  "_comment": "SHOPLINE 報表欄位 → 內部欄位 對應表。匯入時會用「不分大小寫、去空白」比對 CSV 標題列，第一個命中的就採用。若你的匯出欄名不同，把它加進對應陣列即可，不需改程式。",
+  "order_number":      ["訂單號碼", "訂單編號", "訂單號", "訂單序號", "Order Number", "Order No", "order_number"],
+  "customer_name":     ["收件人姓名", "收件人", "顧客姓名", "會員姓名", "客戶名稱", "買家姓名", "姓名", "Customer Name", "Recipient Name", "Customer"],
+  "phone":             ["收件人電話", "收件人手機", "聯絡電話", "電話", "手機", "Phone", "Recipient Phone"],
+  "order_date":        ["訂單成立日期", "訂單成立時間", "訂單建立時間", "成立時間", "下單時間", "下單日期", "訂單日期", "建立時間", "Created At", "Order Date"],
+  "total":             ["訂單總額", "訂單金額", "總金額", "總計", "應付金額", "實付金額", "Total", "Order Total"],
+  "item_summary":      ["商品名稱", "商品", "品名", "購買商品", "Product Name", "Line Items", "Products"],
+  "sl_order_status":   ["訂單狀態", "Order Status", "Status"],
+  "sl_payment_status": ["付款狀態", "付款状态", "Payment Status"],
+  "sl_shipping_status":["出貨狀態", "物流狀態", "配送狀態", "送貨狀態", "理貨狀態", "Delivery Status", "Fulfillment Status", "Shipping Status"]
+}
