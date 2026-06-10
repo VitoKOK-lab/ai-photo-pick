@@ -1,0 +1,75 @@
+{
+  "color": {
+    "紅色":    "a photo of red colored gemstone jewelry",
+    "粉紅色":  "a photo of pink colored gemstone jewelry",
+    "橙色":    "a photo of orange colored gemstone jewelry",
+    "黃色":    "a photo of yellow colored gemstone jewelry",
+    "綠色":    "a photo of green colored gemstone jewelry",
+    "藍綠色":  "a photo of teal or blue-green colored gemstone jewelry",
+    "藍色":    "a photo of blue colored gemstone jewelry",
+    "紫色":    "a photo of purple or violet colored gemstone jewelry",
+    "白色":    "a photo of white or milky gemstone jewelry",
+    "無色透明": "a photo of colorless transparent crystal or diamond jewelry",
+    "黑色":    "a photo of black gemstone jewelry",
+    "灰色":    "a photo of gray or silver colored gemstone jewelry",
+    "棕色":    "a photo of brown or champagne colored gemstone jewelry",
+    "多色":    "a photo of multicolor or rainbow gemstone jewelry"
+  },
+  "category": {
+    "手鏈":  "a photo of a bracelet or bangle jewelry worn on the wrist",
+    "墜子":  "a photo of a pendant or charm without chain",
+    "耳釘":  "a photo of earrings or ear studs jewelry",
+    "項鏈":  "a photo of a necklace with chain jewelry",
+    "胸針":  "a photo of a brooch or pin jewelry",
+    "多用途": "a photo of versatile jewelry that can be worn multiple ways",
+    "戒指":  "a photo of a ring jewelry worn on finger",
+    "手鐲":  "a photo of a rigid bangle or cuff bracelet",
+    "其他":  "a photo of other miscellaneous jewelry accessories"
+  },
+  "stone_shape": {
+    "橢圓形":   "a photo of jewelry with oval shaped gemstone",
+    "方形":     "a photo of jewelry with square or princess cut gemstone",
+    "長方形":   "a photo of jewelry with rectangular or emerald cut gemstone",
+    "三角形":   "a photo of jewelry with triangular or trillion cut gemstone",
+    "水滴形":   "a photo of jewelry with teardrop or pear shaped gemstone",
+    "圓形":     "a photo of jewelry with round brilliant cut gemstone",
+    "心形":     "a photo of jewelry with heart shaped gemstone",
+    "梨形":     "a photo of jewelry with pear shaped gemstone",
+    "馬眼形":   "a photo of jewelry with marquise or eye shaped gemstone",
+    "枕形":     "a photo of jewelry with cushion cut gemstone",
+    "花形":     "a photo of jewelry with flower shaped design or gemstone",
+    "不規則":   "a photo of jewelry with irregular freeform or raw natural gemstone",
+    "無主石":   "a photo of jewelry with no center gemstone, only metal or small accent stones",
+    "其他":     "a photo of jewelry with uniquely shaped gemstone"
+  },
+  "style": {
+    "無鑽":          "a photo of jewelry with no diamonds, plain metal or colored gemstone only",
+    "簡約(5顆鑽內)":  "a photo of jewelry with minimal diamond accents, less than 5 small diamonds",
+    "輕奢(20顆鑽內)": "a photo of jewelry with some diamond accents, semi-pave setting under 20 diamonds",
+    "豪鑲滿鑲鑽":     "a photo of jewelry fully encrusted with diamonds, full pave or eternity setting"
+  },
+  "stone_size": {
+    "1克拉以內": "a photo of jewelry with small gemstone under 1 carat",
+    "1克拉":     "a photo of jewelry with 1 carat gemstone",
+    "2克拉":     "a photo of jewelry with 2 carat gemstone",
+    "3克拉":     "a photo of jewelry with 3 carat large gemstone",
+    "5克拉":     "a photo of jewelry with 5 carat very large gemstone",
+    "10克拉":    "a photo of jewelry with 10 carat extremely large gemstone",
+    "10克拉以上": "a photo of jewelry with exceptionally large gemstone over 10 carats"
+  },
+  "material": {
+    "925銀":    "a photo of 925 sterling silver jewelry",
+    "18K黃金":  "a photo of 18k yellow gold jewelry",
+    "18K白金":  "a photo of 18k white gold jewelry",
+    "18K玫瑰金": "a photo of 18k rose gold or pink gold jewelry",
+    "鉑金":     "a photo of platinum PT950 jewelry",
+    "其他金屬":  "a photo of other metal jewelry"
+  },
+  "price_band": {
+    "入門":  "a photo of simple affordable everyday jewelry",
+    "中階":  "a photo of mid-range quality jewelry with moderate gemstones",
+    "高階":  "a photo of high-end fine jewelry with quality gemstones",
+    "奢華":  "a photo of luxury jewelry with large precious gemstones",
+    "頂級":  "a photo of ultra-luxury collector jewelry with exceptional gemstones"
+  }
+}

@@ -10,11 +10,13 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import CATEGORIES_JSON, CLIP_MODEL, CLIP_PRETRAINED
 
-# 全域載入模型（lazy load）
+PROMPTS_JSON = Path(__file__).resolve().parent.parent / "config" / "prompts.json"
+
 _model = None
 _preprocess = None
 _tokenizer = None
 _device = "mps" if torch.backends.mps.is_available() else "cpu"
+
 
 def load_model():
     global _model, _preprocess, _tokenizer
@@ -28,9 +30,12 @@ def load_model():
         print("[CLIP] Model loaded.")
     return _model, _preprocess, _tokenizer
 
-def load_categories() -> Dict[str, list]:
-    with open(CATEGORIES_JSON, "r", encoding="utf-8") as f:
+
+def load_prompts() -> Dict[str, Dict[str, str]]:
+    """載入 prompts.json：{維度: {中文標籤: 英文prompt}}"""
+    with open(PROMPTS_JSON, "r", encoding="utf-8") as f:
         return json.load(f)
+
 
 def classify_one(image_path: Path) -> Tuple[Dict, list]:
     """
@@ -38,7 +43,7 @@ def classify_one(image_path: Path) -> Tuple[Dict, list]:
     回傳：(分類結果 dict, embedding list[float])
     """
     model, preprocess, tokenizer = load_model()
-    categories = load_categories()
+    prompts_map = load_prompts()
 
     image = Image.open(image_path).convert("RGB")
     image_input = preprocess(image).unsqueeze(0).to(_device)
@@ -50,8 +55,10 @@ def classify_one(image_path: Path) -> Tuple[Dict, list]:
     embedding = image_features[0].cpu().tolist()
 
     result = {}
-    for dim_name, labels in categories.items():
-        prompts = [f"a photo of jewelry with {label}" for label in labels]
+    for dim_name, label_prompt_map in prompts_map.items():
+        labels = list(label_prompt_map.keys())
+        prompts = list(label_prompt_map.values())
+
         text_input = tokenizer(prompts).to(_device)
 
         with torch.no_grad():
@@ -67,6 +74,7 @@ def classify_one(image_path: Path) -> Tuple[Dict, list]:
         }
 
     return result, embedding
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
