@@ -65,8 +65,9 @@ ALLOWED_ORIGINS = [
 # 店家代號取自匯出報表檔名前綴（例：tzgrotw251_orders_...）。
 SHOPLINE_HANDLE = os.environ.get("SHOPLINE_HANDLE", "tzgrotw251")
 # 訂單連結樣板，{order_number} 會被換成訂單號、{handle} 換成店號。
-# 預設用後台訂單搜尋（以訂單號搜），相容性最高；若你的後台網域不同，改這行即可。
+# 詳情頁(/orders/<內部ID>)需要 SHOPLINE 內部訂單 ID，但匯出報表不含該 ID，
+# 因此預設連到「訂單列表並以訂單號搜尋」，同樣能叫出該單；網域不同改這行即可。
 SHOPLINE_ORDER_URL = os.environ.get(
     "SHOPLINE_ORDER_URL",
-    "https://admin.shoplineapp.com/admin/{handle}/orders?query_key=order_number&query_value={order_number}",
+    "https://admin.shoplineapp.com/admin/{handle}/orders?query={order_number}",
 )
