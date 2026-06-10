@@ -123,6 +123,16 @@ def list_photos(
         "has_more": offset + len(photos) < total,
     }
 
+@router.get("/category-counts")
+def category_counts():
+    """回傳各 category 的照片數量"""
+    conn = _conn()
+    cur = conn.cursor()
+    cur.execute("SELECT category, COUNT(*) as cnt FROM photos WHERE category IS NOT NULL AND category != '' GROUP BY category")
+    rows = cur.fetchall()
+    conn.close()
+    return {r["category"]: r["cnt"] for r in rows}
+
 @router.get("/{photo_id}")
 def get_photo(photo_id: int):
     conn = _conn()

@@ -144,7 +144,7 @@ button { font-family: inherit; cursor: pointer; }
 .det-tags { padding: 14px 16px 8px; display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { padding: 4px 11px; background: var(--s3); border-radius: 20px; font-size: 12px; color: var(--text2); }
 .det-btns { padding: 10px 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.db { padding: 13px; border-radius: var(--r); border: none; font-size: 13px; font-weight: 600; }
+.db { padding: 13px; border-radius: var(--r); border: none; font-size: 13px; font-weight: 600; touch-action: manipulation; position: relative; z-index: 2; }
 .db-fav { background: var(--s3); color: var(--text); }
 .db-fav.on { background: #fff0e0; color: var(--gold); border: 1.5px solid var(--gold); }
 .db-sim { background: var(--accent); color: #fff; }
@@ -186,10 +186,8 @@ const { useState, useEffect, useRef } = React;
 
 /* ── Config ─────────────────────────────────────────── */
 const CFG = {
-  category:   { label: '品項',  values: ['手鏈','墜子','耳釘','項鏈','胸針','戒指','手鐲','其他'] },
-  style:      { label: '鑽石',  values: ['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','豪鑲滿鑲鑽'] },
-  material:   { label: '材質',  values: ['18K黃金','18K白金','18K玫瑰金','925銀','鉑金','其他金屬'] },
-  stone_size: { label: '大小',  values: ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉以上'] },
+  category: { label: '品項', values: ['手鏈','墜子','耳釘','項鏈','胸針','戒指','手鐲','其他'] },
+  style:    { label: '鑽石', values: ['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','豪鑲滿鑲鑽'] },
 };
 
 /* ── Fav storage ────────────────────────────────────── */
@@ -205,7 +203,7 @@ function IcoHeart({ fill }) {
 }
 
 /* ── Filter sheet ───────────────────────────────────── */
-function FilterSheet({ field, cur, onPick, onClose }) {
+function FilterSheet({ field, cur, onPick, onClose, catCounts }) {
   const cfg = CFG[field];
   return (
     <div className="ovl" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -218,7 +216,12 @@ function FilterSheet({ field, cur, onPick, onClose }) {
           {cur && <div className="fsh-item clr" onClick={() => { onPick(null); onClose(); }}>清除篩選（全部）</div>}
           {cfg.values.map(v => (
             <div key={v} className={'fsh-item' + (cur === v ? ' on' : '')} onClick={() => { onPick(v); onClose(); }}>
-              <span>{v}</span>
+              <span>
+                {v}
+                {field === 'category' && catCounts[v] != null && (
+                  <span style={{marginLeft:8,fontSize:13,color:'var(--text3)',fontWeight:400}}>{catCounts[v]}</span>
+                )}
+              </span>
               {cur === v && <span>✓</span>}
             </div>
           ))}
@@ -229,8 +232,8 @@ function FilterSheet({ field, cur, onPick, onClose }) {
 }
 
 /* ── Sidebar ────────────────────────────────────────── */
-function Sidebar({ filters, onFilter, onClear }) {
-  const [open, setOpen] = useState({ category: true, style: true, material: false, stone_size: false });
+function Sidebar({ filters, onFilter, onClear, catCounts }) {
+  const [open, setOpen] = useState({ category: true, style: true });
   return (
     <aside className="sidebar">
       {Object.keys(filters).length > 0 && (
@@ -248,7 +251,12 @@ function Sidebar({ filters, onFilter, onClear }) {
               {filters[field] && <button className="sb-opt-clr" onClick={() => onFilter(field, null)}>✕ 清除</button>}
               {cfg.values.map(v => (
                 <button key={v} className={'sb-opt' + (filters[field] === v ? ' on' : '')}
-                  onClick={() => onFilter(field, filters[field] === v ? null : v)}>{v}</button>
+                  onClick={() => onFilter(field, filters[field] === v ? null : v)}>
+                  {v}
+                  {field === 'category' && catCounts[v] != null && (
+                    <span style={{marginLeft:6,fontSize:11,color:'var(--text3)',fontWeight:400}}>{catCounts[v]}</span>
+                  )}
+                </button>
               ))}
             </div>
           )}
@@ -262,16 +270,20 @@ function Sidebar({ filters, onFilter, onClear }) {
 function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto }) {
   const [view,    setView]    = useState('detail'); // 'detail' | 'similar'
   const [similar, setSimilar] = useState(null);
+  const [simErr,  setSimErr]  = useState(false);
 
-  useEffect(() => { setView('detail'); setSimilar(null); }, [photo.id]);
+  useEffect(() => { setView('detail'); setSimilar(null); setSimErr(false); }, [photo.id]);
 
   const openSimilar = () => {
     setView('similar');
     if (similar !== null) return;
-    fetch('/api/photos/' + photo.id + '/similar?limit=12')
+    setSimErr(false);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    fetch('/api/photos/' + photo.id + '/similar?limit=12', { signal: ctrl.signal })
       .then(r => r.json())
-      .then(d => setSimilar(d.similar || []))
-      .catch(() => setSimilar([]));
+      .then(d => { clearTimeout(timer); setSimilar(d.similar || []); })
+      .catch(() => { clearTimeout(timer); setSimilar([]); setSimErr(true); });
   };
 
   const fav  = isFav(photo.id);
@@ -290,13 +302,15 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto }) {
         <div className="det-scroll">
           {similar === null
             ? <div className="loading-msg">載入中…</div>
-            : similar.length === 0
-              ? <div className="empty-msg">找不到相似款</div>
-              : <div className="sim-grid">
-                  {similar.map(p => (
-                    <img key={p.id} src={p.thumb_url} alt="" loading="lazy"
-                      onClick={() => { onSelectPhoto(p); setView('detail'); }} />
-                  ))}
+            : simErr
+              ? <div className="empty-msg">載入失敗，請稍後再試<br/><button style={{marginTop:12,padding:'8px 20px',borderRadius:8,border:'1px solid var(--border)',background:'var(--s3)',fontSize:13,cursor:'pointer'}} onClick={() => { setSimilar(null); setSimErr(false); openSimilar(); }}>重試</button></div>
+              : similar.length === 0
+                ? <div className="empty-msg">找不到相似款</div>
+                : <div className="sim-grid">
+                    {similar.map(p => (
+                      <img key={p.id} src={p.thumb_url} alt="" loading="lazy"
+                        onClick={() => { onSelectPhoto(p); setView('detail'); }} />
+                    ))}
                 </div>
           }
         </div>
@@ -427,8 +441,16 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
 
 /* ── Browse tab ─────────────────────────────────────── */
 function BrowseTab({ isFav, toggleFav }) {
-  const [filters,  setFilters]  = useState({});
-  const [openChip, setOpenChip] = useState(null);
+  const [filters,   setFilters]   = useState({});
+  const [openChip,  setOpenChip]  = useState(null);
+  const [catCounts, setCatCounts] = useState({});
+
+  useEffect(() => {
+    fetch('/api/photos/category-counts')
+      .then(r => r.json())
+      .then(d => setCatCounts(d))
+      .catch(() => {});
+  }, []);
 
   const setF = (field, value) => setFilters(prev => {
     const n = { ...prev };
@@ -449,14 +471,15 @@ function BrowseTab({ isFav, toggleFav }) {
         {Object.keys(filters).length > 0 && <button className="chip-clr" onClick={clearAll}>清除</button>}
       </div>
       <div className="body-row">
-        <Sidebar filters={filters} onFilter={setF} onClear={clearAll} />
+        <Sidebar filters={filters} onFilter={setF} onClear={clearAll} catCounts={catCounts} />
         <div className="main">
           <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={filters} />
         </div>
       </div>
       {openChip && (
         <FilterSheet field={openChip} cur={filters[openChip] || null}
-          onPick={v => setF(openChip, v)} onClose={() => setOpenChip(null)} />
+          onPick={v => setF(openChip, v)} onClose={() => setOpenChip(null)}
+          catCounts={catCounts} />
       )}
     </>
   );
