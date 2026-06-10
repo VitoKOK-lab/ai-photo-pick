@@ -7,6 +7,10 @@
   "total":             ["訂單合計", "訂單總額", "訂單金額", "總金額", "總計", "應付金額", "實付金額", "付款總金額", "Total", "Order Total"],
   "item_summary":      ["商品名稱", "商品", "品名", "購買商品", "Product Name", "Line Items", "Products"],
   "qty":               ["數量", "Quantity", "Qty"],
+  "customer_id":       ["顧客 ID", "顧客ID", "Customer ID", "會員 ID"],
+  "paid_at":           ["付款日期", "付款時間", "Paid At"],
+  "ship_at":           ["發貨時間", "出貨時間", "Shipped At"],
+  "arrive_at":         ["到達時間", "到貨時間", "送達時間", "Delivered At"],
   "sl_order_status":   ["訂單狀態", "Order Status", "Status"],
   "sl_payment_status": ["付款狀態", "付款状态", "Payment Status"],
   "sl_shipping_status":["送貨狀態", "出貨狀態", "物流狀態", "配送狀態", "理貨狀態", "Delivery Status", "Fulfillment Status", "Shipping Status"]

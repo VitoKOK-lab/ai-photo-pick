@@ -24,19 +24,41 @@ from config.settings import (
 
 router = APIRouter(prefix="/api/cs", tags=["customer-service"])
 
-# 出貨後幾天自動封存進資料庫
-ARCHIVE_AFTER_DAYS = 14
 # 付款超過幾天未付款 → 視為付款超時（黃旗）
 PAYMENT_OVERDUE_DAYS = 3
+# 出貨期限剩幾天內 → 視為「快到期」（橙旗）
+DUE_SOON_DAYS = 3
 
-# 內部追蹤里程碑（看板下拉選單）
-TRACK_STATUSES = [
-    "待付款", "製作中", "待出貨", "寄送中", "待交貨", "售後處理中", "已結案",
-]
-RISK_TYPES = [
-    "欠石", "主石裂待換貨", "退貨", "換貨", "客訴",
-    "付款超時", "寄送問題", "缺貨待叫貨", "客戶指定款待確認圖", "其他",
-]
+
+def _load_workflow() -> dict:
+    """讀取 config/cs_workflow.json（流程關卡、品項類型、SLA、歸檔天數）。"""
+    path = CONFIG_DIR / "cs_workflow.json"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    return {k: v for k, v in raw.items() if not k.startswith("_")}
+
+
+WORKFLOW = _load_workflow()
+TRACK_STATUSES = WORKFLOW.get("stages", ["待處理", "已完成"])
+RISK_TYPES = WORKFLOW.get("risk_types", ["其他"])
+PRODUCT_TYPES = WORKFLOW.get("product_types", {"規格": {"sla_days": 14}})
+DEFAULT_PRODUCT_TYPE = WORKFLOW.get("default_product_type", "規格")
+# 已完成後幾天自動封存（退換貨期）
+ARCHIVE_AFTER_COMPLETE_DAYS = int(WORKFLOW.get("archive_after_complete_days", 7))
+
+
+def _detect_product_type(item_summary: str) -> str:
+    """依商品名稱關鍵字判斷規格/訂製，預設規格。"""
+    text = item_summary or ""
+    for ptype, cfg in PRODUCT_TYPES.items():
+        for kw in cfg.get("keywords", []):
+            if kw and kw in text:
+                return ptype
+    return DEFAULT_PRODUCT_TYPE
+
+
+def _sla_days(product_type: str) -> int:
+    cfg = PRODUCT_TYPES.get(product_type) or PRODUCT_TYPES.get(DEFAULT_PRODUCT_TYPE, {})
+    return int(cfg.get("sla_days", 14))
 
 # SHOPLINE 狀態關鍵字 → 判斷用（涵蓋實際匯出報表的用語）
 _PAID_KEYWORDS = ["已付款", "已收款", "付款完成", "paid"]
@@ -49,11 +71,48 @@ _SHIPPED_KEYWORDS = ["已出貨", "已發貨", "發貨中", "已寄出", "已送
 # 已取消／退款／退回／付款失敗 → 視為結案，不佔看板
 _CANCELLED_KEYWORDS = ["已取消", "取消", "已退回", "退款", "付款失敗",
                        "cancel", "refund", "returned", "failed"]
+# 已完成（送達）→ 退換貨期由此起算
+_COMPLETED_KEYWORDS = ["已完成", "已送達", "已到達", "已到貨", "已取貨",
+                       "completed", "delivered"]
+
+_MIGRATED = False
+# 後加的欄位（讓既有資料庫也能無痛升級）
+_EXTRA_COLUMNS = {
+    "product_type": "TEXT DEFAULT '規格'",
+    "sla_days": "INTEGER",
+    "due_ship_date": "TEXT",
+    "last_handler": "TEXT",
+    "customer_id": "TEXT",
+    "completed_at": "TEXT",
+}
+
+
+def _migrate(c):
+    """既有資料庫補上新欄位與時間軸表（新庫由 schema 直接建好，這裡只是保險）。"""
+    cols = {r[1] for r in c.execute("PRAGMA table_info(cs_orders)").fetchall()}
+    for name, decl in _EXTRA_COLUMNS.items():
+        if name not in cols:
+            c.execute(f"ALTER TABLE cs_orders ADD COLUMN {name} {decl}")
+    c.execute("""CREATE TABLE IF NOT EXISTS cs_order_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id INTEGER NOT NULL,
+        occurred_at TEXT, actor TEXT, actor_type TEXT DEFAULT 'staff',
+        kind TEXT DEFAULT 'note', content TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_cs_events_order ON cs_order_events(order_id)")
+    c.commit()
 
 
 def _conn():
+    global _MIGRATED
     c = sqlite3.connect(SQLITE_PATH)
     c.row_factory = sqlite3.Row
+    if not _MIGRATED:
+        try:
+            _migrate(c)
+        except sqlite3.OperationalError:
+            pass  # 資料表尚未建立（首次初始化前），交給 schema
+        _MIGRATED = True
     return c
 
 
@@ -76,10 +135,23 @@ def _today() -> str:
     return date.today().isoformat()
 
 
+def _now() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
+def _add_days(iso_date: str, days: int) -> str:
+    """ISO 日期 + 天數；解析失敗回空字串。"""
+    try:
+        return (date.fromisoformat((iso_date or "")[:10]) + timedelta(days=days)).isoformat()
+    except ValueError:
+        return ""
+
+
 # ─── Models ──────────────────────────────────────────────────────────────────
 
 class OrderUpdate(BaseModel):
     track_status: Optional[str] = None
+    product_type: Optional[str] = None
     owner: Optional[str] = None
     next_action: Optional[str] = None
     due_date: Optional[str] = None
@@ -87,6 +159,14 @@ class OrderUpdate(BaseModel):
     risk_type: Optional[str] = None
     notes: Optional[str] = None
     archived: Optional[bool] = None
+    handler: Optional[str] = None       # 操作者（誰在動這張單）— 用於旅程記錄
+
+
+class EventCreate(BaseModel):
+    content: str
+    actor: Optional[str] = None         # 員工名 或 客人名
+    actor_type: Optional[str] = "staff"  # staff / customer
+    occurred_at: Optional[str] = None   # 預設現在
 
 
 class HandoverCreate(BaseModel):
@@ -118,15 +198,17 @@ def _is_xls(filename: str, raw: bytes) -> bool:
     return raw[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 
 
-def _cell(value, datemode: int = 0, is_date: bool = False) -> str:
-    """把一格（CSV 字串或 xls 原生值）轉成乾淨字串。"""
+def _cell(value, datemode: int = 0, is_date: bool = False, is_datetime: bool = False) -> str:
+    """把一格（CSV 字串或 xls 原生值）轉成乾淨字串。
+    is_date → 取日期；is_datetime → 取『年月日 時:分』（時間軸用）。"""
     if value is None:
         return ""
     if isinstance(value, float):
-        if is_date and value > 0:
+        if (is_date or is_datetime) and value > 0:
             try:
                 import xlrd
-                return xlrd.xldate_as_datetime(value, datemode).date().isoformat()
+                dt = xlrd.xldate_as_datetime(value, datemode)
+                return dt.strftime("%Y-%m-%d %H:%M") if is_datetime else dt.date().isoformat()
             except Exception:
                 pass
         # 1360.0 → "1360"；保留非整數小數
@@ -177,15 +259,14 @@ def _resolve_columns(fieldnames: List[str], mapping: dict) -> dict:
 
 
 def _initial_track_status(payment: str, shipping: str, order_status: str) -> str:
-    blob = f"{order_status} {payment} {shipping}"
-    if _contains_any(blob, _CANCELLED_KEYWORDS):
-        return "已結案"
-    if _contains_any(shipping, _SHIPPED_KEYWORDS) or _contains_any(order_status, ["已完成", "completed"]):
-        return "寄送中"
-    if _contains_any(payment, _UNPAID_KEYWORDS):
-        return "待付款"
-    if _contains_any(payment, _PAID_KEYWORDS):
-        return "製作中"
+    """依 SHOPLINE 狀態，落到簡化後的單一進度下拉。"""
+    if _contains_any(order_status, ["已完成", "completed"]) or \
+       _contains_any(shipping, _COMPLETED_KEYWORDS):
+        return "已完成"
+    if _contains_any(shipping, ["已發貨", "發貨中", "已出貨", "已寄出", "配送中", "運送中", "shipped"]):
+        return "已寄台灣(在途)"
+    if _contains_any(shipping, ["備貨中", "處理中", "理貨"]) or _contains_any(payment, _PAID_KEYWORDS):
+        return "大陸-備貨/製作中"
     return "待處理"
 
 
@@ -194,12 +275,34 @@ def _clean_order_no(value: str) -> str:
     return (value or "").lstrip("#").strip()
 
 
+def _log_event(conn, order_id, actor_type, actor, kind, content, occurred_at=None):
+    """寫一筆購物旅程事件。"""
+    conn.execute(
+        """INSERT INTO cs_order_events(order_id, occurred_at, actor, actor_type, kind, content)
+           VALUES(?,?,?,?,?,?)""",
+        (order_id, occurred_at or _now(), actor, actor_type, kind, content),
+    )
+
+
+def _seed_timeline(conn, order_id, o):
+    """新單匯入時，依 SHOPLINE 時間戳補上系統事件（下單/付款/發貨/送達）。"""
+    seeds = [
+        (o.get("_ordered_at") or o.get("order_date"), "客人下單"),
+        (o.get("_paid_at"), "完成付款"),
+        (o.get("_ship_at"), "大陸發貨"),
+        (o.get("_arrive_at"), "貨運送達 / SHOPLINE 完成"),
+    ]
+    for when, text in seeds:
+        if when:
+            _log_event(conn, order_id, "system", "系統", "system", text, when)
+
+
 def _group_orders(rows: List[dict], cols: dict, datemode: int) -> List[dict]:
     """SHOPLINE 一張訂單可橫跨多列（每件商品一列）。依訂單號合併，
     訂單層欄位取第一列，商品名稱跨列彙整成一段摘要。"""
-    def cv(row, field, is_date=False):
+    def cv(row, field, is_date=False, is_datetime=False):
         actual = cols.get(field)
-        return _cell(row.get(actual), datemode, is_date) if actual else ""
+        return _cell(row.get(actual), datemode, is_date, is_datetime) if actual else ""
 
     grouped: "dict[str, dict]" = {}
     order_seq: List[str] = []
@@ -212,11 +315,17 @@ def _group_orders(rows: List[dict], cols: dict, datemode: int) -> List[dict]:
                 "order_number": order_number,
                 "customer_name": cv(row, "customer_name"),
                 "phone": cv(row, "phone"),
+                "customer_id": cv(row, "customer_id"),
                 "order_date": cv(row, "order_date", is_date=True),
                 "total": cv(row, "total"),
                 "sl_order_status": cv(row, "sl_order_status"),
                 "sl_payment_status": cv(row, "sl_payment_status"),
                 "sl_shipping_status": cv(row, "sl_shipping_status"),
+                # 給時間軸用的原始時間戳
+                "_ordered_at": cv(row, "order_date", is_datetime=True),
+                "_paid_at": cv(row, "paid_at", is_datetime=True),
+                "_ship_at": cv(row, "ship_at", is_datetime=True),
+                "_arrive_at": cv(row, "arrive_at", is_datetime=True),
                 "_items": [],
                 "_raw_first": row,
             }
@@ -266,6 +375,8 @@ async def import_report(file: UploadFile = File(...)):
         order_status = o["sl_order_status"]
         shipped_now = _contains_any(shipping, _SHIPPED_KEYWORDS) or \
             _contains_any(order_status, ["已完成", "completed"])
+        completed_now = _contains_any(order_status, ["已完成", "completed"]) or \
+            _contains_any(shipping, _COMPLETED_KEYWORDS)
 
         existing = conn.execute(
             "SELECT * FROM cs_orders WHERE order_number=?", (order_number,)
@@ -276,15 +387,22 @@ async def import_report(file: UploadFile = File(...)):
             shipped_at = existing["shipped_at"]
             if shipped_now and not shipped_at:
                 shipped_at = _today()
+                _log_event(conn, existing["id"], "system", "系統", "stage",
+                           "SHOPLINE 顯示已出貨", _now())
+            completed_at = existing["completed_at"]
+            if completed_now and not completed_at:
+                completed_at = _today()
+                _log_event(conn, existing["id"], "system", "系統", "stage",
+                           "SHOPLINE 顯示已完成（送達），退換貨期起算", _now())
             conn.execute(
                 """UPDATE cs_orders SET
-                       customer_name=?, phone=?, order_date=?, total=?, item_summary=?,
+                       customer_name=?, phone=?, customer_id=?, order_date=?, total=?, item_summary=?,
                        sl_order_status=?, sl_payment_status=?, sl_shipping_status=?,
-                       shipped_at=?, raw_json=?, updated_at=CURRENT_TIMESTAMP
+                       shipped_at=?, completed_at=?, raw_json=?, updated_at=CURRENT_TIMESTAMP
                    WHERE order_number=?""",
-                (o["customer_name"], o["phone"], o["order_date"],
+                (o["customer_name"], o["phone"], o["customer_id"], o["order_date"],
                  o["total"], o["item_summary"],
-                 order_status, payment, shipping, shipped_at,
+                 order_status, payment, shipping, shipped_at, completed_at,
                  json.dumps(o["_raw_first"], ensure_ascii=False, default=str), order_number),
             )
             updated_count += 1
@@ -293,20 +411,27 @@ async def import_report(file: UploadFile = File(...)):
             closed = shipped_now or _contains_any(
                 f"{order_status} {payment} {shipping}", _CANCELLED_KEYWORDS
             )
-            conn.execute(
+            ptype = _detect_product_type(o["item_summary"])
+            sla = _sla_days(ptype)
+            due_ship = _add_days(o["order_date"], sla)
+            cur = conn.execute(
                 """INSERT INTO cs_orders
-                       (order_number, customer_name, phone, order_date, total, item_summary,
+                       (order_number, customer_name, phone, customer_id, order_date, total, item_summary,
                         sl_order_status, sl_payment_status, sl_shipping_status,
-                        track_status, shipped_at, archived, raw_json)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (order_number, o["customer_name"], o["phone"],
+                        product_type, sla_days, due_ship_date,
+                        track_status, shipped_at, completed_at, archived, raw_json)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (order_number, o["customer_name"], o["phone"], o["customer_id"],
                  o["order_date"], o["total"], o["item_summary"],
                  order_status, payment, shipping,
+                 ptype, sla, due_ship,
                  _initial_track_status(payment, shipping, order_status),
                  _today() if shipped_now else None,
+                 _today() if completed_now else None,
                  1 if closed else 0,
                  json.dumps(o["_raw_first"], ensure_ascii=False, default=str)),
             )
+            _seed_timeline(conn, cur.lastrowid, o)
             new_count += 1
             if not closed:
                 new_orders.append(order_number)
@@ -328,11 +453,14 @@ async def import_report(file: UploadFile = File(...)):
 
 
 def _run_archive(conn) -> int:
-    """把已出貨超過 ARCHIVE_AFTER_DAYS 天的單封存（移出看板）。"""
-    cutoff = (date.today() - timedelta(days=ARCHIVE_AFTER_DAYS)).isoformat()
+    """已完成（送達）滿退換貨期天數 → 自動封存（移出看板，仍可查）。
+    舊資料若只有 shipped_at 沒有 completed_at，退而求其次用 shipped_at。"""
+    cutoff = (date.today() - timedelta(days=ARCHIVE_AFTER_COMPLETE_DAYS)).isoformat()
     cur = conn.execute(
         """UPDATE cs_orders SET archived=1, updated_at=CURRENT_TIMESTAMP
-           WHERE archived=0 AND shipped_at IS NOT NULL AND shipped_at <= ?""",
+           WHERE archived=0
+             AND COALESCE(completed_at, shipped_at) IS NOT NULL
+             AND COALESCE(completed_at, shipped_at) <= ?""",
         (cutoff,),
     )
     conn.commit()
@@ -349,13 +477,23 @@ def archive_run():
 
 # ─── 看板 ────────────────────────────────────────────────────────────────────
 
+def _days_left(due: str) -> Optional[int]:
+    """距出貨期限還有幾天（負數=已逾期）。"""
+    try:
+        return (date.fromisoformat((due or "")[:10]) - date.today()).days
+    except ValueError:
+        return None
+
+
 def _decorate(row: dict) -> dict:
-    """加上前端要用的計算旗標。"""
+    """加上前端要用的計算旗標：出貨期限急迫度 + 自訂預計日逾期。"""
     o = dict(row)
-    today = _today()
-    o["overdue"] = bool(
-        o.get("due_date") and o["due_date"] < today and o.get("track_status") != "已結案"
-    )
+    done = o.get("track_status") == "已完成"
+    dl = None if done else _days_left(o.get("due_ship_date"))
+    o["days_left"] = dl                       # 距出貨期限天數（None=無法計算/已完成）
+    o["ship_overdue"] = bool(dl is not None and dl < 0)   # 出貨期限已逾期
+    o["due_soon"] = bool(dl is not None and 0 <= dl <= DUE_SOON_DAYS)  # 快到期
+    o["overdue"] = bool(o.get("due_date") and o["due_date"] < _today() and not done)
     return o
 
 
@@ -380,13 +518,18 @@ def list_orders(
     if view == "risk":
         where.append("is_risk=1")
     elif view == "overdue":
-        where.append("due_date IS NOT NULL AND due_date < ? AND track_status != '已結案'")
-        args.append(_today())
-    elif view == "payment":
+        # 出貨期限或自訂預計日已逾期，且尚未完成
         where.append(
-            "track_status='待付款' AND julianday('now') - julianday(first_imported_at) > ?"
+            "track_status != '已完成' AND ("
+            "(due_ship_date IS NOT NULL AND due_ship_date < ?) OR "
+            "(due_date IS NOT NULL AND due_date < ?))"
         )
-        args.append(PAYMENT_OVERDUE_DAYS)
+        args += [_today(), _today()]
+    elif view == "duesoon":
+        # 快到期（含逾期）且尚未完成
+        cutoff = _add_days(_today(), DUE_SOON_DAYS)
+        where.append("due_ship_date IS NOT NULL AND due_ship_date <= ? AND track_status != '已完成'")
+        args.append(cutoff)
 
     if status:
         where.append("track_status=?")
@@ -396,14 +539,16 @@ def list_orders(
         args.append(owner)
     if q:
         like = f"%{q}%"
-        where.append("(order_number LIKE ? OR customer_name LIKE ? OR item_summary LIKE ?)")
-        args += [like, like, like]
+        where.append("(order_number LIKE ? OR customer_name LIKE ? OR item_summary LIKE ? OR phone LIKE ?)")
+        args += [like, like, like, like]
 
     sql = "SELECT * FROM cs_orders"
     if where:
         sql += " WHERE " + " AND ".join(where)
-    # 異常 → 逾期 → 最近更新，讓要命的單排最上面
-    sql += " ORDER BY is_risk DESC, (due_date IS NOT NULL AND due_date < date('now')) DESC, updated_at DESC"
+    # 異常最前 → 再依出貨期限由近到遠（急的排上面），未完成優先
+    sql += (" ORDER BY is_risk DESC,"
+            " (track_status='已完成') ASC,"
+            " (due_ship_date IS NULL) ASC, due_ship_date ASC, updated_at DESC")
 
     rows = conn.execute(sql, args).fetchall()
     conn.close()
@@ -419,15 +564,16 @@ def dashboard():
     def count(sql, args=()):
         return conn.execute(sql, args).fetchone()[0]
 
+    soon = _add_days(today, DUE_SOON_DAYS)
     active = count("SELECT COUNT(*) FROM cs_orders WHERE archived=0")
     risk = count("SELECT COUNT(*) FROM cs_orders WHERE archived=0 AND is_risk=1")
     overdue = count(
-        "SELECT COUNT(*) FROM cs_orders WHERE archived=0 AND due_date IS NOT NULL "
-        "AND due_date < ? AND track_status != '已結案'", (today,)
+        "SELECT COUNT(*) FROM cs_orders WHERE archived=0 AND due_ship_date IS NOT NULL "
+        "AND due_ship_date < ? AND track_status != '已完成'", (today,)
     )
-    payment_overdue = count(
-        "SELECT COUNT(*) FROM cs_orders WHERE archived=0 AND track_status='待付款' "
-        "AND julianday('now') - julianday(first_imported_at) > ?", (PAYMENT_OVERDUE_DAYS,)
+    due_soon = count(
+        "SELECT COUNT(*) FROM cs_orders WHERE archived=0 AND due_ship_date IS NOT NULL "
+        "AND due_ship_date >= ? AND due_ship_date <= ? AND track_status != '已完成'", (today, soon)
     )
     by_status = {
         r["track_status"]: r["n"]
@@ -443,20 +589,32 @@ def dashboard():
         "active": active,
         "risk": risk,
         "overdue": overdue,
-        "payment_overdue": payment_overdue,
+        "due_soon": due_soon,
         "by_status": by_status,
         "last_import": last_import,
     }
+
+
+def _timeline(conn, order_id: int) -> list:
+    rows = conn.execute(
+        """SELECT occurred_at, actor, actor_type, kind, content, created_at
+           FROM cs_order_events WHERE order_id=?
+           ORDER BY occurred_at ASC, id ASC""",
+        (order_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 @router.get("/orders/{order_id}")
 def get_order(order_id: int):
     conn = _conn()
     row = conn.execute("SELECT * FROM cs_orders WHERE id=?", (order_id,)).fetchone()
-    conn.close()
     if not row:
+        conn.close()
         raise HTTPException(404, "Order not found")
     o = _decorate(row)
+    o["timeline"] = _timeline(conn, order_id)
+    conn.close()
     try:
         o["raw"] = json.loads(o.get("raw_json") or "{}")
     except (ValueError, TypeError):
@@ -477,6 +635,7 @@ def update_order(order_id: int, body: OrderUpdate):
         return val if val is not None else current
 
     track_status = pick("track_status", row["track_status"])
+    product_type = pick("product_type", row["product_type"])
     owner        = pick("owner", row["owner"])
     next_action  = pick("next_action", row["next_action"])
     due_date     = pick("due_date", row["due_date"])
@@ -484,17 +643,96 @@ def update_order(order_id: int, body: OrderUpdate):
     notes        = pick("notes", row["notes"])
     is_risk      = int(body.is_risk) if body.is_risk is not None else row["is_risk"]
     archived     = int(body.archived) if body.archived is not None else row["archived"]
+    handler      = (body.handler or "").strip()
+
+    # 改了品項類型 → 重算出貨期限
+    sla_days = row["sla_days"]
+    due_ship = row["due_ship_date"]
+    if product_type != row["product_type"]:
+        sla_days = _sla_days(product_type)
+        due_ship = _add_days(row["order_date"], sla_days)
+
+    # 完成時補記完成日（退換貨期起算）
+    completed_at = row["completed_at"]
+    if track_status == "已完成" and not completed_at:
+        completed_at = _today()
+
+    last_handler = handler or row["last_handler"]
 
     conn.execute(
-        """UPDATE cs_orders SET track_status=?, owner=?, next_action=?, due_date=?,
-               is_risk=?, risk_type=?, notes=?, archived=?, updated_at=CURRENT_TIMESTAMP
+        """UPDATE cs_orders SET track_status=?, product_type=?, sla_days=?, due_ship_date=?,
+               owner=?, last_handler=?, next_action=?, due_date=?,
+               is_risk=?, risk_type=?, notes=?, completed_at=?, archived=?,
+               updated_at=CURRENT_TIMESTAMP
            WHERE id=?""",
-        (track_status, owner, next_action, due_date, is_risk, risk_type, notes, archived, order_id),
+        (track_status, product_type, sla_days, due_ship, owner, last_handler,
+         next_action, due_date, is_risk, risk_type, notes, completed_at, archived, order_id),
     )
+
+    # 旅程記錄：進度推進 / 標記異常（誰、何時）
+    who = handler or owner or "員工"
+    if track_status != row["track_status"]:
+        _log_event(conn, order_id, "staff", who, "stage", f"進度 → {track_status}")
+    if is_risk and not row["is_risk"]:
+        _log_event(conn, order_id, "staff", who, "risk",
+                   f"標記異常：{risk_type or '異常'}" + (f"（{next_action}）" if next_action else ""))
+
     conn.commit()
     row = conn.execute("SELECT * FROM cs_orders WHERE id=?", (order_id,)).fetchone()
+    o = _decorate(row)
+    o["timeline"] = _timeline(conn, order_id)
     conn.close()
-    return _decorate(row)
+    return o
+
+
+@router.post("/orders/{order_id}/events", status_code=201)
+def add_event(order_id: int, body: EventCreate):
+    """新增一筆購物旅程記錄（員工備註 或 客人對話：誰、何時、說了什麼）。"""
+    content = (body.content or "").strip()
+    if not content:
+        raise HTTPException(400, "內容不可空白")
+    conn = _conn()
+    row = conn.execute("SELECT id FROM cs_orders WHERE id=?", (order_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Order not found")
+    actor_type = body.actor_type if body.actor_type in ("staff", "customer") else "staff"
+    actor = (body.actor or ("客人" if actor_type == "customer" else "員工")).strip()
+    _log_event(conn, order_id, actor_type, actor, "note", content, body.occurred_at)
+    # 員工留言 → 更新最後處理人
+    if actor_type == "staff":
+        conn.execute("UPDATE cs_orders SET last_handler=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                     (actor, order_id))
+    conn.commit()
+    timeline = _timeline(conn, order_id)
+    conn.close()
+    return {"ok": True, "timeline": timeline}
+
+
+@router.get("/customers/history")
+def customer_history(customer_id: Optional[str] = Query(None),
+                     phone: Optional[str] = Query(None),
+                     exclude_id: Optional[int] = Query(None)):
+    """同一客人過去所有訂單（依顧客ID或電話），含誰處理過、進度。"""
+    if not customer_id and not phone:
+        raise HTTPException(400, "需提供 customer_id 或 phone")
+    conn = _conn()
+    where, args = [], []
+    if customer_id:
+        where.append("customer_id=?"); args.append(customer_id)
+    elif phone:
+        where.append("phone=?"); args.append(phone)
+    if exclude_id:
+        where.append("id != ?"); args.append(exclude_id)
+    rows = conn.execute(
+        f"""SELECT id, order_number, customer_name, order_date, total, item_summary,
+                  track_status, product_type, last_handler, is_risk, archived
+           FROM cs_orders WHERE {' AND '.join(where)}
+           ORDER BY order_date DESC""",
+        args,
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 @router.delete("/orders/{order_id}")
@@ -523,6 +761,9 @@ def meta():
     return {
         "track_statuses": TRACK_STATUSES,
         "risk_types": RISK_TYPES,
+        "product_types": {k: _sla_days(k) for k in PRODUCT_TYPES},
+        "archive_after_complete_days": ARCHIVE_AFTER_COMPLETE_DAYS,
+        "due_soon_days": DUE_SOON_DAYS,
         "shopline_order_url": SHOPLINE_ORDER_URL,
         "shopline_handle": SHOPLINE_HANDLE,
     }

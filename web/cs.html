@@ -14,6 +14,7 @@
     <h1>客服訂單追蹤</h1>
     <div class="spacer"></div>
     <span class="last-import" id="last-import"></span>
+    <label class="whoami"><span>我是</span><input id="whoami" placeholder="你的名字" title="你的操作會記在購物旅程上，交班不漏接"></label>
     <button class="btn btn-sm" id="refresh-btn">↻ 重新整理</button>
     <button class="btn btn-gold btn-sm" id="open-import-btn">⬆ 上傳 SHOPLINE 報表</button>
   </div>
@@ -31,10 +32,10 @@
       <button class="chip active" data-view="active">全部進行中</button>
       <button class="chip" data-view="risk">🔴 異常</button>
       <button class="chip" data-view="overdue">🟠 逾期未出</button>
-      <button class="chip" data-view="payment">🟡 付款超時</button>
+      <button class="chip" data-view="duesoon">🟡 快到期</button>
       <button class="chip" data-view="archived">📦 已封存</button>
       <span class="grow"></span>
-      <input class="search" id="search" placeholder="搜尋訂單號 / 客戶 / 商品…">
+      <input class="search" id="search" placeholder="搜尋訂單號 / 客戶 / 商品 / 電話…">
     </div>
 
     <div class="table-card">
@@ -43,11 +44,11 @@
           <tr>
             <th>訂單號</th>
             <th>客戶</th>
+            <th>品項</th>
             <th class="hide-sm">商品</th>
-            <th>狀態</th>
-            <th>負責人</th>
-            <th class="hide-sm">下一步</th>
-            <th>預計日</th>
+            <th>目前進度</th>
+            <th>出貨期限</th>
+            <th class="hide-sm">最後處理</th>
             <th>旗標</th>
           </tr>
         </thead>
@@ -90,52 +91,92 @@
     </div>
   </div>
 
-  <!-- ── 訂單編輯 Modal ── -->
+  <!-- ── 訂單詳情 Modal（左：進度操作　右：購物旅程）── -->
   <div class="overlay hidden" id="order-modal">
-    <div class="modal">
+    <div class="modal modal-wide">
       <h2 id="om-title">訂單</h2>
       <p class="sub" id="om-sub"></p>
-      <div class="grid2">
-        <div class="field">
-          <label>目前狀態</label>
-          <select id="om-status"></select>
+      <div class="om-due-bar" id="om-duebar"></div>
+
+      <div class="om-cols">
+        <!-- 左欄：進度與處理 -->
+        <div class="om-left">
+          <div class="grid2">
+            <div class="field">
+              <label>品項類型（決定出貨期）</label>
+              <select id="om-ptype"></select>
+            </div>
+            <div class="field">
+              <label>目前進度</label>
+              <select id="om-status"></select>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label>負責人</label>
+              <input id="om-owner" placeholder="誰的球">
+            </div>
+            <div class="field">
+              <label>異常類型</label>
+              <select id="om-risktype"></select>
+            </div>
+          </div>
+          <div class="field">
+            <label>下一步動作</label>
+            <input id="om-next" placeholder="接班的人照這個做">
+          </div>
+          <div class="field">
+            <label>預計出貨/完成日（自訂）</label>
+            <input type="date" id="om-due">
+          </div>
+          <div class="field check-row">
+            <input type="checkbox" id="om-risk">
+            <label for="om-risk" style="margin:0;">標為異常（整列變紅，優先看）</label>
+          </div>
+          <div class="field">
+            <label>備註</label>
+            <textarea id="om-notes"></textarea>
+          </div>
+          <div class="field" id="om-rawwrap">
+            <label>SHOPLINE 原始資料</label>
+            <div id="om-raw"></div>
+          </div>
         </div>
-        <div class="field">
-          <label>負責人</label>
-          <input id="om-owner" placeholder="誰的球">
+
+        <!-- 右欄：購物旅程時間軸 -->
+        <div class="om-right">
+          <div class="om-right-head">
+            <strong>購物旅程</strong>
+            <button class="btn btn-sm" id="om-history" title="同一位客人過去的訂單">👤 客人歷史</button>
+          </div>
+          <div class="timeline" id="om-timeline"></div>
+          <div class="addnote">
+            <div class="who-toggle">
+              <button type="button" class="wt active" data-who="staff">員工做了/說了</button>
+              <button type="button" class="wt" data-who="customer">客人說了</button>
+            </div>
+            <textarea id="om-noteinput" placeholder="例：已 LINE 客人告知欠石、預計 6/15 換貨"></textarea>
+            <button class="btn btn-gold btn-sm" id="om-addnote">加入旅程</button>
+          </div>
         </div>
       </div>
-      <div class="field">
-        <label>下一步動作</label>
-        <input id="om-next" placeholder="接班的人照這個做">
-      </div>
-      <div class="grid2">
-        <div class="field">
-          <label>預計出貨/完成日</label>
-          <input type="date" id="om-due">
-        </div>
-        <div class="field">
-          <label>異常類型</label>
-          <select id="om-risktype"></select>
-        </div>
-      </div>
-      <div class="field check-row">
-        <input type="checkbox" id="om-risk">
-        <label for="om-risk" style="margin:0;">標為異常（整列變紅，交班優先看）</label>
-      </div>
-      <div class="field">
-        <label>備註</label>
-        <textarea id="om-notes"></textarea>
-      </div>
-      <div class="field" id="om-rawwrap">
-        <label>SHOPLINE 原始資料</label>
-        <div id="om-raw" style="font-size:12px;color:var(--ink-2);background:#FAF8F5;border-radius:8px;padding:10px;max-height:140px;overflow:auto;"></div>
-      </div>
+
       <div class="modal-actions">
-        <button class="btn btn-gold" id="om-save">儲存</button>
-        <button class="btn" id="om-close">取消</button>
+        <button class="btn btn-gold" id="om-save">儲存進度</button>
+        <button class="btn" id="om-close">關閉</button>
         <span class="grow" style="flex:1"></span>
         <button class="btn btn-danger" id="om-archive">移入封存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 客人歷史 Modal ── -->
+  <div class="overlay hidden" id="history-modal">
+    <div class="modal">
+      <h2 id="hist-title">客人歷史訂單</h2>
+      <div id="hist-list" class="hist-list"></div>
+      <div class="modal-actions">
+        <button class="btn" id="hist-close">關閉</button>
       </div>
     </div>
   </div>

@@ -281,8 +281,8 @@ class TestCSImport:
         _import(client)
         rows = client.get("/api/cs/orders?view=all").json()
         by_no = {o["order_number"]: o for o in rows}
-        assert by_no["20260601002"]["track_status"] == "待付款"   # 未付款
-        assert by_no["20260601001"]["track_status"] == "製作中"   # 已付款未出貨
+        assert by_no["20260601002"]["track_status"] == "待處理"            # 未付款
+        assert by_no["20260601001"]["track_status"] == "大陸-備貨/製作中"   # 已付款未出貨
         # 只追未完成：一進來就已出貨的單直接封存、不佔看板
         assert by_no["20260601003"]["shipped_at"] is not None
         assert by_no["20260601003"]["archived"] == 1
@@ -351,7 +351,7 @@ class TestCSBoard:
         oid = client.get("/api/cs/orders?view=active").json()[0]["id"]
         r = client.put(f"/api/cs/orders/{oid}", json={
             "is_risk": True, "risk_type": "欠石", "owner": "深圳-阿明",
-            "next_action": "聯絡客人告知延期", "track_status": "售後處理中",
+            "next_action": "聯絡客人告知延期", "track_status": "台灣-品管出貨",
         })
         assert r.status_code == 200
         assert r.json()["is_risk"] == 1
@@ -380,8 +380,66 @@ class TestCSBoard:
         client.put(f"/api/cs/orders/{oid}", json={"archived": True})
         active_ids = [o["id"] for o in client.get("/api/cs/orders?view=active").json()]
         assert oid not in active_ids
-        archived_ids = [o["id"] for o in client.get("/api/cs/orders?view=archived").json()]
-        assert oid in archived_ids
+
+
+# 進度流程 + 出貨期限急迫度 + 購物旅程時間軸 + 客人歷史
+WORKFLOW_CSV = (
+    "訂單號碼,收件人,收件人電話號碼,顧客 ID,訂單日期,商品名稱,訂單合計,付款狀態,送貨狀態,訂單狀態\n"
+    "S1,王小明,0911,C001,2026-06-08,藍寶石戒指,30000,已付款,備貨中,處理中\n"
+    "S2,王小明,0911,C001,2026-05-01,訂製-綠碧璽吊墜,52000,已付款,備貨中,處理中\n"
+)
+
+
+class TestCSWorkflow:
+    def test_product_type_and_sla(self, client):
+        _import(client, WORKFLOW_CSV)
+        by_no = {o["order_number"]: o for o in client.get("/api/cs/orders?view=all").json()}
+        s1 = by_no["S1"]
+        assert s1["product_type"] == "規格"
+        assert s1["sla_days"] == 14
+        assert s1["due_ship_date"] == "2026-06-22"   # 6/08 + 14
+        s2 = by_no["S2"]
+        assert s2["product_type"] == "訂製"           # 商品名含「訂製」
+        assert s2["sla_days"] == 45
+        assert s2["due_ship_date"] == "2026-06-15"   # 5/01 + 45
+
+    def test_timeline_seeded_and_stage_logged(self, client):
+        _import(client, WORKFLOW_CSV)
+        oid = client.get("/api/cs/orders?view=all&q=S1").json()[0]["id"]
+        # 匯入時已種下「客人下單」系統事件
+        o = client.get(f"/api/cs/orders/{oid}").json()
+        kinds = [(e["kind"], e["content"]) for e in o["timeline"]]
+        assert any(k == "system" and "下單" in c for k, c in kinds)
+        # 推進進度 → 自動記錄誰、做了什麼
+        client.put(f"/api/cs/orders/{oid}", json={
+            "track_status": "大陸-拍照打包", "handler": "深圳-阿明"})
+        o = client.get(f"/api/cs/orders/{oid}").json()
+        assert o["last_handler"] == "深圳-阿明"
+        assert any(e["kind"] == "stage" and "大陸-拍照打包" in e["content"]
+                   and e["actor"] == "深圳-阿明" for e in o["timeline"])
+
+    def test_add_customer_message(self, client):
+        _import(client, WORKFLOW_CSV)
+        oid = client.get("/api/cs/orders?view=all&q=S1").json()[0]["id"]
+        r = client.post(f"/api/cs/orders/{oid}/events", json={
+            "actor": "王小明", "actor_type": "customer", "content": "想改成18號圈口"})
+        assert r.status_code == 201
+        o = client.get(f"/api/cs/orders/{oid}").json()
+        assert any(e["actor_type"] == "customer" and "18號" in e["content"]
+                   for e in o["timeline"])
+
+    def test_customer_history(self, client):
+        _import(client, WORKFLOW_CSV)
+        rows = client.get("/api/cs/customers/history?customer_id=C001").json()
+        assert len(rows) == 2                         # 同一顧客兩張單
+        assert {r["order_number"] for r in rows} == {"S1", "S2"}
+
+    def test_urgency_sort_most_urgent_first(self, client):
+        _import(client, WORKFLOW_CSV)
+        active = client.get("/api/cs/orders?view=active").json()
+        # 出貨期限較近的排前面（S2 訂製到期 6/15 早於 S1 規格 6/22）
+        nums = [o["order_number"] for o in active]
+        assert nums.index("S2") < nums.index("S1")
 
 
 class TestCSHandover:

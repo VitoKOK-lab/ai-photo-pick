@@ -167,8 +167,73 @@ tbody tr:last-child td { border-bottom: none; }
 .ho-note { font-size: 14px; color: var(--ink); margin-top: 4px; white-space: pre-wrap; }
 .ack-badge { font-size: 12px; color: var(--ok); }
 
+/* 操作者身分 */
+.whoami { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); }
+.whoami input { width: 90px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; font-size: 13px; }
+
+/* 品項類型徽章 */
+.type-badge { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 600; white-space: nowrap; }
+.tb-std { background: #eef3fb; color: #3a6ea5; }
+.tb-custom { background: #f6eefb; color: #8a4baf; }
+
+/* 出貨期限欄 */
+.due-wrap { display: flex; flex-direction: column; gap: 2px; }
+.due-date { font-size: 12px; font-variant-numeric: tabular-nums; }
+.due-tag { font-size: 11px; color: var(--ink-3); }
+.due-tag.due-soon { color: var(--overdue); font-weight: 600; }
+.due-tag.due-late { color: var(--risk); font-weight: 700; }
+.flag-soon { background: var(--overdue-bg); color: var(--overdue); }
+
+/* 出貨期限提示條 */
+.om-due-bar { font-size: 13px; font-weight: 600; padding: 8px 12px; border-radius: 8px; margin-bottom: 14px; }
+.om-due-bar:empty { display: none; }
+.om-due-bar.ok   { background: #eef6ee; color: var(--ok); }
+.om-due-bar.soon { background: var(--overdue-bg); color: var(--overdue); }
+.om-due-bar.late { background: var(--risk-bg); color: var(--risk); }
+.om-due-bar.done { background: #f1f1f1; color: var(--ink-2); }
+
+/* 詳情 Modal 雙欄 */
+.modal-wide { max-width: 880px; }
+.om-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.om-right { display: flex; flex-direction: column; border-left: 1px solid var(--line); padding-left: 20px; }
+.om-right-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+#om-raw { font-size: 12px; color: var(--ink-2); background: #FAF8F5; border-radius: 8px; padding: 10px; max-height: 120px; overflow: auto; }
+
+/* 購物旅程時間軸 */
+.timeline { flex: 1; overflow-y: auto; max-height: 360px; padding-right: 4px; }
+.tl-empty { color: var(--ink-3); font-size: 13px; padding: 10px 0; }
+.tl-item { display: flex; gap: 10px; padding: 6px 0; position: relative; }
+.tl-item:not(:last-child)::before { content: ""; position: absolute; left: 11px; top: 26px; bottom: -6px; width: 2px; background: var(--line); }
+.tl-dot { flex: 0 0 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; background: #eef3fb; z-index: 1; }
+.tl-cust .tl-dot { background: #f6eefb; }
+.tl-sys .tl-dot { background: #f1f1f1; }
+.tl-staff .tl-dot { background: #eef6ee; }
+.tl-meta { display: flex; gap: 8px; font-size: 11px; color: var(--ink-3); }
+.tl-actor { font-weight: 600; color: var(--ink-2); }
+.tl-text { font-size: 13px; color: var(--ink); margin-top: 1px; white-space: pre-wrap; }
+.tl-cust .tl-text { color: #7a3da0; }
+
+/* 加入旅程 */
+.addnote { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 10px; }
+.who-toggle { display: flex; gap: 6px; margin-bottom: 6px; }
+.who-toggle .wt { flex: 1; font-size: 12px; padding: 6px; border: 1px solid var(--line); background: #fff; border-radius: 7px; cursor: pointer; color: var(--ink-2); }
+.who-toggle .wt.active { border-color: var(--gold); background: var(--gold-bg); color: var(--gold-deep); font-weight: 600; }
+.addnote textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; min-height: 48px; resize: vertical; margin-bottom: 6px; }
+
+/* 客人歷史 */
+.hist-list { max-height: 60vh; overflow-y: auto; }
+.hist-item { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.hist-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hist-sub { font-size: 12px; margin-top: 4px; }
+
+@media (max-width: 820px) {
+  .modal-wide { max-width: 540px; }
+  .om-cols { grid-template-columns: 1fr; }
+  .om-right { border-left: none; padding-left: 0; border-top: 1px solid var(--line); padding-top: 14px; }
+}
 @media (max-width: 720px) {
   .dash { grid-template-columns: repeat(2, 1fr); }
   .grid2 { grid-template-columns: 1fr; }
   .hide-sm { display: none; }
+  .whoami input { width: 70px; }
 }

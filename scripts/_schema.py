@@ -175,14 +175,20 @@ CREATE TABLE IF NOT EXISTS cs_orders (
     sl_payment_status TEXT,             -- SHOPLINE 付款狀態（原文）
     sl_shipping_status TEXT,            -- SHOPLINE 出貨狀態（原文）
     -- 內部追蹤欄位（同仁手動維護，匯入不覆蓋）
-    track_status TEXT DEFAULT '待處理',   -- 待付款/製作中/待出貨/寄送中/待交貨/售後處理中/已結案
+    track_status TEXT DEFAULT '待處理',   -- 目前進度（單一下拉，見 config/cs_workflow.json）
+    product_type TEXT DEFAULT '規格',     -- 規格 / 訂製（決定出貨期限 14 或 45 天）
+    sla_days INTEGER,                    -- 出貨期天數（規格14/訂製45）
+    due_ship_date TEXT,                  -- 出貨期限 = 下單日 + sla_days（YYYY-MM-DD）
     owner TEXT,                          -- 目前負責人
+    last_handler TEXT,                   -- 最後處理人（誰動過這張單）
     next_action TEXT,                    -- 下一步動作
     due_date TEXT,                       -- 預計出貨/完成日（YYYY-MM-DD）
     is_risk INTEGER DEFAULT 0,           -- 異常旗標
     risk_type TEXT,                      -- 異常類型
     notes TEXT,
+    customer_id TEXT,                    -- SHOPLINE 顧客 ID（串客人歷史用）
     shipped_at TEXT,                     -- 首次偵測到已出貨的日期（YYYY-MM-DD）
+    completed_at TEXT,                   -- 首次偵測到已完成（送達）的日期，退換貨期由此起算
     archived INTEGER DEFAULT 0,          -- 0=在看板上, 1=已封存進資料庫
     raw_json TEXT,                       -- 原始整列備份，不遺失任何欄位
     first_imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -192,6 +198,21 @@ CREATE TABLE IF NOT EXISTS cs_orders (
 CREATE INDEX IF NOT EXISTS idx_cs_orders_status   ON cs_orders(track_status);
 CREATE INDEX IF NOT EXISTS idx_cs_orders_archived ON cs_orders(archived);
 CREATE INDEX IF NOT EXISTS idx_cs_orders_risk     ON cs_orders(is_risk);
+CREATE INDEX IF NOT EXISTS idx_cs_orders_customer ON cs_orders(customer_id);
+
+-- 購物旅程：每張單的時間軸（系統自動 + 員工 + 客人，誰在何時做了/說了什麼）
+CREATE TABLE IF NOT EXISTS cs_order_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    occurred_at TEXT,                    -- 事件發生時間（YYYY-MM-DD HH:MM）
+    actor TEXT,                          -- 誰：員工名 / 客人 / 系統
+    actor_type TEXT DEFAULT 'staff',     -- staff / customer / system
+    kind TEXT DEFAULT 'note',            -- system / stage / note / risk
+    content TEXT,                        -- 做了什麼 / 說了什麼
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES cs_orders(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_cs_events_order ON cs_order_events(order_id);
 
 CREATE TABLE IF NOT EXISTS cs_handovers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
