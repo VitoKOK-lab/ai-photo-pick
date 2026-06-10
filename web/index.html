@@ -10,527 +10,170 @@
 
 /* ── Tokens ─────────────────────────────────────────────── */
 :root {
-  --bg:      #0e0e0e;
-  --s1:      #181818;   /* surface */
-  --s2:      #222;
-  --s3:      #2c2c2c;
-  --t1:      #f0f0f0;   /* text */
-  --t2:      #999;
-  --t3:      #555;
-  --border:  #2a2a2a;
-  --gold:    #c9a96e;
-  --r:       8px;
+  --bg:      #f4f4f4;
+  --surface: #ffffff;
+  --s2:      #f9f9f9;
+  --s3:      #efefef;
+  --text:    #1a1a1a;
+  --text2:   #777;
+  --text3:   #bbb;
+  --border:  #e8e8e8;
+  --accent:  #1a1a1a;
+  --gold:    #b8935a;
+  --r:       10px;
   --nav-h:   52px;
   --tab-h:   58px;
-  --side-w:  224px;
+  --side-w:  220px;
+  --shadow:  0 1px 4px rgba(0,0,0,.08);
+  --shadow2: 0 4px 16px rgba(0,0,0,.12);
 }
 
 /* ── Base ───────────────────────────────────────────────── */
 html, body {
   height: 100%;
   background: var(--bg);
-  color: var(--t1);
+  color: var(--text);
   font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 #root { height: 100%; display: flex; flex-direction: column; }
-button { font-family: inherit; }
+button { font-family: inherit; cursor: pointer; }
 
 /* ── Nav ────────────────────────────────────────────────── */
 .nav {
   height: var(--nav-h);
-  background: var(--s1);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 20px;
   flex-shrink: 0;
-  gap: 12px;
+  box-shadow: var(--shadow);
 }
-.nav-logo {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 2.5px;
-  color: var(--gold);
-  flex: 1;
-}
+.nav-logo { font-size: 14px; font-weight: 700; letter-spacing: 2px; color: var(--gold); flex: 1; }
 .nav-tabs { display: none; gap: 4px; }
 .nav-tab {
-  padding: 7px 16px;
+  padding: 7px 18px;
   border-radius: 20px;
   background: none;
   border: none;
-  cursor: pointer;
-  color: var(--t2);
+  color: var(--text2);
   font-size: 14px;
   font-weight: 500;
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.nav-tab.on { background: var(--s3); color: var(--t1); }
-.badge {
-  background: var(--gold);
-  color: #000;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 10px;
-  min-width: 18px;
-  text-align: center;
-}
+.nav-tab.on { background: var(--s3); color: var(--text); font-weight: 600; }
+.badge { background: var(--gold); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
 
-/* ── Mobile tab bar ─────────────────────────────────────── */
-.tab-bar {
-  height: var(--tab-h);
-  background: var(--s1);
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-shrink: 0;
-}
-.tab-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--t3);
-  font-size: 10px;
-  font-weight: 500;
-  position: relative;
-}
-.tab-btn.on { color: var(--gold); }
-.tab-btn svg {
-  width: 22px; height: 22px;
-  stroke: currentColor; fill: none;
-  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
-}
-.tab-badge {
-  position: absolute;
-  top: 6px;
-  right: calc(50% - 18px);
-  background: var(--gold);
-  color: #000;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 8px;
-  min-width: 16px;
-  text-align: center;
-}
+/* ── Tab bar (mobile) ───────────────────────────────────── */
+.tab-bar { height: var(--tab-h); background: var(--surface); border-top: 1px solid var(--border); display: flex; flex-shrink: 0; }
+.tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: none; color: var(--text3); font-size: 10px; font-weight: 500; position: relative; }
+.tab-btn.on { color: var(--accent); }
+.tab-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tab-badge { position: absolute; top: 6px; right: calc(50% - 18px); background: var(--gold); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; min-width: 16px; text-align: center; }
 
-/* ── Content wrapper ────────────────────────────────────── */
-.content {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
+/* ── Content ────────────────────────────────────────────── */
+.content { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
 
-/* ── Mobile filter chips ────────────────────────────────── */
-.chips-bar {
-  padding: 9px 12px;
-  overflow-x: auto;
-  white-space: nowrap;
-  scrollbar-width: none;
-  background: var(--s1);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
+/* ── Chips (mobile) ─────────────────────────────────────── */
+.chips-bar { padding: 10px 14px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .chips-bar::-webkit-scrollbar { display: none; }
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  background: var(--s2);
-  font-size: 12px;
-  color: var(--t2);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  margin-right: 6px;
-  white-space: nowrap;
-}
-.chip.on {
-  background: var(--gold);
-  color: #000;
-  border-color: var(--gold);
-  font-weight: 600;
-}
-.chip-clr {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: 20px;
-  background: none;
-  border: 1px solid var(--border);
-  font-size: 12px;
-  color: var(--t3);
-  cursor: pointer;
-  white-space: nowrap;
-}
+.chip { display: inline-flex; align-items: center; gap: 3px; padding: 6px 14px; border-radius: 20px; background: var(--s3); font-size: 12px; color: var(--text2); border: 1px solid var(--border); margin-right: 6px; white-space: nowrap; }
+.chip.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.chip-clr { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 20px; background: none; border: 1px solid var(--border); font-size: 12px; color: var(--text3); white-space: nowrap; }
 
-/* ── Body row (sidebar + main) ──────────────────────────── */
-.body-row {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  min-height: 0;
-}
+/* ── Body row ───────────────────────────────────────────── */
+.body-row { flex: 1; overflow: hidden; display: flex; min-height: 0; }
 
 /* ── Sidebar ────────────────────────────────────────────── */
-.sidebar {
-  display: none;
-  width: var(--side-w);
-  background: var(--s1);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-  flex-shrink: 0;
-  padding: 8px 0 32px;
-}
-.sb-clear {
-  margin: 6px 12px 10px;
-  padding: 8px 12px;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  color: var(--t3);
-  font-size: 12px;
-  cursor: pointer;
-  width: calc(100% - 24px);
-  text-align: left;
-}
-.sb-clear:hover { background: var(--s3); color: var(--t2); }
+.sidebar { display: none; width: var(--side-w); background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; padding: 12px 0 32px; }
+.sb-clear { margin: 6px 14px 12px; padding: 8px 12px; background: none; border: 1px solid var(--border); border-radius: var(--r); color: var(--text3); font-size: 12px; width: calc(100% - 28px); text-align: left; }
+.sb-clear:hover { background: var(--s3); color: var(--text2); }
 .sb-sec { border-bottom: 1px solid var(--border); }
-.sb-hd {
-  width: 100%;
-  padding: 10px 14px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  text-align: left;
-}
-.sb-hd-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--t3);
-}
-.sb-hd.has-val .sb-hd-label { color: var(--gold); }
-.sb-hd-arrow { font-size: 10px; color: var(--t3); }
-.sb-opts { padding: 0 8px 8px; }
-.sb-opt {
-  display: block;
-  width: 100%;
-  padding: 8px 8px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--t2);
-  font-size: 13px;
-  text-align: left;
-  border-radius: 6px;
-}
-.sb-opt:hover { background: var(--s3); color: var(--t1); }
-.sb-opt.on { color: var(--gold); font-weight: 600; }
-.sb-opt-clr {
-  display: block;
-  width: 100%;
-  padding: 6px 8px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--t3);
-  font-size: 11px;
-  text-align: left;
-  border-radius: 6px;
-}
-.sb-opt-clr:hover { color: var(--t2); }
+.sb-hd { width: 100%; padding: 11px 16px; background: none; border: none; display: flex; align-items: center; justify-content: space-between; text-align: left; }
+.sb-hd-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); }
+.sb-hd.has-val .sb-hd-label { color: var(--accent); }
+.sb-hd-arrow { font-size: 10px; color: var(--text3); }
+.sb-opts { padding: 0 10px 10px; }
+.sb-opt { display: block; width: 100%; padding: 8px 8px; background: none; border: none; color: var(--text2); font-size: 13px; text-align: left; border-radius: 6px; }
+.sb-opt:hover { background: var(--s3); color: var(--text); }
+.sb-opt.on { color: var(--accent); font-weight: 600; }
+.sb-opt-clr { display: block; width: 100%; padding: 5px 8px; background: none; border: none; color: var(--text3); font-size: 11px; text-align: left; }
 
-/* ── Main area ──────────────────────────────────────────── */
-.main {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
+/* ── Main + grid ────────────────────────────────────────── */
+.main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 .grid-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-
-/* ── Photo grid ─────────────────────────────────────────── */
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2px;
-  padding: 2px;
-}
-.card {
-  background: var(--s2);
-  cursor: pointer;
-  overflow: hidden;
-  position: relative;
-}
-.card img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  display: block;
-  background: var(--s3);
-}
-.card-fav {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.55);
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255,255,255,0.7);
-  backdrop-filter: blur(4px);
-}
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 3px; }
+.card { background: var(--surface); cursor: pointer; overflow: hidden; position: relative; border-radius: 4px; }
+.card img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--s3); }
+.card-fav { position: absolute; top: 7px; right: 7px; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.85); border: none; font-size: 15px; display: flex; align-items: center; justify-content: center; color: var(--text3); box-shadow: var(--shadow); }
 .card-fav.on { color: var(--gold); }
-.card-lbl {
-  padding: 5px 8px 6px;
-  font-size: 11px;
-  color: var(--t3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.card-lbl { padding: 6px 9px 8px; font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sentinel { height: 1px; }
-.loading-msg { text-align: center; padding: 24px; color: var(--t3); font-size: 13px; }
-.empty-msg {
-  text-align: center;
-  padding: 64px 24px;
-  color: var(--t2);
-  font-size: 14px;
-  line-height: 1.8;
-}
+.loading-msg { text-align: center; padding: 28px; color: var(--text3); font-size: 13px; }
+.empty-msg { text-align: center; padding: 64px 24px; color: var(--text2); font-size: 14px; line-height: 1.9; }
 
-/* ── Filter bottom sheet (mobile) ───────────────────────── */
-.ovl {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.65);
-  z-index: 200;
-  display: flex;
-  align-items: flex-end;
-}
-.fsh {
-  width: 100%;
-  max-height: 70vh;
-  background: var(--s1);
-  border-radius: 16px 16px 0 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: up .22s cubic-bezier(.32,.72,0,1);
-}
+/* ── Filter sheet (mobile) ──────────────────────────────── */
+.ovl { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; display: flex; align-items: flex-end; }
+.fsh { width: 100%; max-height: 72vh; background: var(--surface); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; overflow: hidden; animation: up .22s cubic-bezier(.32,.72,0,1); box-shadow: var(--shadow2); }
 @keyframes up { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.fsh-hd {
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-}
+.fsh-hd { padding: 14px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .fsh-title { font-size: 15px; font-weight: 600; }
-.fsh-x {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  background: var(--s3);
-  border: none;
-  cursor: pointer;
-  font-size: 18px;
-  color: var(--t2);
-  line-height: 28px;
-  text-align: center;
-}
+.fsh-x { width: 28px; height: 28px; border-radius: 50%; background: var(--s3); border: none; font-size: 18px; color: var(--text2); line-height: 28px; text-align: center; }
 .fsh-body { overflow-y: auto; flex: 1; }
-.fsh-item {
-  padding: 14px 16px;
-  font-size: 15px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-  color: var(--t1);
-}
+.fsh-item { padding: 14px 18px; font-size: 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); color: var(--text); }
 .fsh-item:last-child { border-bottom: none; }
 .fsh-item:active { background: var(--s3); }
-.fsh-item.on { color: var(--gold); font-weight: 600; }
-.fsh-item.clr { color: var(--t3); font-size: 13px; }
+.fsh-item.on { color: var(--accent); font-weight: 600; }
+.fsh-item.clr { color: var(--text3); font-size: 13px; }
 
 /* ── Detail overlay ─────────────────────────────────────── */
-.det-ovl {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.75);
-  z-index: 300;
-  display: flex;
-  align-items: flex-end;
-}
-.det-panel {
-  width: 100%;
-  max-height: 90vh;
-  background: var(--s1);
-  border-radius: 16px 16px 0 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-  animation: up .25s cubic-bezier(.32,.72,0,1);
-}
-.det-handle {
-  width: 36px; height: 4px;
-  background: var(--s3);
-  border-radius: 2px;
-  margin: 10px auto 0;
-  flex-shrink: 0;
-}
-.det-x {
-  position: absolute;
-  top: 14px; right: 14px;
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.5);
-  border: none;
-  cursor: pointer;
-  font-size: 18px;
-  color: var(--t2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-  backdrop-filter: blur(4px);
-}
+.det-ovl { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; align-items: flex-end; }
+.det-panel { width: 100%; max-height: 90vh; background: var(--surface); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; overflow: hidden; position: relative; animation: up .25s cubic-bezier(.32,.72,0,1); box-shadow: var(--shadow2); }
+.det-handle { width: 36px; height: 4px; background: var(--s3); border-radius: 2px; margin: 10px auto 0; flex-shrink: 0; }
+.det-x { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%; background: var(--s3); border: none; font-size: 18px; color: var(--text2); display: flex; align-items: center; justify-content: center; z-index: 1; }
+.det-hd-bar { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.det-back { width: 32px; height: 32px; border-radius: 50%; background: var(--s3); border: none; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--text); }
+.det-hd-title { font-size: 15px; font-weight: 600; flex: 1; }
 .det-left { flex-shrink: 0; }
-.det-img {
-  width: 100%;
-  max-height: 54vw;
-  object-fit: cover;
-  display: block;
-  background: var(--s3);
-}
-.det-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
-}
+.det-img { width: 100%; max-height: 56vw; object-fit: cover; display: block; background: var(--s3); }
+.det-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 .det-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.det-tags { padding: 12px 16px 8px; display: flex; flex-wrap: wrap; gap: 6px; }
-.tag {
-  padding: 4px 10px;
-  background: var(--s3);
-  border-radius: 20px;
-  font-size: 12px;
-  color: var(--t2);
-}
-.det-btns {
-  padding: 8px 16px 16px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.db {
-  padding: 13px;
-  border-radius: var(--r);
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-}
-.db-fav { background: var(--s3); color: var(--t1); }
-.db-fav.on { background: var(--gold); color: #000; }
-.db-sim { background: var(--s2); border: 1px solid var(--border); color: var(--t1); }
-.sim-sec { padding: 0 16px 28px; }
-.sim-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--t3);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 10px;
-  padding-top: 4px;
-}
-.sim-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-}
-.sim-grid img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  display: block;
-  background: var(--s3);
-  cursor: pointer;
-  border-radius: 3px;
-}
+.det-tags { padding: 14px 16px 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { padding: 4px 11px; background: var(--s3); border-radius: 20px; font-size: 12px; color: var(--text2); }
+.det-btns { padding: 10px 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.db { padding: 13px; border-radius: var(--r); border: none; font-size: 13px; font-weight: 600; }
+.db-fav { background: var(--s3); color: var(--text); }
+.db-fav.on { background: #fff0e0; color: var(--gold); border: 1.5px solid var(--gold); }
+.db-sim { background: var(--accent); color: #fff; }
 
-/* ── Favorites empty ────────────────────────────────────── */
-.fav-empty {
-  text-align: center;
-  padding: 80px 24px;
-  color: var(--t2);
-  font-size: 14px;
-  line-height: 1.9;
-}
+/* similar view */
+.sim-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; }
+.sim-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--s3); cursor: pointer; }
 
-/* ── RWD: tablet ≥ 768px ────────────────────────────────── */
+/* ── Fav empty ──────────────────────────────────────────── */
+.fav-empty { text-align: center; padding: 80px 24px; color: var(--text2); font-size: 14px; line-height: 1.9; }
+
+/* ── Desktop ≥ 768px ────────────────────────────────────── */
 @media (min-width: 768px) {
-  .nav-tabs   { display: flex; }
-  .tab-bar    { display: none; }
-  .sidebar    { display: block; }
-  .chips-bar  { display: none; }
-
+  .nav-tabs  { display: flex; }
+  .tab-bar   { display: none; }
+  .sidebar   { display: block; }
+  .chips-bar { display: none; }
   .grid { grid-template-columns: repeat(3, 1fr); }
 
-  /* Detail: centered modal, 2-col */
-  .det-ovl { align-items: center; justify-content: center; padding: 24px; }
-  .det-panel {
-    width: 100%;
-    max-width: 860px;
-    border-radius: 14px;
-    flex-direction: row;
-    max-height: 84vh;
-    animation: pop .2s ease;
-  }
+  .det-ovl { align-items: center; justify-content: center; padding: 32px; }
+  .det-panel { width: 100%; max-width: 840px; border-radius: 16px; flex-direction: row; max-height: 82vh; animation: pop .2s ease; box-shadow: var(--shadow2); }
   @keyframes pop { from { opacity:0; transform:scale(.96); } to { opacity:1; transform:scale(1); } }
   .det-handle { display: none; }
   .det-left { width: 50%; flex-shrink: 0; }
-  .det-img   { width: 100%; height: 100%; max-height: none; border-radius: 14px 0 0 14px; }
+  .det-img { width: 100%; height: 100%; max-height: none; border-radius: 16px 0 0 16px; }
   .det-right { flex: 1; min-height: 0; }
 }
-
-/* ── RWD: desktop ≥ 1200px ──────────────────────────────── */
-@media (min-width: 1200px) {
-  .grid { grid-template-columns: repeat(4, 1fr); }
-}
-@media (min-width: 1600px) {
-  :root { --side-w: 256px; }
-  .grid { grid-template-columns: repeat(5, 1fr); }
-}
+@media (min-width: 1200px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1600px) { :root { --side-w: 248px; } .grid { grid-template-columns: repeat(5, 1fr); } }
   </style>
 </head>
 <body>
@@ -551,30 +194,19 @@ const CFG = {
   color:       { label: '顏色',  values: ['紅色','粉紅色','橙色','黃色','綠色','藍色','紫色','白色','無色透明','黑色','多色'] },
 };
 
-/* ── Fav helpers ────────────────────────────────────── */
+/* ── Fav storage ────────────────────────────────────── */
 const loadFavs = () => { try { return JSON.parse(localStorage.getItem('jdb_favs') || '[]'); } catch { return []; } };
 const saveFavs = f => localStorage.setItem('jdb_favs', JSON.stringify(f));
 
 /* ── Icons ──────────────────────────────────────────── */
 function IcoGrid() {
-  return (
-    <svg viewBox="0 0 24 24">
-      <rect x="3" y="3" width="7" height="7" rx="1"/>
-      <rect x="14" y="3" width="7" height="7" rx="1"/>
-      <rect x="3" y="14" width="7" height="7" rx="1"/>
-      <rect x="14" y="14" width="7" height="7" rx="1"/>
-    </svg>
-  );
+  return <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>;
 }
 function IcoHeart({ fill }) {
-  return (
-    <svg viewBox="0 0 24 24" fill={fill ? 'currentColor' : 'none'}>
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-    </svg>
-  );
+  return <svg viewBox="0 0 24 24" fill={fill ? 'currentColor' : 'none'}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
 }
 
-/* ── Mobile filter sheet ────────────────────────────── */
+/* ── Filter sheet ───────────────────────────────────── */
 function FilterSheet({ field, cur, onPick, onClose }) {
   const cfg = CFG[field];
   return (
@@ -585,14 +217,9 @@ function FilterSheet({ field, cur, onPick, onClose }) {
           <button className="fsh-x" onClick={onClose}>×</button>
         </div>
         <div className="fsh-body">
-          {cur && (
-            <div className="fsh-item clr" onClick={() => { onPick(null); onClose(); }}>
-              清除篩選（顯示全部）
-            </div>
-          )}
+          {cur && <div className="fsh-item clr" onClick={() => { onPick(null); onClose(); }}>清除篩選（全部）</div>}
           {cfg.values.map(v => (
-            <div key={v} className={'fsh-item' + (cur === v ? ' on' : '')}
-              onClick={() => { onPick(v); onClose(); }}>
+            <div key={v} className={'fsh-item' + (cur === v ? ' on' : '')} onClick={() => { onPick(v); onClose(); }}>
               <span>{v}</span>
               {cur === v && <span>✓</span>}
             </div>
@@ -603,36 +230,27 @@ function FilterSheet({ field, cur, onPick, onClose }) {
   );
 }
 
-/* ── Desktop sidebar ────────────────────────────────── */
+/* ── Sidebar ────────────────────────────────────────── */
 function Sidebar({ filters, onFilter, onClear }) {
   const [open, setOpen] = useState({ category: true, gemstone: true, stone_shape: false, stone_size: false, style: false, color: false });
-  const hasAny = Object.keys(filters).length > 0;
   return (
     <aside className="sidebar">
-      {hasAny && (
+      {Object.keys(filters).length > 0 && (
         <button className="sb-clear" onClick={onClear}>✕ 清除全部篩選</button>
       )}
       {Object.entries(CFG).map(([field, cfg]) => (
         <div key={field} className="sb-sec">
           <button className={'sb-hd' + (filters[field] ? ' has-val' : '')}
             onClick={() => setOpen(p => ({ ...p, [field]: !p[field] }))}>
-            <span className="sb-hd-label">
-              {cfg.label}{filters[field] ? ' · ' + filters[field] : ''}
-            </span>
+            <span className="sb-hd-label">{cfg.label}{filters[field] ? ' · ' + filters[field] : ''}</span>
             <span className="sb-hd-arrow">{open[field] ? '▾' : '▸'}</span>
           </button>
           {open[field] && (
             <div className="sb-opts">
-              {filters[field] && (
-                <button className="sb-opt-clr" onClick={() => onFilter(field, null)}>
-                  ✕ 清除
-                </button>
-              )}
+              {filters[field] && <button className="sb-opt-clr" onClick={() => onFilter(field, null)}>✕ 清除</button>}
               {cfg.values.map(v => (
                 <button key={v} className={'sb-opt' + (filters[field] === v ? ' on' : '')}
-                  onClick={() => onFilter(field, filters[field] === v ? null : v)}>
-                  {v}
-                </button>
+                  onClick={() => onFilter(field, filters[field] === v ? null : v)}>{v}</button>
               ))}
             </div>
           )}
@@ -644,13 +262,13 @@ function Sidebar({ filters, onFilter, onClear }) {
 
 /* ── Photo detail ───────────────────────────────────── */
 function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto }) {
-  const [similar,     setSimilar]     = useState(null);
-  const [showSimilar, setShowSimilar] = useState(false);
+  const [view,    setView]    = useState('detail'); // 'detail' | 'similar'
+  const [similar, setSimilar] = useState(null);
 
-  useEffect(() => { setSimilar(null); setShowSimilar(false); }, [photo.id]);
+  useEffect(() => { setView('detail'); setSimilar(null); }, [photo.id]);
 
-  const loadSim = () => {
-    setShowSimilar(true);
+  const openSimilar = () => {
+    setView('similar');
     if (similar !== null) return;
     fetch('/api/photos/' + photo.id + '/similar?limit=12')
       .then(r => r.json())
@@ -662,48 +280,55 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto }) {
   const tags = [photo.category, photo.gemstone, photo.stone_shape, photo.stone_size, photo.style, photo.color, photo.material]
     .filter(v => v && v !== '未定');
 
+  /* Similar view */
+  if (view === 'similar') return (
+    <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="det-panel" style={{flexDirection:'column'}}>
+        <div className="det-hd-bar">
+          <button className="det-back" onClick={() => setView('detail')}>←</button>
+          <span className="det-hd-title">{'相似款 · ' + (photo.category || '')}</span>
+          <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
+        </div>
+        <div className="det-scroll">
+          {similar === null
+            ? <div className="loading-msg">載入中…</div>
+            : similar.length === 0
+              ? <div className="empty-msg">找不到相似款</div>
+              : <div className="sim-grid">
+                  {similar.map(p => (
+                    <img key={p.id} src={p.thumb_url} alt="" loading="lazy"
+                      onClick={() => { onSelectPhoto(p); setView('detail'); }} />
+                  ))}
+                </div>
+          }
+        </div>
+      </div>
+    </div>
+  );
+
+  /* Detail view */
   return (
     <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="det-panel">
         <button className="det-x" onClick={onClose}>×</button>
-
-        {/* Image */}
         <div className="det-left">
           <div className="det-handle" />
           <img className="det-img" src={photo.full_url} alt="" loading="lazy" />
         </div>
-
-        {/* Info */}
         <div className="det-right">
           <div className="det-scroll">
             <div className="det-tags">
               {tags.map((t, i) => <span key={i} className="tag">{t}</span>)}
-              {photo.price_band && <span className="tag" style={{color:'var(--t3)'}}>{photo.price_band}</span>}
+              {photo.price_band && <span className="tag" style={{color:'var(--text3)'}}>{photo.price_band}</span>}
             </div>
             <div className="det-btns">
               <button className={'db db-fav' + (fav ? ' on' : '')} onClick={() => toggleFav(photo)}>
                 {fav ? '♥ 已收藏' : '♡ 收藏'}
               </button>
-              <button className="db db-sim" onClick={loadSim}>
-                🔍 找相似
+              <button className="db db-sim" onClick={openSimilar}>
+                找相似 →
               </button>
             </div>
-            {showSimilar && (
-              <div className="sim-sec">
-                <div className="sim-title">{'相似款 · ' + (photo.category || '')}</div>
-                {similar === null
-                  ? <div className="loading-msg">載入中…</div>
-                  : similar.length === 0
-                    ? <div style={{color:'var(--t3)',fontSize:13}}>找不到相似款</div>
-                    : <div className="sim-grid">
-                        {similar.map(p => (
-                          <img key={p.id} src={p.thumb_url} alt="" loading="lazy"
-                            onClick={() => onSelectPhoto(p)} />
-                        ))}
-                      </div>
-                }
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -711,8 +336,8 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto }) {
   );
 }
 
-/* ── Photo grid with infinite scroll ────────────────── */
-function PhotoGrid({ isFav, toggleFav, extraFilters }) {
+/* ── Photo grid ─────────────────────────────────────── */
+function PhotoGrid({ isFav, toggleFav, filters }) {
   const [photos,  setPhotos]  = useState([]);
   const [loading, setLoading] = useState(false);
   const [detail,  setDetail]  = useState(null);
@@ -737,17 +362,12 @@ function PhotoGrid({ isFav, toggleFav, extraFilters }) {
       if (pageRef.current === 1) setPhotos(list);
       else setPhotos(prev => [...prev, ...list]);
       hasMoreRef.current = !!data.has_more;
-      pageRef.current   += 1;
-    } catch {
-      hasMoreRef.current = false;
-    } finally {
-      loadingRef.current = false;
-      setLoading(false);
-    }
+      pageRef.current += 1;
+    } catch { hasMoreRef.current = false; }
+    finally { loadingRef.current = false; setLoading(false); }
   };
   fetchRef.current = doFetch;
 
-  // Observer: empty deps → set up once, no loop
   useEffect(() => {
     const s = sentinelRef.current;
     if (!s) return;
@@ -761,15 +381,14 @@ function PhotoGrid({ isFav, toggleFav, extraFilters }) {
 
   useEffect(() => { fetchRef.current?.(); }, []);
 
-  // When external filters change, reset and reload
   useEffect(() => {
-    filtersRef.current = extraFilters || {};
+    filtersRef.current = filters || {};
     pageRef.current    = 1;
     hasMoreRef.current = true;
     loadingRef.current = false;
     setPhotos([]);
     fetchRef.current?.();
-  }, [JSON.stringify(extraFilters)]);
+  }, [JSON.stringify(filters)]);
 
   return (
     <>
@@ -778,8 +397,7 @@ function PhotoGrid({ isFav, toggleFav, extraFilters }) {
           {photos.map(p => (
             <div key={p.id} className="card">
               <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
-              <button
-                className={'card-fav' + (isFav(p.id) ? ' on' : '')}
+              <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
                 onClick={e => { e.stopPropagation(); toggleFav(p); }}>
                 {isFav(p.id) ? '♥' : '♡'}
               </button>
@@ -791,10 +409,7 @@ function PhotoGrid({ isFav, toggleFav, extraFilters }) {
         </div>
         {loading && <div className="loading-msg">載入中…</div>}
         {!loading && photos.length === 0 && !hasMoreRef.current && (
-          <div className="empty-msg">
-            沒有符合條件的照片<br/>
-            <span style={{fontSize:12,color:'var(--t3)'}}>試著調整篩選條件</span>
-          </div>
+          <div className="empty-msg">沒有符合條件的照片<br/><span style={{fontSize:12,color:'var(--text3)'}}>試著調整篩選條件</span></div>
         )}
         <div ref={sentinelRef} className="sentinel" />
       </div>
@@ -817,49 +432,33 @@ function BrowseTab({ isFav, toggleFav }) {
   const [filters,  setFilters]  = useState({});
   const [openChip, setOpenChip] = useState(null);
 
-  const setF = (field, value) => {
-    setFilters(prev => {
-      const n = { ...prev };
-      if (value) n[field] = value; else delete n[field];
-      return n;
-    });
-  };
+  const setF = (field, value) => setFilters(prev => {
+    const n = { ...prev };
+    if (value) n[field] = value; else delete n[field];
+    return n;
+  });
 
   const clearAll = () => setFilters({});
-  const hasAny   = Object.keys(filters).length > 0;
 
   return (
     <>
-      {/* Mobile chips */}
       <div className="chips-bar">
         {Object.entries(CFG).map(([field, cfg]) => (
-          <button key={field}
-            className={'chip' + (filters[field] ? ' on' : '')}
-            onClick={() => setOpenChip(field)}>
+          <button key={field} className={'chip' + (filters[field] ? ' on' : '')} onClick={() => setOpenChip(field)}>
             {filters[field] || cfg.label} {filters[field] ? '✕' : '▾'}
           </button>
         ))}
-        {hasAny && <button className="chip-clr" onClick={clearAll}>清除</button>}
+        {Object.keys(filters).length > 0 && <button className="chip-clr" onClick={clearAll}>清除</button>}
       </div>
-
       <div className="body-row">
-        {/* Desktop sidebar */}
         <Sidebar filters={filters} onFilter={setF} onClear={clearAll} />
-
-        {/* Grid */}
         <div className="main">
-          <PhotoGrid isFav={isFav} toggleFav={toggleFav} extraFilters={filters} />
+          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={filters} />
         </div>
       </div>
-
-      {/* Mobile filter sheet */}
       {openChip && (
-        <FilterSheet
-          field={openChip}
-          cur={filters[openChip] || null}
-          onPick={v => setF(openChip, v)}
-          onClose={() => setOpenChip(null)}
-        />
+        <FilterSheet field={openChip} cur={filters[openChip] || null}
+          onPick={v => setF(openChip, v)} onClose={() => setOpenChip(null)} />
       )}
     </>
   );
@@ -871,10 +470,7 @@ function FavsTab({ favs, isFav, toggleFav }) {
   if (favs.length === 0) return (
     <div className="body-row">
       <div style={{flex:1}}>
-        <div className="fav-empty">
-          尚無收藏款式<br/>
-          <span style={{fontSize:12,color:'var(--t3)'}}>找款頁面點 ♡ 即可收藏</span>
-        </div>
+        <div className="fav-empty">尚無收藏款式<br/><span style={{fontSize:12,color:'var(--text3)'}}>找款頁面點 ♡ 即可收藏</span></div>
       </div>
     </div>
   );
@@ -887,10 +483,7 @@ function FavsTab({ favs, isFav, toggleFav }) {
               {favs.map(p => (
                 <div key={p.id} className="card">
                   <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
-                  <button className="card-fav on"
-                    onClick={e => { e.stopPropagation(); toggleFav(p); }}>
-                    ♥
-                  </button>
+                  <button className="card-fav on" onClick={e => { e.stopPropagation(); toggleFav(p); }}>♥</button>
                   <div className="card-lbl" onClick={() => setDetail(p)}>
                     {[p.category, p.gemstone].filter(v => v && v !== '未定').join(' · ')}
                   </div>
@@ -901,13 +494,8 @@ function FavsTab({ favs, isFav, toggleFav }) {
         </div>
       </div>
       {detail && (
-        <PhotoDetail
-          photo={detail}
-          onClose={() => setDetail(null)}
-          isFav={isFav}
-          toggleFav={toggleFav}
-          onSelectPhoto={p => setDetail(p)}
-        />
+        <PhotoDetail photo={detail} onClose={() => setDetail(null)}
+          isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p => setDetail(p)} />
       )}
     </>
   );
@@ -919,44 +507,33 @@ function App() {
   const [favs, setFavs] = useState(loadFavs);
 
   const toggleFav = photo => setFavs(prev => {
-    const next = prev.find(p => p.id === photo.id)
-      ? prev.filter(p => p.id !== photo.id)
-      : [...prev, photo];
+    const next = prev.find(p => p.id === photo.id) ? prev.filter(p => p.id !== photo.id) : [...prev, photo];
     saveFavs(next);
     return next;
   });
-
   const isFav = id => favs.some(p => p.id === id);
 
   return (
     <React.Fragment>
-      {/* Nav */}
       <header className="nav">
         <span className="nav-logo">JEWELRY DB</span>
         <div className="nav-tabs">
-          <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>
-            找款
-          </button>
+          <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>找款</button>
           <button className={'nav-tab' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
             收藏 {favs.length > 0 && <span className="badge">{favs.length}</span>}
           </button>
         </div>
       </header>
-
-      {/* Screen */}
       <div className="content">
-        {tab === 'browse'    && <BrowseTab isFav={isFav} toggleFav={toggleFav} />}
-        {tab === 'favorites' && <FavsTab   favs={favs} isFav={isFav} toggleFav={toggleFav} />}
+        {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} />}
+        {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} />}
       </div>
-
-      {/* Mobile tab bar */}
       <nav className="tab-bar">
         <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>
           <IcoGrid /><span>找款</span>
         </button>
         <button className={'tab-btn' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
-          <IcoHeart fill={tab === 'favorites'} />
-          <span>收藏</span>
+          <IcoHeart fill={tab === 'favorites'} /><span>收藏</span>
           {favs.length > 0 && <span className="tab-badge">{favs.length}</span>}
         </button>
       </nav>
