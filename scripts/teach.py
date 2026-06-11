@@ -85,7 +85,6 @@ def show_progress(labels_dict, label_list, target):
 
 
 def build_row_order(conn, label_list, labels_done):
-    """最缺的品項優先顯示"""
     counts = Counter(labels_done.values())
     priority = sorted(label_list, key=lambda c: counts.get(c, 0))
     rows, seen = [], set()
@@ -187,7 +186,6 @@ def run_style():
         with open(STYLE_LABELS_FILE, encoding='utf-8') as f:
             labels = json.load(f)
 
-    # 所有照片，依 style 現況優先排序
     rows_all = conn.execute(
         "SELECT id, full_path, filename, category, style FROM photos "
         "WHERE full_path IS NOT NULL ORDER BY RANDOM()"
