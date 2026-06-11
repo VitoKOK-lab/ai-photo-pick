@@ -45,24 +45,17 @@ for jpg in sorted(CLASSIFIED_DIR.rglob("*.jpg")):
             return None if v in (None, "未定", "其他") else v
 
         file_hash = hashlib.md5(str(jpg).encode()).hexdigest()
+        file_size = jpg.stat().st_size
 
         conn.execute(
             """INSERT INTO photos
                (filename, original_filename, original_path, full_path, thumb_path, micro_path,
-                file_hash, category, style, color, gemstone, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+                file_hash, file_size, category, style, color, gemstone, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
             (
-                filename,
-                jpg.name,
-                str(jpg),
-                str(jpg),
-                str(jpg),
-                str(jpg),
-                file_hash,
-                category,
-                clean(style),
-                clean(color),
-                clean(gemstone),
+                filename, jpg.name, str(jpg), str(jpg), str(jpg), str(jpg),
+                file_hash, file_size,
+                category, clean(style), clean(color), clean(gemstone),
             )
         )
         inserted += 1
