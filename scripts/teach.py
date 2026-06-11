@@ -1,10 +1,11 @@
-"""teach.py - 互動式標記工具（品項 + 鑽石等級）
+"""teach.py - 互動式標記工具（品項 + 鑽石等級 + 鍊子粗細）
 
 按單鍵立即送出，照片開啟後自動切回終端。
 
 執行：
   python3 scripts/teach.py           ← 標記品項
   python3 scripts/teach.py --style   ← 標記鑽石等級
+  python3 scripts/teach.py --chain   ← 標記鍊子粗細
 """
 import json
 import subprocess
@@ -27,6 +28,11 @@ CAT_LABELS_FILE = BASE_DIR / "data" / "training_labels.json"
 STYLE_DISPLAY  = ['無鑽', '簡約', '輕奢', '豪鑲']
 STYLE_DB_VALS  = ['無鑽', '簡約(5顆鑽內)', '輕奢(20顆鑽內)', '豪鑲滿鑲鑽']
 STYLE_LABELS_FILE = BASE_DIR / "data" / "training_labels_style.json"
+
+# ── 鍊子粗細設定 ──────────────────────────────────────────────
+CHAIN_DISPLAY  = ['無鍊', '細鍊', '中等', '粗鍊']
+CHAIN_DB_VALS  = ['無鍊', '細鍊', '中等', '粗鍊']
+CHAIN_LABELS_FILE = BASE_DIR / "data" / "training_labels_chain.json"
 
 TARGET_PER_CAT = 8
 
@@ -241,10 +247,94 @@ def run_style():
         print("繼續標記：python3 scripts/teach.py --style")
 
 
+# ── 鍊子粗細標記 ──────────────────────────────────────────────
+
+def run_chain_width():
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+
+    labels = {}
+    if CHAIN_LABELS_FILE.exists():
+        with open(CHAIN_LABELS_FILE, encoding='utf-8') as f:
+            labels = json.load(f)
+
+    rows_all = conn.execute(
+        "SELECT id, full_path, filename, category, style FROM photos "
+        "WHERE full_path IS NOT NULL ORDER BY RANDOM()"
+    ).fetchall()
+    conn.close()
+
+    key_map = {str(i): (CHAIN_DISPLAY[i-1], CHAIN_DB_VALS[i-1])
+               for i in range(1, len(CHAIN_DISPLAY)+1)}
+
+    print("\n" + "=" * 50)
+    print("  鍊子粗細標記  (單鍵送出)")
+    print("=" * 50)
+    print(show_progress(labels, CHAIN_DB_VALS, TARGET_PER_CAT))
+    print()
+    for k, (disp, _) in key_map.items():
+        print(f"  [{k}] {disp}", end="   ")
+    print(f"\n  [s] 跳過   [q] 儲存離開")
+    print()
+    print("  說明：")
+    print("    無鍊 = 戒指/耳釘/單獨墜子（沒有鍊子）")
+    print("    細鍊 = 纖細精緻鍊子（< 2mm）")
+    print("    中等 = 標準鍊子（2-4mm）")
+    print("    粗鍊 = 粗重鍊子（> 4mm）\n")
+
+    new = 0
+    for row in rows_all:
+        pid = str(row['id'])
+        if pid in labels:
+            continue
+        counts = Counter(labels.values())
+        still_needed = [db for db in CHAIN_DB_VALS if counts.get(db, 0) < TARGET_PER_CAT]
+        if not still_needed:
+            break
+        full_path = Path(row['full_path'])
+        if not full_path.exists():
+            continue
+
+        open_photo(full_path)
+        print(f"\r{row['filename'][:45]}  品項:{row['category'] or '?'}  ", end='', flush=True)
+
+        ch = getch()
+        if ch in ('\x03', 'q'):
+            print("\n中斷"); break
+        elif ch in ('s', ' '):
+            print(f"\r  ↷ 跳過{' '*40}")
+        elif ch in key_map:
+            disp, db_val = key_map[ch]
+            labels[pid] = db_val
+            new += 1
+            print(f"\r  ✓  {disp}{' '*40}")
+        else:
+            print(f"\r  ? 無效[{ch}]{' '*40}")
+
+    CHAIN_LABELS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(CHAIN_LABELS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(labels, f, ensure_ascii=False, indent=2)
+
+    counts = Counter(labels.values())
+    print(f"\n{'='*50}")
+    print(f"✅ 已儲存 {len(labels)} 筆（本次新增 {new}）\n")
+    print(show_progress(labels, CHAIN_DB_VALS, TARGET_PER_CAT))
+    if all(counts.get(db, 0) >= TARGET_PER_CAT for db in CHAIN_DB_VALS):
+        print("\n✅ 鍊子粗細訓練充足！")
+        print("下一步：python3 scripts/reclassify_trained.py --chain")
+    else:
+        missing = [CHAIN_DISPLAY[CHAIN_DB_VALS.index(db)] for db in CHAIN_DB_VALS
+                   if counts.get(db, 0) < TARGET_PER_CAT]
+        print(f"\n⚠  尚不足：{', '.join(missing)}")
+        print("繼續標記：python3 scripts/teach.py --chain")
+
+
 # ── 入口 ──────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     if '--style' in sys.argv:
         run_style()
+    elif '--chain' in sys.argv:
+        run_chain_width()
     else:
         run_category()

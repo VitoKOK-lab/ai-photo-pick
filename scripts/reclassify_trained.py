@@ -23,14 +23,27 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH, BASE_DIR
 
-CAT_LABELS_FILE   = BASE_DIR / "data" / "training_labels.json"
-STYLE_LABELS_FILE = BASE_DIR / "data" / "training_labels_style.json"
-EMBED_CACHE_FILE  = BASE_DIR / "data" / "embeddings_cache.npz"
-CLASSIFIED_DIR    = BASE_DIR / "data" / "02_classified"
+CAT_LABELS_FILE    = BASE_DIR / "data" / "training_labels.json"
+STYLE_LABELS_FILE  = BASE_DIR / "data" / "training_labels_style.json"
+CHAIN_LABELS_FILE  = BASE_DIR / "data" / "training_labels_chain.json"
+EMBED_CACHE_FILE   = BASE_DIR / "data" / "embeddings_cache.npz"
+CLASSIFIED_DIR     = BASE_DIR / "data" / "02_classified"
 
-CATEGORIES = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
+CATEGORIES    = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
 STYLE_DB_VALS = ['無鑽', '簡約(5顆鑽內)', '輕奢(20顆鑽內)', '豪鑲滿鑲鑽']
+CHAIN_DB_VALS = ['無鍊', '細鍊', '中等', '粗鍊']
 KNN_K = 7
+
+
+def _ensure_chain_column():
+    """確保 photos 表有 chain_width 欄位"""
+    conn = sqlite3.connect(SQLITE_PATH)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(photos)")}
+    if 'chain_width' not in cols:
+        conn.execute("ALTER TABLE photos ADD COLUMN chain_width TEXT")
+        conn.commit()
+        print("✓ 已新增 chain_width 欄位")
+    conn.close()
 
 
 # ── CLIP helpers ──────────────────────────────────────────────────────────────
@@ -85,8 +98,16 @@ def knn_predict(train_embs: np.ndarray, train_labels: list,
 
 def main():
     mode_style = '--style' in sys.argv
+    mode_chain = '--chain' in sys.argv
 
-    if mode_style:
+    if mode_chain:
+        _ensure_chain_column()
+        labels_file = CHAIN_LABELS_FILE
+        dim_name    = '鍊子粗細'
+        dim_field   = 'chain_width'
+        dim_labels  = CHAIN_DB_VALS
+        teach_cmd   = 'python3 scripts/teach.py --chain'
+    elif mode_style:
         labels_file = STYLE_LABELS_FILE
         dim_name    = '鑽石等級'
         dim_field   = 'style'
@@ -123,7 +144,9 @@ def main():
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
-        f"SELECT id, full_path, filename, category, style FROM photos ORDER BY id"
+        "SELECT id, full_path, filename, category, style, chain_width FROM photos ORDER BY id"
+        if not mode_chain else
+        "SELECT id, full_path, filename, category, style, COALESCE(chain_width,'') as chain_width FROM photos ORDER BY id"
     ).fetchall()
     conn.close()
     print(f"共 {len(rows)} 張照片")
@@ -191,14 +214,20 @@ def main():
             continue
 
         predicted   = knn_predict(train_embs, train_labs, cache[pid])
-        old_val     = (row['style'] if mode_style else row['category']) or ''
+        if mode_chain:
+            old_val = row['chain_width'] or ''
+        elif mode_style:
+            old_val = row['style'] or ''
+        else:
+            old_val = row['category'] or ''
 
         if predicted == old_val:
             continue  # 沒變，跳過
 
-        if mode_style:
-            # 只更新 DB style 欄位，不動檔案
-            conn.execute("UPDATE photos SET style=? WHERE id=?", (predicted, row['id']))
+        if mode_style or mode_chain:
+            # 只更新 DB 欄位，不動檔案
+            field = 'chain_width' if mode_chain else 'style'
+            conn.execute(f"UPDATE photos SET {field}=? WHERE id=?", (predicted, row['id']))
             changed += 1
         else:
             # 品項模式：移動檔案 + 更新 DB
@@ -247,15 +276,15 @@ def main():
     conn.commit()
     conn.close()
 
-    label = '鑽石等級' if mode_style else '品項'
+    label = '鍊子粗細' if mode_chain else ('鑽石等級' if mode_style else '品項')
     print(f"\n✅ 完成！")
     print(f"  更改{label}：{changed} 筆")
     print(f"  錯誤：      {errors} 筆")
     print(f"  跳過：      {skipped} 筆")
-    if not mode_style:
+    if not mode_style and not mode_chain:
         print(f"\n下一步：python3 scripts/reindex_from_disk.py")
     else:
-        print(f"\n完成！鑽石等級已更新到 DB。")
+        print(f"\n完成！{label}已更新到 DB。")
 
 
 if __name__ == "__main__":
