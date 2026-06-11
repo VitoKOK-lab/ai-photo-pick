@@ -168,8 +168,8 @@ button { font-family: inherit; cursor: pointer; }
 @media (min-width: 768px) {
   .nav-tabs  { display: flex; }
   .tab-bar   { display: none; }
-  .sidebar   { display: block; }
-  .chips-bar { display: none; }
+  .sidebar   { display: none; }
+  .chips-bar { display: flex; }
   .grid { grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
 
   .det-ovl { align-items: center; justify-content: center; padding: 32px; }
@@ -598,7 +598,6 @@ function BrowseTab({ isFav, toggleFav }) {
         {Object.keys(filters).length > 0 && <button className="chip-clr" onClick={clearAll}>清除全部</button>}
       </div>
       <div className="body-row">
-        <Sidebar filters={filters} onFilter={setF} onClear={clearAll} counts={counts} />
         <div className="main">
           <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={filters} />
         </div>
