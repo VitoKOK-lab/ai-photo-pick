@@ -313,7 +313,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   };
 
   const doDelete = async () => {
-    if (!confirm('確定刪除這張照片的紀錄？')) return;
+    if (!confirm('確定永久刪除這張照片？（檔案會一併刪除，無法復原）')) return;
     await fetch('/api/photos/' + photo.id, { method: 'DELETE' });
     onDeleted && onDeleted(photo.id);
     onClose();
@@ -387,7 +387,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
               <button className="db db-save" onClick={doSave} disabled={saving}>
                 {saving ? '儲存中…' : '✓ 儲存'}
               </button>
-              <button className="db db-del" onClick={doDelete}>✕ 刪除紀錄</button>
+              <button className="db db-del" onClick={doDelete}>✕ 刪除</button>
             </div>
           </div>
         </div>

@@ -220,4 +220,10 @@ def delete_photo(photo_id: int):
     conn.execute("DELETE FROM photos WHERE id = ?", (photo_id,))
     conn.commit()
     conn.close()
+    # 刪除磁碟上的實際檔案
+    if row["full_path"]:
+        try:
+            Path(row["full_path"]).unlink(missing_ok=True)
+        except Exception:
+            pass
     return {"deleted": photo_id}
