@@ -93,5 +93,11 @@
     "少": "a photo of jewelry with simple minimal setting — plain solitaire with prongs, or a center stone with a small number of accent diamonds only on the band shoulders or simple channel-set side stones, clean understated design where the main gemstone is clearly the dominant focus",
     "正常": "a photo of jewelry with moderate setting work — a center gemstone surrounded by a full halo of diamonds, pave diamonds spread across a significant portion of the band, multiple rows of accent stones, or side stones extending well beyond the shoulder area",
     "多": "a photo of jewelry with heavy elaborate setting work — full pave diamonds covering nearly all metal surfaces, eternity rings or bands fully set with stones all around, complex multi-tier or layered designs, ornate frame or cage-style settings enclosing the stone, micro-pave everywhere, or pieces where the metal structure is almost entirely hidden under dense stone coverage"
+  },
+  "craft_complexity": {
+    "極簡": "a fine jewelry photo where the setting around the center stone is extremely simple and plain — a basic four-prong or six-prong solitaire with no decorative elements, smooth plain metal shank, no milgrain, no engraving, no filigree, no gallery work, purely functional minimal metalwork",
+    "普通": "a fine jewelry photo with standard everyday setting complexity around the center stone — a classic prong or bezel setting with a plain polished gallery, simple shared-prong or channel shoulders, basic basket setting with no decorative details, straightforward workmanship without special ornamentation",
+    "複雜": "a fine jewelry photo with elaborate decorative setting work around the center stone — ornate gallery with cutout patterns, detailed basket or crown setting with milgrain edges, pave-set halo with diamond melee framing, engraved or textured metal band, split shank with diamond accents, visible intricate metalwork craftsmanship",
+    "極複雜": "a fine jewelry photo with extraordinarily intricate handcrafted setting — multi-tiered cathedral mount, lace-like filigree metalwork, deeply carved relief sculpture on the mount, openwork gallery with multiple layers, antique or Art Deco style architectural setting with complex geometric patterns, the metalwork itself is a work of art independent of the gemstone"
   }
 }

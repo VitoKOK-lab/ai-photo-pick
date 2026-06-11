@@ -1,11 +1,12 @@
-"""teach.py - 互動式標記工具（品項 + 鑽石等級 + 鍊子粗細）
+"""teach.py - 互動式標記工具（品項 + 鑽石等級 + 用料多寡 + 做工複雜度）
 
 按單鍵立即送出，照片開啟後自動切回終端。
 
 執行：
   python3 scripts/teach.py           ← 標記品項
   python3 scripts/teach.py --style   ← 標記鑽石等級
-  python3 scripts/teach.py --chain   ← 標記鍊子粗細
+  python3 scripts/teach.py --chain   ← 標記用料多寡
+  python3 scripts/teach.py --craft   ← 標記做工複雜度
 """
 import json
 import subprocess
@@ -33,6 +34,11 @@ STYLE_LABELS_FILE = BASE_DIR / "data" / "training_labels_style.json"
 CHAIN_DISPLAY  = ['少', '正常', '多']
 CHAIN_DB_VALS  = ['少', '正常', '多']
 CHAIN_LABELS_FILE = BASE_DIR / "data" / "training_labels_setting.json"
+
+# ── 做工複雜度設定 ────────────────────────────────────────────
+CRAFT_DISPLAY  = ['極簡', '普通', '複雜', '極複雜']
+CRAFT_DB_VALS  = ['極簡', '普通', '複雜', '極複雜']
+CRAFT_LABELS_FILE = BASE_DIR / "data" / "training_labels_craft.json"
 
 TARGET_PER_CAT = 8
 
@@ -328,6 +334,88 @@ def run_setting_amount():
         print("繼續標記：python3 scripts/teach.py --chain")
 
 
+# ── 做工複雜度標記 ────────────────────────────────────────────
+
+def run_craft_complexity():
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+
+    labels = {}
+    if CRAFT_LABELS_FILE.exists():
+        with open(CRAFT_LABELS_FILE, encoding='utf-8') as f:
+            labels = json.load(f)
+
+    rows_all = conn.execute(
+        "SELECT id, full_path, filename, category, style FROM photos "
+        "WHERE full_path IS NOT NULL ORDER BY RANDOM()"
+    ).fetchall()
+    conn.close()
+
+    key_map = {str(i): (CRAFT_DISPLAY[i-1], CRAFT_DB_VALS[i-1])
+               for i in range(1, len(CRAFT_DISPLAY)+1)}
+
+    print("\n" + "=" * 50)
+    print("  做工複雜度標記  (單鍵送出)")
+    print("=" * 50)
+    print(show_progress(labels, CRAFT_DB_VALS, TARGET_PER_CAT))
+    print()
+    for k, (disp, _) in key_map.items():
+        print(f"  [{k}] {disp}", end="   ")
+    print(f"\n  [s] 跳過   [q] 儲存離開")
+    print()
+    print("  做工複雜度說明（主石周圍的台座工藝）：")
+    print("    極簡   = 基本四爪/六爪，無裝飾")
+    print("    普通   = 標準台座，簡單包鑲/爪鑲")
+    print("    複雜   = 有裝飾台座、蕾絲邊、多層結構、密釘圍邊")
+    print("    極複雜 = 頂級手工鏤空、浮雕、多層鑲嵌建築感台座\n")
+
+    new = 0
+    for row in rows_all:
+        pid = str(row['id'])
+        if pid in labels:
+            continue
+        counts = Counter(labels.values())
+        still_needed = [db for db in CRAFT_DB_VALS if counts.get(db, 0) < TARGET_PER_CAT]
+        if not still_needed:
+            break
+        full_path = Path(row['full_path'])
+        if not full_path.exists():
+            continue
+
+        open_photo(full_path)
+        print(f"\r{row['filename'][:45]}  品項:{row['category'] or '?'}  ", end='', flush=True)
+
+        ch = getch()
+        if ch in ('\x03', 'q'):
+            print("\n中斷"); break
+        elif ch in ('s', ' '):
+            print(f"\r  ↷ 跳過{' '*40}")
+        elif ch in key_map:
+            disp, db_val = key_map[ch]
+            labels[pid] = db_val
+            new += 1
+            print(f"\r  ✓  {disp}{' '*40}")
+        else:
+            print(f"\r  ? 無效[{ch}]{' '*40}")
+
+    CRAFT_LABELS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(CRAFT_LABELS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(labels, f, ensure_ascii=False, indent=2)
+
+    counts = Counter(labels.values())
+    print(f"\n{'='*50}")
+    print(f"✅ 已儲存 {len(labels)} 筆（本次新增 {new}）\n")
+    print(show_progress(labels, CRAFT_DB_VALS, TARGET_PER_CAT))
+    if all(counts.get(db, 0) >= TARGET_PER_CAT for db in CRAFT_DB_VALS):
+        print("\n✅ 做工複雜度訓練充足！")
+        print("下一步：python3 scripts/reclassify_trained.py --craft")
+    else:
+        missing = [CRAFT_DISPLAY[CRAFT_DB_VALS.index(db)] for db in CRAFT_DB_VALS
+                   if counts.get(db, 0) < TARGET_PER_CAT]
+        print(f"\n⚠  尚不足：{', '.join(missing)}")
+        print("繼續標記：python3 scripts/teach.py --craft")
+
+
 # ── 入口 ──────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -335,5 +423,7 @@ if __name__ == "__main__":
         run_style()
     elif '--chain' in sys.argv:
         run_setting_amount()
+    elif '--craft' in sys.argv:
+        run_craft_complexity()
     else:
         run_category()

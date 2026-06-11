@@ -13,7 +13,8 @@ from config.settings import BASE_DIR, PROCESSED_DIR, ALLOWED_ORIGINS, SQLITE_PAT
 def _run_migrations():
     """啟動時確保所有新欄位存在"""
     new_cols = [
-        ("setting_amount", "TEXT"),
+        ("setting_amount",   "TEXT"),
+        ("craft_complexity", "TEXT"),
     ]
     conn = sqlite3.connect(SQLITE_PATH)
     existing = {r[1] for r in conn.execute("PRAGMA table_info(photos)")}

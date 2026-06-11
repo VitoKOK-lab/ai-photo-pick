@@ -3,10 +3,10 @@
 執行：
   python3 scripts/reclassify_trained.py           ← 重分品項（category）
   python3 scripts/reclassify_trained.py --style   ← 重分鑽石等級（style）
+  python3 scripts/reclassify_trained.py --chain   ← 重分用料多寡（setting_amount）
+  python3 scripts/reclassify_trained.py --craft   ← 重分做工複雜度（craft_complexity）
 
-前置條件：
-  品項：先執行 python3 scripts/teach.py
-  鑽石：先執行 python3 scripts/teach.py --style
+前置條件：先執行對應的 teach.py 模式
 """
 import json
 import shutil
@@ -26,23 +26,26 @@ from config.settings import SQLITE_PATH, BASE_DIR
 CAT_LABELS_FILE    = BASE_DIR / "data" / "training_labels.json"
 STYLE_LABELS_FILE  = BASE_DIR / "data" / "training_labels_style.json"
 CHAIN_LABELS_FILE  = BASE_DIR / "data" / "training_labels_setting.json"
+CRAFT_LABELS_FILE  = BASE_DIR / "data" / "training_labels_craft.json"
 EMBED_CACHE_FILE   = BASE_DIR / "data" / "embeddings_cache.npz"
 CLASSIFIED_DIR     = BASE_DIR / "data" / "02_classified"
 
-CATEGORIES    = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
-STYLE_DB_VALS = ['無鑽', '簡約(5顆鑽內)', '輕奢(20顆鑽內)', '豪鑲滿鑲鑽']
-CHAIN_DB_VALS = ['少', '正常', '多']
+CATEGORIES     = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
+STYLE_DB_VALS  = ['無鑽', '簡約(5顆鑽內)', '輕奢(20顆鑽內)', '豪鑲滿鑲鑽']
+CHAIN_DB_VALS  = ['少', '正常', '多']
+CRAFT_DB_VALS  = ['極簡', '普通', '複雜', '極複雜']
 KNN_K = 7
 
 
-def _ensure_chain_column():
-    """確保 photos 表有 setting_amount 欄位"""
+def _ensure_columns():
+    """確保 photos 表有所需欄位"""
     conn = sqlite3.connect(SQLITE_PATH)
     cols = {r[1] for r in conn.execute("PRAGMA table_info(photos)")}
-    if 'setting_amount' not in cols:
-        conn.execute("ALTER TABLE photos ADD COLUMN setting_amount TEXT")
-        conn.commit()
-        print("✓ 已新增 setting_amount 欄位")
+    for col in ('setting_amount', 'craft_complexity'):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE photos ADD COLUMN {col} TEXT")
+            print(f"✓ 已新增 {col} 欄位")
+    conn.commit()
     conn.close()
 
 
@@ -99,11 +102,19 @@ def knn_predict(train_embs: np.ndarray, train_labels: list,
 def main():
     mode_style = '--style' in sys.argv
     mode_chain = '--chain' in sys.argv
+    mode_craft = '--craft' in sys.argv
 
-    if mode_chain:
-        _ensure_chain_column()
+    _ensure_columns()
+
+    if mode_craft:
+        labels_file = CRAFT_LABELS_FILE
+        dim_name    = '做工複雜度'
+        dim_field   = 'craft_complexity'
+        dim_labels  = CRAFT_DB_VALS
+        teach_cmd   = 'python3 scripts/teach.py --craft'
+    elif mode_chain:
         labels_file = CHAIN_LABELS_FILE
-        dim_name    = '鍊子粗細'
+        dim_name    = '用料多寡'
         dim_field   = 'setting_amount'
         dim_labels  = CHAIN_DB_VALS
         teach_cmd   = 'python3 scripts/teach.py --chain'
@@ -144,9 +155,10 @@ def main():
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
-        "SELECT id, full_path, filename, category, style, setting_amount FROM photos ORDER BY id"
-        if not mode_chain else
-        "SELECT id, full_path, filename, category, style, COALESCE(setting_amount,'') as setting_amount FROM photos ORDER BY id"
+        "SELECT id, full_path, filename, category, style, "
+        "COALESCE(setting_amount,'') as setting_amount, "
+        "COALESCE(craft_complexity,'') as craft_complexity "
+        "FROM photos ORDER BY id"
     ).fetchall()
     conn.close()
     print(f"共 {len(rows)} 張照片")
@@ -214,7 +226,9 @@ def main():
             continue
 
         predicted   = knn_predict(train_embs, train_labs, cache[pid])
-        if mode_chain:
+        if mode_craft:
+            old_val = row['craft_complexity'] or ''
+        elif mode_chain:
             old_val = row['setting_amount'] or ''
         elif mode_style:
             old_val = row['style'] or ''
@@ -224,9 +238,14 @@ def main():
         if predicted == old_val:
             continue  # 沒變，跳過
 
-        if mode_style or mode_chain:
+        if mode_style or mode_chain or mode_craft:
             # 只更新 DB 欄位，不動檔案
-            field = 'setting_amount' if mode_chain else 'style'
+            if mode_craft:
+                field = 'craft_complexity'
+            elif mode_chain:
+                field = 'setting_amount'
+            else:
+                field = 'style'
             conn.execute(f"UPDATE photos SET {field}=? WHERE id=?", (predicted, row['id']))
             changed += 1
         else:
@@ -276,12 +295,19 @@ def main():
     conn.commit()
     conn.close()
 
-    label = '鍊子粗細' if mode_chain else ('鑽石等級' if mode_style else '品項')
+    if mode_craft:
+        label = '做工複雜度'
+    elif mode_chain:
+        label = '用料多寡'
+    elif mode_style:
+        label = '鑽石等級'
+    else:
+        label = '品項'
     print(f"\n✅ 完成！")
     print(f"  更改{label}：{changed} 筆")
     print(f"  錯誤：      {errors} 筆")
     print(f"  跳過：      {skipped} 筆")
-    if not mode_style and not mode_chain:
+    if not mode_style and not mode_chain and not mode_craft:
         print(f"\n下一步：python3 scripts/reindex_from_disk.py")
     else:
         print(f"\n完成！{label}已更新到 DB。")

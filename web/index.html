@@ -285,14 +285,16 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   const [view,    setView]    = useState('detail'); // 'detail' | 'similar' | 'edit'
   const [similar, setSimilar] = useState(null);
   const [simErr,  setSimErr]  = useState(false);
-  const [editCat,   setEditCat]   = useState(photo.category    || '');
-  const [editSty,   setEditSty]   = useState(photo.style       || '');
-  const [editChain, setEditChain] = useState(photo.setting_amount || '');
+  const [editCat,   setEditCat]   = useState(photo.category        || '');
+  const [editSty,   setEditSty]   = useState(photo.style           || '');
+  const [editChain, setEditChain] = useState(photo.setting_amount  || '');
+  const [editCraft, setEditCraft] = useState(photo.craft_complexity|| '');
   const [saving,    setSaving]    = useState(false);
 
   useEffect(() => {
     setView('detail'); setSimilar(null); setSimErr(false);
-    setEditCat(photo.category || ''); setEditSty(photo.style || ''); setEditChain(photo.setting_amount || '');
+    setEditCat(photo.category || ''); setEditSty(photo.style || '');
+    setEditChain(photo.setting_amount || ''); setEditCraft(photo.craft_complexity || '');
   }, [photo.id]);
 
   const doSave = async () => {
@@ -301,7 +303,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
       const res = await fetch('/api/photos/' + photo.id, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: editCat, style: editSty, setting_amount: editChain }),
+        body: JSON.stringify({ category: editCat, style: editSty, setting_amount: editChain, craft_complexity: editCraft }),
       });
       const updated = await res.json();
       onUpdated && onUpdated(updated);
@@ -333,7 +335,8 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   const STYLE_VALS = new Set(['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','豪鑲滿鑲鑽']);
   const tags = [photo.category, photo.style,
     STYLE_VALS.has(photo.gemstone) ? null : photo.gemstone,
-    photo.stone_shape, photo.stone_size, photo.color, photo.material, photo.setting_amount]
+    photo.stone_shape, photo.stone_size, photo.color, photo.material,
+    photo.setting_amount, photo.craft_complexity]
     .filter(v => v && v !== '未定');
 
   /* Edit view */
@@ -369,6 +372,14 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
               <div className="edit-chips">
                 {['少','正常','多'].map(v => (
                   <button key={v} className={'edit-chip' + (editChain === v ? ' on' : '')} onClick={() => setEditChain(v)}>{v}</button>
+                ))}
+              </div>
+            </div>
+            <div className="edit-row">
+              <div className="edit-label">做工複雜</div>
+              <div className="edit-chips">
+                {['極簡','普通','複雜','極複雜'].map(v => (
+                  <button key={v} className={'edit-chip' + (editCraft === v ? ' on' : '')} onClick={() => setEditCraft(v)}>{v}</button>
                 ))}
               </div>
             </div>
