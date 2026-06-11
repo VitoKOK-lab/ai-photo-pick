@@ -88,5 +88,10 @@
     "高階":  "a photo of high-end fine jewelry with large quality gemstones and excellent craftsmanship",
     "奢華":  "a photo of luxury jewelry with impressive large precious gemstones in elaborate settings",
     "頂級":  "a photo of ultra-luxury collector grade jewelry with extraordinary rare gemstones"
+  },
+  "setting_amount": {
+    "少": "a photo of jewelry with minimal metal work and almost no stone setting — plain polished band, solitaire with bare prongs, or completely undecorated surface with no pave, no halo, no side stones",
+    "正常": "a photo of jewelry with moderate setting work — a center gemstone with a small halo or a few side accent diamonds, simple pave on part of the band, standard four-prong or bezel solitaire with minor decoration",
+    "多": "a photo of jewelry with heavy elaborate setting work — full pave diamonds covering most surfaces, multi-row stone bands, complex layered designs with many gemstones, eternity rings, or pieces where metal is mostly hidden under dense stone coverage"
   }
 }
