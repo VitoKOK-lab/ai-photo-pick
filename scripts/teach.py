@@ -1,13 +1,16 @@
 """teach.py - 互動式品項標記工具
 
-給系統「教學資料」，讓 KNN 分類器能學會你的分類方式。
-每個品項標記 15 張照片後，執行 reclassify_trained.py 自動分類全部。
+照片自動開啟後切回終端，按單鍵立即送出（不需 Enter）。
+每個品項標記 8 張後執行 reclassify_trained.py 自動分類全部。
 
 執行：python3 scripts/teach.py
 """
 import json
 import subprocess
 import sys
+import termios
+import time
+import tty
 from collections import Counter
 from pathlib import Path
 import sqlite3
@@ -20,13 +23,43 @@ LABELS_FILE = BASE_DIR / "data" / "training_labels.json"
 TARGET_PER_CAT = 8
 
 
+def getch() -> str:
+    """讀取單一按鍵，不需 Enter。Ctrl+C 回傳 '\x03'。"""
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    return ch
+
+
+def open_photo(path: Path):
+    """開啟照片預覽，0.4 秒後把終端切回前景。"""
+    subprocess.Popen(
+        ['open', str(path)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    time.sleep(0.45)
+    # 把終端切回前景（Terminal / iTerm2 都試）
+    subprocess.run(
+        ['osascript', '-e',
+         'try\n  tell application "iTerm2" to activate\non error\n'
+         '  tell application "Terminal" to activate\nend try'],
+        capture_output=True,
+        timeout=2,
+    )
+
+
 def show_progress(cat_counts):
     lines = []
     for c in CATEGORIES:
         n = cat_counts.get(c, 0)
         bar = '█' * n + '░' * max(0, TARGET_PER_CAT - n)
-        done = '✓' if n >= TARGET_PER_CAT else f'{n:2d}/{TARGET_PER_CAT}'
-        lines.append(f"  {c:4s} {bar} {done}")
+        done = '✓' if n >= TARGET_PER_CAT else f'{n}/{TARGET_PER_CAT}'
+        lines.append(f"  {c:3s}  {bar}  {done}")
     return '\n'.join(lines)
 
 
@@ -42,38 +75,40 @@ def main():
 
     cat_counts = Counter(labels.values())
 
-    # 取得所有照片：按「最缺的品項」優先排序，已夠的品項放最後
-    # 計算每個品項的優先順序（還缺越多 = 越前面）
+    # 照片排序：最缺的品項優先
     priority_order = sorted(CATEGORIES, key=lambda c: cat_counts.get(c, 0))
-    # 把優先品項對應的照片先撈，其餘隨機附在後面
     rows = []
-    seen_ids = set()
+    seen_ids: set = set()
     for cat in priority_order:
-        cat_rows = conn.execute(
+        for r in conn.execute(
             "SELECT id, full_path, filename, category FROM photos "
             "WHERE full_path IS NOT NULL AND category = ? ORDER BY RANDOM()",
             (cat,)
-        ).fetchall()
-        for r in cat_rows:
+        ).fetchall():
             if r['id'] not in seen_ids:
                 rows.append(r)
                 seen_ids.add(r['id'])
-    # 其餘（DB 未分類或品項不在清單）
-    other_rows = conn.execute(
+    for r in conn.execute(
         "SELECT id, full_path, filename, category FROM photos "
         "WHERE full_path IS NOT NULL ORDER BY RANDOM()"
-    ).fetchall()
-    for r in other_rows:
+    ).fetchall():
         if r['id'] not in seen_ids:
             rows.append(r)
             seen_ids.add(r['id'])
     conn.close()
 
-    print("\n" + "=" * 55)
-    print("  品項標記工具  (KNN 訓練資料)")
-    print("=" * 55)
-    print(f"共 {len(rows)} 張照片  |  目標：每類 {TARGET_PER_CAT} 張\n")
+    print("\n" + "=" * 50)
+    print("  品項標記工具  (單鍵送出，不用按 Enter)")
+    print("=" * 50)
+    print(f"共 {len(rows)} 張  |  目標：每類 {TARGET_PER_CAT} 張\n")
     print(show_progress(cat_counts))
+
+    # 列出快捷鍵說明
+    key_map = {str(i): c for i, c in enumerate(CATEGORIES, 1)}
+    print()
+    for k, c in key_map.items():
+        print(f"  [{k}] {c}", end="   ")
+    print(f"\n  [s] 跳過   [q] 儲存離開")
     print()
 
     labeled_this_session = 0
@@ -81,7 +116,7 @@ def main():
     for row in rows:
         pid = str(row['id'])
         if pid in labels:
-            continue  # 已標記過
+            continue
 
         still_needed = [c for c in CATEGORIES if cat_counts[c] < TARGET_PER_CAT]
         if not still_needed:
@@ -91,55 +126,36 @@ def main():
         if not full_path.exists():
             continue
 
-        # 開啟照片預覽
-        try:
-            subprocess.Popen(
-                ['open', str(full_path)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except Exception:
-            pass
+        open_photo(full_path)
 
-        print(f"\n{'─' * 55}")
-        print(f"照片: {row['filename']}")
-        db_cat = row['category'] or '未分類'
-        print(f"DB 目前: {db_cat}")
-        print(f"還需要: {', '.join(still_needed)}\n")
+        # 顯示提示（覆蓋同一行更新用 \r，保持畫面乾淨）
+        needed_keys = [k for k, c in key_map.items() if c in still_needed]
+        print(f"\r照片: {row['filename'][:45]}  |  還缺: {''.join(needed_keys)}  ", end='', flush=True)
 
-        for i, c in enumerate(CATEGORIES, 1):
-            mark = ' ← 需要' if c in still_needed else ''
-            print(f"  {i}. {c}{mark}")
-        print()
-        print("  s. 跳過   q. 儲存離開")
+        ch = getch()
 
-        try:
-            choice = input("> ").strip().lower()
-        except (EOFError, KeyboardInterrupt):
+        if ch == '\x03' or ch == 'q':   # Ctrl+C 或 q
             print("\n中斷")
             break
-
-        if choice == 'q':
-            break
-        elif choice in ('s', ''):
+        elif ch == 's' or ch == ' ':
+            print(f"\r  ↷ 跳過{' ' * 40}")
             continue
-        elif choice.isdigit() and 1 <= int(choice) <= len(CATEGORIES):
-            cat = CATEGORIES[int(choice) - 1]
+        elif ch in key_map:
+            cat = key_map[ch]
             labels[pid] = cat
             cat_counts[cat] += 1
             labeled_this_session += 1
-            print(f"✓  →  {cat}")
+            print(f"\r  ✓  {cat}{' ' * 40}")
         else:
-            print("無效，跳過")
+            print(f"\r  ? 無效鍵 [{ch}]，跳過{' ' * 30}")
 
     # 儲存
     LABELS_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(LABELS_FILE, 'w', encoding='utf-8') as f:
         json.dump(labels, f, ensure_ascii=False, indent=2)
 
-    total = len(labels)
-    print(f"\n{'=' * 55}")
-    print(f"✅ 已儲存 {total} 筆標記（本次新增 {labeled_this_session}）\n")
+    print(f"\n{'=' * 50}")
+    print(f"✅ 已儲存 {len(labels)} 筆（本次新增 {labeled_this_session}）\n")
     print(show_progress(cat_counts))
 
     if all(cat_counts[c] >= TARGET_PER_CAT for c in CATEGORIES):
