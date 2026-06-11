@@ -50,7 +50,6 @@ def main():
     labels_ordered = list(color_prompts.keys())
     prompt_texts   = list(color_prompts.values())
 
-    # 載入快取
     if not EMBED_CACHE_FILE.exists():
         print("❌ 找不到 embeddings_cache.npz，請先執行 classify_setting_amount.py")
         return
@@ -62,7 +61,6 @@ def main():
     rows = conn.execute("SELECT id FROM photos WHERE full_path IS NOT NULL ORDER BY id").fetchall()
     print(f"共 {len(rows)} 張照片")
 
-    # 計算文字特徵
     print("計算文字特徵…")
     model, tokenizer, logit_scale = _load_clip()
     tokens = tokenizer(prompt_texts).to(_device)

@@ -1,4 +1,4 @@
-"""cleanup_filenames.py - 把檔名裡的「未定」替換成 DB 實際欄位值，或直接移除
+"""cleanup_filenames.py - 把檔名裡的「未定」替換或直接移除
 
 執行：
   python3 scripts/cleanup_filenames.py          ← 預覽（不改名）
@@ -32,16 +32,10 @@ def main():
 
     renamed = errors = skipped = 0
     for row, old_path in to_fix:
-        # 組合新檔名：把每個「未定」換成對應欄位值（若有），或直接移除
-        replacements = {
-            'color':       row['color']       or '',
-            'stone_shape': row['stone_shape'] or '',
-        }
-        # 新檔名：把 _未定 替換（連底線一起）
         new_name = old_path.name
-        new_name = re.sub(r'_?未定_?', '_', new_name)  # 移除 未定 段落
-        new_name = re.sub(r'_+', '_', new_name)          # 合併多個底線
-        new_name = new_name.strip('_')                    # 去掉首尾底線
+        new_name = re.sub(r'_?未定_?', '_', new_name)
+        new_name = re.sub(r'_+', '_', new_name)
+        new_name = new_name.strip('_')
 
         if new_name == old_path.name:
             skipped += 1
@@ -55,12 +49,10 @@ def main():
             continue
 
         if not old_path.exists():
-            print(f"  ⚠ 檔案不存在，跳過")
             skipped += 1
             continue
 
         try:
-            # 避免覆蓋已有的檔案
             if new_path.exists() and new_path != old_path:
                 base, ext = new_path.stem, new_path.suffix
                 n = 1
@@ -82,7 +74,7 @@ def main():
         conn.commit()
         print(f"\n✅ 完成！改名 {renamed} 個，跳過 {skipped} 個，錯誤 {errors} 個")
     else:
-        print(f"\n（預覽模式）加上 --rename 才會真正改名")
+        print(f"\n加上 --rename 才會真正改名")
 
     conn.close()
 
