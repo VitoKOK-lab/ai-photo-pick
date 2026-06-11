@@ -4,9 +4,10 @@
 
 執行：
   python3 scripts/teach.py           ← 標記品項
-  python3 scripts/teach.py --style   ← 標記鑽石等級
+  python3 scripts/teach.py --style   ← 標記鑽石數量
   python3 scripts/teach.py --chain   ← 標記用料多寡
   python3 scripts/teach.py --craft   ← 標記做工複雜度
+  python3 scripts/teach.py --color   ← 標記寶石顏色
 """
 import json
 import subprocess
@@ -39,6 +40,11 @@ CHAIN_LABELS_FILE = BASE_DIR / "data" / "training_labels_setting.json"
 CRAFT_DISPLAY  = ['極簡', '普通', '複雜', '極複雜']
 CRAFT_DB_VALS  = ['極簡', '普通', '複雜', '極複雜']
 CRAFT_LABELS_FILE = BASE_DIR / "data" / "training_labels_craft.json"
+
+# ── 寶石顏色設定 ──────────────────────────────────────────────
+COLOR_DISPLAY  = ['紅', '粉', '黃', '綠', '藍', '紫', '白', '彩']
+COLOR_DB_VALS  = ['紅', '粉', '黃', '綠', '藍', '紫', '白', '彩']
+COLOR_LABELS_FILE = BASE_DIR / "data" / "training_labels_color.json"
 
 TARGET_PER_CAT = 8
 
@@ -416,6 +422,82 @@ def run_craft_complexity():
         print("繼續標記：python3 scripts/teach.py --craft")
 
 
+# ── 寶石顏色標記 ──────────────────────────────────────────────
+
+def run_color():
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+
+    labels = {}
+    if COLOR_LABELS_FILE.exists():
+        with open(COLOR_LABELS_FILE, encoding='utf-8') as f:
+            labels = json.load(f)
+
+    rows_all = conn.execute(
+        "SELECT id, full_path, filename, category, color FROM photos "
+        "WHERE full_path IS NOT NULL ORDER BY RANDOM()"
+    ).fetchall()
+    conn.close()
+
+    key_map = {str(i): (COLOR_DISPLAY[i-1], COLOR_DB_VALS[i-1])
+               for i in range(1, len(COLOR_DISPLAY)+1)}
+
+    print("\n" + "=" * 50)
+    print("  寶石顏色標記  (單鍵送出)")
+    print("=" * 50)
+    print(show_progress(labels, COLOR_DB_VALS, TARGET_PER_CAT))
+    print()
+    for k, (disp, _) in key_map.items():
+        print(f"  [{k}] {disp}", end="   ")
+    print(f"\n  [s] 跳過   [q] 儲存離開\n")
+
+    new = 0
+    for row in rows_all:
+        pid = str(row['id'])
+        if pid in labels:
+            continue
+        counts = Counter(labels.values())
+        still_needed = [db for db in COLOR_DB_VALS if counts.get(db, 0) < TARGET_PER_CAT]
+        if not still_needed:
+            break
+        full_path = Path(row['full_path'])
+        if not full_path.exists():
+            continue
+
+        open_photo(full_path)
+        print(f"\r{row['filename'][:45]}  現在:{row['color'] or '?'}  ", end='', flush=True)
+
+        ch = getch()
+        if ch in ('\x03', 'q'):
+            print("\n中斷"); break
+        elif ch in ('s', ' '):
+            print(f"\r  ↷ 跳過{' '*40}")
+        elif ch in key_map:
+            disp, db_val = key_map[ch]
+            labels[pid] = db_val
+            new += 1
+            print(f"\r  ✓  {disp}{' '*40}")
+        else:
+            print(f"\r  ? 無效[{ch}]{' '*40}")
+
+    COLOR_LABELS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(COLOR_LABELS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(labels, f, ensure_ascii=False, indent=2)
+
+    counts = Counter(labels.values())
+    print(f"\n{'='*50}")
+    print(f"✅ 已儲存 {len(labels)} 筆（本次新增 {new}）\n")
+    print(show_progress(labels, COLOR_DB_VALS, TARGET_PER_CAT))
+    if all(counts.get(db, 0) >= TARGET_PER_CAT for db in COLOR_DB_VALS):
+        print("\n✅ 顏色訓練充足！")
+        print("下一步：python3 scripts/reclassify_trained.py --color")
+    else:
+        missing = [COLOR_DISPLAY[COLOR_DB_VALS.index(db)] for db in COLOR_DB_VALS
+                   if counts.get(db, 0) < TARGET_PER_CAT]
+        print(f"\n⚠  尚不足：{', '.join(missing)}")
+        print("繼續標記：python3 scripts/teach.py --color")
+
+
 # ── 入口 ──────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -425,5 +507,7 @@ if __name__ == "__main__":
         run_setting_amount()
     elif '--craft' in sys.argv:
         run_craft_complexity()
+    elif '--color' in sys.argv:
+        run_color()
     else:
         run_category()

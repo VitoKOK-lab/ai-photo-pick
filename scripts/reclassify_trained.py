@@ -27,6 +27,7 @@ CAT_LABELS_FILE    = BASE_DIR / "data" / "training_labels.json"
 STYLE_LABELS_FILE  = BASE_DIR / "data" / "training_labels_style.json"
 CHAIN_LABELS_FILE  = BASE_DIR / "data" / "training_labels_setting.json"
 CRAFT_LABELS_FILE  = BASE_DIR / "data" / "training_labels_craft.json"
+COLOR_LABELS_FILE  = BASE_DIR / "data" / "training_labels_color.json"
 EMBED_CACHE_FILE   = BASE_DIR / "data" / "embeddings_cache.npz"
 CLASSIFIED_DIR     = BASE_DIR / "data" / "02_classified"
 
@@ -34,6 +35,7 @@ CATEGORIES     = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '�
 STYLE_DB_VALS  = ['無鑽', '簡約', '輕奢', '豪鑲']
 CHAIN_DB_VALS  = ['少', '正常', '多']
 CRAFT_DB_VALS  = ['極簡', '普通', '複雜', '極複雜']
+COLOR_DB_VALS  = ['紅', '粉', '黃', '綠', '藍', '紫', '白', '彩']
 KNN_K = 7
 
 
@@ -103,10 +105,17 @@ def main():
     mode_style = '--style' in sys.argv
     mode_chain = '--chain' in sys.argv
     mode_craft = '--craft' in sys.argv
+    mode_color = '--color' in sys.argv
 
     _ensure_columns()
 
-    if mode_craft:
+    if mode_color:
+        labels_file = COLOR_LABELS_FILE
+        dim_name    = '寶石顏色'
+        dim_field   = 'color'
+        dim_labels  = COLOR_DB_VALS
+        teach_cmd   = 'python3 scripts/teach.py --color'
+    elif mode_craft:
         labels_file = CRAFT_LABELS_FILE
         dim_name    = '做工複雜度'
         dim_field   = 'craft_complexity'
@@ -157,7 +166,8 @@ def main():
     rows = conn.execute(
         "SELECT id, full_path, filename, category, style, "
         "COALESCE(setting_amount,'') as setting_amount, "
-        "COALESCE(craft_complexity,'') as craft_complexity "
+        "COALESCE(craft_complexity,'') as craft_complexity, "
+        "COALESCE(color,'') as color "
         "FROM photos ORDER BY id"
     ).fetchall()
     conn.close()
@@ -226,7 +236,9 @@ def main():
             continue
 
         predicted   = knn_predict(train_embs, train_labs, cache[pid])
-        if mode_craft:
+        if mode_color:
+            old_val = row['color'] or ''
+        elif mode_craft:
             old_val = row['craft_complexity'] or ''
         elif mode_chain:
             old_val = row['setting_amount'] or ''
@@ -240,7 +252,9 @@ def main():
 
         if mode_style or mode_chain or mode_craft:
             # 只更新 DB 欄位，不動檔案
-            if mode_craft:
+            if mode_color:
+                field = 'color'
+            elif mode_craft:
                 field = 'craft_complexity'
             elif mode_chain:
                 field = 'setting_amount'
@@ -295,7 +309,9 @@ def main():
     conn.commit()
     conn.close()
 
-    if mode_craft:
+    if mode_color:
+        label = '寶石顏色'
+    elif mode_craft:
         label = '做工複雜度'
     elif mode_chain:
         label = '用料多寡'
