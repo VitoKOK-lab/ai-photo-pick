@@ -1,4 +1,5 @@
 """photos.py - /api/photos 列表 + 單張詳細"""
+import json
 import sqlite3
 import sys
 from pathlib import Path
@@ -6,7 +7,27 @@ from typing import Optional
 from fastapi import APIRouter, Query, HTTPException
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config.settings import SQLITE_PATH
+from config.settings import SQLITE_PATH, BASE_DIR
+
+CAT_LABELS_FILE   = BASE_DIR / "data" / "training_labels.json"
+STYLE_LABELS_FILE = BASE_DIR / "data" / "training_labels_style.json"
+
+
+def _save_label(photo_id: int, field: str, value: str):
+    """把 UI 手動修正存回訓練標記檔，讓 KNN 越用越準。"""
+    if field == "category":
+        path = CAT_LABELS_FILE
+    elif field == "style":
+        path = STYLE_LABELS_FILE
+    else:
+        return
+    try:
+        labels = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        labels[str(photo_id)] = value
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass  # 不因儲存失敗中斷主流程
 
 router = APIRouter(prefix="/api/photos", tags=["photos"])
 
@@ -173,6 +194,10 @@ def update_photo(photo_id: int, body: dict):
     cur.execute("SELECT * FROM photos WHERE id = ?", (photo_id,))
     row = cur.fetchone()
     conn.close()
+    # 把手動修正存回訓練標記，讓 KNN 越用越準
+    for field in ("category", "style"):
+        if field in updates and updates[field]:
+            _save_label(photo_id, field, updates[field])
     return _row_to_dict(row)
 
 @router.delete("/{photo_id}")
