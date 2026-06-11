@@ -201,7 +201,7 @@ const { useState, useEffect, useRef } = React;
 /* ── Config ─────────────────────────────────────────── */
 const CFG = {
   category:    { label: '品項',   values: ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'] },
-  style:       { label: '鑽石',   values: ['無鑽','簡約','輕奢','豪鑲'] },
+  style:       { label: '鑽石數量', values: ['無鑽','簡約','輕奢','豪鑲'] },
   color:       { label: '寶石色', values: ['紅色','粉紅色','橙色','黃色','綠色','藍綠色','藍色','紫色','白色','無色透明','黑色','灰色','棕色','多色'] },
   metal_color: { label: '金工色', values: ['金','銀'] },
 };
@@ -364,7 +364,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
               </div>
             </div>
             <div className="edit-row">
-              <div className="edit-label">鑽石等級</div>
+              <div className="edit-label">鑽石數量</div>
               <div className="edit-chips">
                 {CFG.style.values.map(v => (
                   <button key={v} className={'edit-chip' + (editSty === v ? ' on' : '')} onClick={() => setEditSty(v)}>{v}</button>
