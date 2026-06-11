@@ -1,9 +1,10 @@
-"""teach.py - 互動式品項標記工具
+"""teach.py - 互動式標記工具（品項 + 鑽石等級）
 
-照片自動開啟後切回終端，按單鍵立即送出（不需 Enter）。
-每個品項標記 8 張後執行 reclassify_trained.py 自動分類全部。
+按單鍵立即送出，照片開啟後自動切回終端。
 
-執行：python3 scripts/teach.py
+執行：
+  python3 scripts/teach.py           ← 標記品項
+  python3 scripts/teach.py --style   ← 標記鑽石等級
 """
 import json
 import subprocess
@@ -18,13 +19,21 @@ import sqlite3
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH, BASE_DIR
 
+# ── 品項設定 ─────────────────────────────────────────────────
 CATEGORIES = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
-LABELS_FILE = BASE_DIR / "data" / "training_labels.json"
+CAT_LABELS_FILE = BASE_DIR / "data" / "training_labels.json"
+
+# ── 鑽石等級設定 ──────────────────────────────────────────────
+STYLE_DISPLAY  = ['無鑽', '簡約', '輕奢', '豪鑲']
+STYLE_DB_VALS  = ['無鑽', '簡約(5顆鑽內)', '輕奢(20顆鑽內)', '豪鑲滿鑲鑽']
+STYLE_LABELS_FILE = BASE_DIR / "data" / "training_labels_style.json"
+
 TARGET_PER_CAT = 8
 
 
+# ── 通用工具 ──────────────────────────────────────────────────
+
 def getch() -> str:
-    """讀取單一按鍵，不需 Enter。Ctrl+C 回傳 '\x03'。"""
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     try:
@@ -36,136 +45,206 @@ def getch() -> str:
 
 
 def open_photo(path: Path):
-    """開啟照片預覽，0.4 秒後把終端切回前景。"""
-    subprocess.Popen(
-        ['open', str(path)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    subprocess.Popen(['open', str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.45)
-    # 把終端切回前景（Terminal / iTerm2 都試）
     subprocess.run(
         ['osascript', '-e',
          'try\n  tell application "iTerm2" to activate\non error\n'
          '  tell application "Terminal" to activate\nend try'],
-        capture_output=True,
-        timeout=2,
+        capture_output=True, timeout=2,
     )
 
 
-def show_progress(cat_counts):
+def show_progress(labels_dict, label_list, target):
+    counts = Counter(labels_dict.values())
     lines = []
-    for c in CATEGORIES:
-        n = cat_counts.get(c, 0)
-        bar = '█' * n + '░' * max(0, TARGET_PER_CAT - n)
-        done = '✓' if n >= TARGET_PER_CAT else f'{n}/{TARGET_PER_CAT}'
-        lines.append(f"  {c:3s}  {bar}  {done}")
+    for c in label_list:
+        n = counts.get(c, 0)
+        bar = '█' * n + '░' * max(0, target - n)
+        done = '✓' if n >= target else f'{n}/{target}'
+        lines.append(f"  {c:8s}  {bar}  {done}")
     return '\n'.join(lines)
 
 
-def main():
+def build_row_order(conn, label_list, labels_done):
+    """最缺的品項優先顯示"""
+    counts = Counter(labels_done.values())
+    priority = sorted(label_list, key=lambda c: counts.get(c, 0))
+    rows, seen = [], set()
+    for cat in priority:
+        for r in conn.execute(
+            "SELECT id, full_path, filename, category, style FROM photos "
+            "WHERE full_path IS NOT NULL AND category = ? ORDER BY RANDOM()", (cat,)
+        ).fetchall():
+            if r['id'] not in seen:
+                rows.append(r)
+                seen.add(r['id'])
+    for r in conn.execute(
+        "SELECT id, full_path, filename, category, style FROM photos "
+        "WHERE full_path IS NOT NULL ORDER BY RANDOM()"
+    ).fetchall():
+        if r['id'] not in seen:
+            rows.append(r)
+            seen.add(r['id'])
+    return rows
+
+
+# ── 品項標記 ──────────────────────────────────────────────────
+
+def run_category():
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
 
-    # 載入已有標記
     labels = {}
-    if LABELS_FILE.exists():
-        with open(LABELS_FILE, encoding='utf-8') as f:
+    if CAT_LABELS_FILE.exists():
+        with open(CAT_LABELS_FILE, encoding='utf-8') as f:
             labels = json.load(f)
 
-    cat_counts = Counter(labels.values())
-
-    # 照片排序：最缺的品項優先
-    priority_order = sorted(CATEGORIES, key=lambda c: cat_counts.get(c, 0))
-    rows = []
-    seen_ids: set = set()
-    for cat in priority_order:
-        for r in conn.execute(
-            "SELECT id, full_path, filename, category FROM photos "
-            "WHERE full_path IS NOT NULL AND category = ? ORDER BY RANDOM()",
-            (cat,)
-        ).fetchall():
-            if r['id'] not in seen_ids:
-                rows.append(r)
-                seen_ids.add(r['id'])
-    for r in conn.execute(
-        "SELECT id, full_path, filename, category FROM photos "
-        "WHERE full_path IS NOT NULL ORDER BY RANDOM()"
-    ).fetchall():
-        if r['id'] not in seen_ids:
-            rows.append(r)
-            seen_ids.add(r['id'])
+    rows = build_row_order(conn, CATEGORIES, labels)
     conn.close()
 
-    print("\n" + "=" * 50)
-    print("  品項標記工具  (單鍵送出，不用按 Enter)")
-    print("=" * 50)
-    print(f"共 {len(rows)} 張  |  目標：每類 {TARGET_PER_CAT} 張\n")
-    print(show_progress(cat_counts))
-
-    # 列出快捷鍵說明
     key_map = {str(i): c for i, c in enumerate(CATEGORIES, 1)}
+
+    print("\n" + "=" * 50)
+    print("  品項標記  (單鍵送出)")
+    print("=" * 50)
+    print(show_progress(labels, CATEGORIES, TARGET_PER_CAT))
     print()
     for k, c in key_map.items():
         print(f"  [{k}] {c}", end="   ")
-    print(f"\n  [s] 跳過   [q] 儲存離開")
-    print()
+    print(f"\n  [s] 跳過   [q] 儲存離開\n")
 
-    labeled_this_session = 0
-
+    new = 0
     for row in rows:
         pid = str(row['id'])
         if pid in labels:
             continue
-
-        still_needed = [c for c in CATEGORIES if cat_counts[c] < TARGET_PER_CAT]
+        still_needed = [c for c in CATEGORIES if Counter(labels.values()).get(c, 0) < TARGET_PER_CAT]
         if not still_needed:
             break
-
         full_path = Path(row['full_path'])
         if not full_path.exists():
             continue
 
         open_photo(full_path)
-
-        # 顯示提示（覆蓋同一行更新用 \r，保持畫面乾淨）
         needed_keys = [k for k, c in key_map.items() if c in still_needed]
-        print(f"\r照片: {row['filename'][:45]}  |  還缺: {''.join(needed_keys)}  ", end='', flush=True)
+        print(f"\r{row['filename'][:48]}  |  還缺:[{''.join(needed_keys)}]  ", end='', flush=True)
 
         ch = getch()
-
-        if ch == '\x03' or ch == 'q':   # Ctrl+C 或 q
-            print("\n中斷")
-            break
-        elif ch == 's' or ch == ' ':
-            print(f"\r  ↷ 跳過{' ' * 40}")
-            continue
+        if ch in ('\x03', 'q'):
+            print("\n中斷"); break
+        elif ch in ('s', ' '):
+            print(f"\r  ↷ 跳過{' '*40}")
         elif ch in key_map:
             cat = key_map[ch]
             labels[pid] = cat
-            cat_counts[cat] += 1
-            labeled_this_session += 1
-            print(f"\r  ✓  {cat}{' ' * 40}")
+            new += 1
+            print(f"\r  ✓  {cat}{' '*40}")
         else:
-            print(f"\r  ? 無效鍵 [{ch}]，跳過{' ' * 30}")
+            print(f"\r  ? 無效[{ch}]{' '*40}")
 
-    # 儲存
-    LABELS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(LABELS_FILE, 'w', encoding='utf-8') as f:
+    CAT_LABELS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(CAT_LABELS_FILE, 'w', encoding='utf-8') as f:
         json.dump(labels, f, ensure_ascii=False, indent=2)
 
-    print(f"\n{'=' * 50}")
-    print(f"✅ 已儲存 {len(labels)} 筆（本次新增 {labeled_this_session}）\n")
-    print(show_progress(cat_counts))
-
-    if all(cat_counts[c] >= TARGET_PER_CAT for c in CATEGORIES):
-        print(f"\n✅ 訓練資料充足！")
-        print(f"下一步：python3 scripts/reclassify_trained.py")
+    print(f"\n{'='*50}")
+    print(f"✅ 已儲存 {len(labels)} 筆（本次新增 {new}）\n")
+    print(show_progress(labels, CATEGORIES, TARGET_PER_CAT))
+    counts = Counter(labels.values())
+    if all(counts.get(c, 0) >= TARGET_PER_CAT for c in CATEGORIES):
+        print("\n✅ 訓練資料充足！下一步：python3 scripts/reclassify_trained.py")
     else:
-        missing = [c for c in CATEGORIES if cat_counts[c] < TARGET_PER_CAT]
+        missing = [c for c in CATEGORIES if counts.get(c, 0) < TARGET_PER_CAT]
         print(f"\n⚠  尚不足：{', '.join(missing)}")
-        print(f"繼續標記：python3 scripts/teach.py")
 
+
+# ── 鑽石等級標記 ──────────────────────────────────────────────
+
+def run_style():
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+
+    labels = {}
+    if STYLE_LABELS_FILE.exists():
+        with open(STYLE_LABELS_FILE, encoding='utf-8') as f:
+            labels = json.load(f)
+
+    # 所有照片，依 style 現況優先排序
+    rows_all = conn.execute(
+        "SELECT id, full_path, filename, category, style FROM photos "
+        "WHERE full_path IS NOT NULL ORDER BY RANDOM()"
+    ).fetchall()
+    conn.close()
+
+    key_map = {str(i): (STYLE_DISPLAY[i-1], STYLE_DB_VALS[i-1])
+               for i in range(1, len(STYLE_DISPLAY)+1)}
+
+    print("\n" + "=" * 50)
+    print("  鑽石等級標記  (單鍵送出)")
+    print("=" * 50)
+    print(show_progress(labels, STYLE_DB_VALS, TARGET_PER_CAT))
+    print()
+    for k, (disp, _) in key_map.items():
+        print(f"  [{k}] {disp}", end="   ")
+    print(f"\n  [s] 跳過   [q] 儲存離開")
+    print()
+    print("  鑽石等級說明：")
+    print("    無鑽   = 完全沒有鑽石")
+    print("    簡約   = 5 顆以內小鑽")
+    print("    輕奢   = 20 顆以內鑽石")
+    print("    豪鑲   = 整體滿鑲鑽\n")
+
+    new = 0
+    for row in rows_all:
+        pid = str(row['id'])
+        if pid in labels:
+            continue
+        counts = Counter(labels.values())
+        still_needed = [db for db in STYLE_DB_VALS if counts.get(db, 0) < TARGET_PER_CAT]
+        if not still_needed:
+            break
+        full_path = Path(row['full_path'])
+        if not full_path.exists():
+            continue
+
+        open_photo(full_path)
+        print(f"\r{row['filename'][:45]}  品項:{row['category'] or '?'}  ", end='', flush=True)
+
+        ch = getch()
+        if ch in ('\x03', 'q'):
+            print("\n中斷"); break
+        elif ch in ('s', ' '):
+            print(f"\r  ↷ 跳過{' '*40}")
+        elif ch in key_map:
+            disp, db_val = key_map[ch]
+            labels[pid] = db_val
+            new += 1
+            print(f"\r  ✓  {disp}{' '*40}")
+        else:
+            print(f"\r  ? 無效[{ch}]{' '*40}")
+
+    STYLE_LABELS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(STYLE_LABELS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(labels, f, ensure_ascii=False, indent=2)
+
+    counts = Counter(labels.values())
+    print(f"\n{'='*50}")
+    print(f"✅ 已儲存 {len(labels)} 筆（本次新增 {new}）\n")
+    print(show_progress(labels, STYLE_DB_VALS, TARGET_PER_CAT))
+    if all(counts.get(db, 0) >= TARGET_PER_CAT for db in STYLE_DB_VALS):
+        print("\n✅ 鑽石等級訓練充足！")
+        print("下一步：python3 scripts/reclassify_trained.py --style")
+    else:
+        missing = [STYLE_DISPLAY[STYLE_DB_VALS.index(db)] for db in STYLE_DB_VALS
+                   if counts.get(db, 0) < TARGET_PER_CAT]
+        print(f"\n⚠  尚不足：{', '.join(missing)}")
+        print("繼續標記：python3 scripts/teach.py --style")
+
+
+# ── 入口 ──────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    main()
+    if '--style' in sys.argv:
+        run_style()
+    else:
+        run_category()

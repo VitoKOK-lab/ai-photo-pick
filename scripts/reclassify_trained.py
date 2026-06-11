@@ -1,14 +1,12 @@
 """reclassify_trained.py - 用 KNN 重新分類所有照片並整理檔名
 
-前置條件：先執行 python3 scripts/teach.py（每類標記 15 張）
-執行：python3 scripts/reclassify_trained.py
+執行：
+  python3 scripts/reclassify_trained.py           ← 重分品項（category）
+  python3 scripts/reclassify_trained.py --style   ← 重分鑽石等級（style）
 
-流程：
-  1. 載入訓練標記 (data/training_labels.json)
-  2. 用 CLIP 生成所有照片的 embedding（有快取，可中斷續跑）
-  3. KNN (k=7) 預測每張照片的品項
-  4. 移動檔案到新資料夾，更新 DB
-  5. 完成後提示執行 reindex_from_disk.py
+前置條件：
+  品項：先執行 python3 scripts/teach.py
+  鑽石：先執行 python3 scripts/teach.py --style
 """
 import json
 import shutil
@@ -25,11 +23,13 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH, BASE_DIR
 
-LABELS_FILE      = BASE_DIR / "data" / "training_labels.json"
-EMBED_CACHE_FILE = BASE_DIR / "data" / "embeddings_cache.npz"
-CLASSIFIED_DIR   = BASE_DIR / "data" / "02_classified"
+CAT_LABELS_FILE   = BASE_DIR / "data" / "training_labels.json"
+STYLE_LABELS_FILE = BASE_DIR / "data" / "training_labels_style.json"
+EMBED_CACHE_FILE  = BASE_DIR / "data" / "embeddings_cache.npz"
+CLASSIFIED_DIR    = BASE_DIR / "data" / "02_classified"
 
 CATEGORIES = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
+STYLE_DB_VALS = ['無鑽', '簡約(5顆鑽內)', '輕奢(20顆鑽內)', '豪鑲滿鑲鑽']
 KNN_K = 7
 
 
@@ -84,21 +84,36 @@ def knn_predict(train_embs: np.ndarray, train_labels: list,
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    mode_style = '--style' in sys.argv
+
+    if mode_style:
+        labels_file = STYLE_LABELS_FILE
+        dim_name    = '鑽石等級'
+        dim_field   = 'style'
+        dim_labels  = STYLE_DB_VALS
+        teach_cmd   = 'python3 scripts/teach.py --style'
+    else:
+        labels_file = CAT_LABELS_FILE
+        dim_name    = '品項'
+        dim_field   = 'category'
+        dim_labels  = CATEGORIES
+        teach_cmd   = 'python3 scripts/teach.py'
+
     # 1. 載入訓練標記
-    if not LABELS_FILE.exists():
-        print("❌ 找不到訓練標記！請先執行：python3 scripts/teach.py")
+    if not labels_file.exists():
+        print(f"❌ 找不到{dim_name}訓練標記！請先執行：{teach_cmd}")
         sys.exit(1)
 
-    with open(LABELS_FILE, encoding='utf-8') as f:
-        label_dict: dict = json.load(f)   # {str(photo_id): category}
+    with open(labels_file, encoding='utf-8') as f:
+        label_dict: dict = json.load(f)
 
-    cat_counts = Counter(label_dict.values())
-    print(f"✓ 訓練標記：{len(label_dict)} 筆  {dict(cat_counts)}")
+    label_counts = Counter(label_dict.values())
+    print(f"✓ {dim_name}訓練標記：{len(label_dict)} 筆  {dict(label_counts)}")
 
-    min_samples = min(cat_counts.get(c, 0) for c in CATEGORIES)
+    min_samples = min(label_counts.get(c, 0) for c in dim_labels)
     if min_samples < 5:
-        lacking = [c for c in CATEGORIES if cat_counts.get(c, 0) < 5]
-        print(f"⚠  標記不足的品項：{lacking}")
+        lacking = [c for c in dim_labels if label_counts.get(c, 0) < 5]
+        print(f"⚠  標記不足：{lacking}")
         print("建議先補足（每類至少 5 張），或繼續執行（準確率可能較低）")
         ans = input("繼續？(y/n) ").strip().lower()
         if ans != 'y':
@@ -108,7 +123,7 @@ def main():
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
-        "SELECT id, full_path, filename, category FROM photos ORDER BY id"
+        f"SELECT id, full_path, filename, category, style FROM photos ORDER BY id"
     ).fetchall()
     conn.close()
     print(f"共 {len(rows)} 張照片")
@@ -161,8 +176,9 @@ def main():
     train_labs = [label_dict[pid] for pid in train_ids]
     print(f"\n訓練集：{len(train_ids)} 筆")
 
-    # 5. KNN 分類 + 移動檔案
-    print("\n開始 KNN 分類 + 搬移檔案…")
+    # 5. KNN 分類 + 更新 DB（品項模式同時搬移檔案）
+    action = "鑽石等級" if mode_style else "品項 + 搬移檔案"
+    print(f"\n開始 KNN 分類（{action}）…")
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
 
@@ -174,55 +190,55 @@ def main():
             skipped += 1
             continue
 
-        predicted = knn_predict(train_embs, train_labs, cache[pid])
-        old_cat   = row['category'] or ''
+        predicted   = knn_predict(train_embs, train_labs, cache[pid])
+        old_val     = (row['style'] if mode_style else row['category']) or ''
 
-        if predicted == old_cat:
-            continue   # 分類沒變，不動
+        if predicted == old_val:
+            continue  # 沒變，跳過
 
-        old_path = Path(row['full_path'])
-        if not old_path.exists():
-            skipped += 1
-            continue
-
-        # 決定新路徑：{classified_dir}/{新品項}/{原款式}/新檔名
-        try:
-            rel_parts = old_path.relative_to(CLASSIFIED_DIR).parts
-            old_style = rel_parts[1] if len(rel_parts) >= 3 else '未分'
-        except ValueError:
-            old_style = '未分'
-
-        new_dir = CLASSIFIED_DIR / predicted / old_style
-        new_dir.mkdir(parents=True, exist_ok=True)
-
-        # 重新命名：把第 0 段（品項）改成新品項
-        stem_parts = old_path.stem.split('_')
-        if stem_parts:
-            stem_parts[0] = predicted
-        new_stem = '_'.join(stem_parts)
-        new_path = new_dir / (new_stem + old_path.suffix)
-
-        # 衝突處理
-        if new_path.exists():
-            base, ext = new_path.stem, new_path.suffix
-            n = 1
-            while new_path.exists():
-                new_path = new_dir / f"{base}_{n}{ext}"
-                n += 1
-
-        try:
-            shutil.move(str(old_path), str(new_path))
-            conn.execute(
-                """UPDATE photos
-                   SET category=?, full_path=?, thumb_path=?, micro_path=?, original_path=?
-                   WHERE id=?""",
-                (predicted, str(new_path), str(new_path),
-                 str(new_path), str(new_path), row['id'])
-            )
+        if mode_style:
+            # 只更新 DB style 欄位，不動檔案
+            conn.execute("UPDATE photos SET style=? WHERE id=?", (predicted, row['id']))
             changed += 1
-        except Exception as e:
-            print(f"  ⚠ 移動失敗 {old_path.name}: {e}")
-            errors += 1
+        else:
+            # 品項模式：移動檔案 + 更新 DB
+            old_path = Path(row['full_path'])
+            if not old_path.exists():
+                skipped += 1
+                continue
+
+            try:
+                rel_parts = old_path.relative_to(CLASSIFIED_DIR).parts
+                old_style_dir = rel_parts[1] if len(rel_parts) >= 3 else '未分'
+            except ValueError:
+                old_style_dir = '未分'
+
+            new_dir = CLASSIFIED_DIR / predicted / old_style_dir
+            new_dir.mkdir(parents=True, exist_ok=True)
+
+            stem_parts = old_path.stem.split('_')
+            if stem_parts:
+                stem_parts[0] = predicted
+            new_stem = '_'.join(stem_parts)
+            new_path = new_dir / (new_stem + old_path.suffix)
+
+            if new_path.exists():
+                base, ext = new_path.stem, new_path.suffix
+                n = 1
+                while new_path.exists():
+                    new_path = new_dir / f"{base}_{n}{ext}"
+                    n += 1
+
+            try:
+                shutil.move(str(old_path), str(new_path))
+                conn.execute(
+                    "UPDATE photos SET category=?, full_path=?, thumb_path=?, micro_path=?, original_path=? WHERE id=?",
+                    (predicted, str(new_path), str(new_path), str(new_path), str(new_path), row['id'])
+                )
+                changed += 1
+            except Exception as e:
+                print(f"  ⚠ 移動失敗 {old_path.name}: {e}")
+                errors += 1
 
         if (changed + errors) % 500 == 0 and (changed + errors) > 0:
             conn.commit()
@@ -231,11 +247,15 @@ def main():
     conn.commit()
     conn.close()
 
+    label = '鑽石等級' if mode_style else '品項'
     print(f"\n✅ 完成！")
-    print(f"  更改品項：{changed} 筆")
-    print(f"  錯誤：    {errors} 筆")
-    print(f"  跳過：    {skipped} 筆")
-    print(f"\n下一步：python3 scripts/reindex_from_disk.py")
+    print(f"  更改{label}：{changed} 筆")
+    print(f"  錯誤：      {errors} 筆")
+    print(f"  跳過：      {skipped} 筆")
+    if not mode_style:
+        print(f"\n下一步：python3 scripts/reindex_from_disk.py")
+    else:
+        print(f"\n完成！鑽石等級已更新到 DB。")
 
 
 if __name__ == "__main__":
