@@ -16,15 +16,14 @@
     "多色":    "a fine jewelry photo with multiple colors from opal or tourmaline or multicolor gemstone"
   },
   "category": {
-    "手鏈":   "a product photo of a flexible chain or beaded bracelet jewelry, shown lying flat or draped, not rigid",
-    "墜子":   "a product photo of a single pendant or charm jewelry piece only, no chain attached, isolated on background",
-    "耳釘":   "a product photo of a pair of earrings or ear studs jewelry, two matching pieces shown together",
-    "項鏈":   "a product photo of a necklace with a long chain and pendant worn around the neck or laid out in full length",
-    "胸針":   "a product photo of a brooch or decorative pin jewelry with a pin clasp on the back, worn on clothing",
-    "多用途":  "a product photo of convertible jewelry that can be worn as both a brooch and pendant, or in multiple ways",
-    "戒指":   "a product photo of a ring jewelry with a circular band shape, shown lying flat on surface, from above, on a display stand, or held between fingers, with or without a center gemstone",
-    "手鐲":   "a product photo of a rigid solid bangle or cuff bracelet jewelry that holds its circular shape and does not flex",
-    "其他":   "a product photo of miscellaneous jewelry accessories such as hair pins, anklets, or body jewelry that clearly does not look like a ring, bracelet, necklace, earring or pendant"
+    "戒指":  "a product photo of a finger ring with a circular band, the center opening is finger-sized (about 17-19mm diameter), shot from above or angled on a ring display cone, with or without a center gemstone",
+    "手鏈":  "a product photo of a wrist bracelet or chain bracelet, flexible with visible chain links and a lobster clasp or toggle clasp, laid flat or slightly curved, length approximately 15-18cm, worn on the wrist",
+    "手鐲":  "a product photo of a solid rigid bangle bracelet, a continuous stiff metal circle or oval with no clasp, slides over the hand onto the wrist, thicker and heavier than a chain bracelet",
+    "墜子":  "a product photo showing only an isolated pendant or charm, no chain attached, a decorative piece with a small bail loop at the top for hanging, displayed alone on a clean background",
+    "項鍊":  "a product photo of a complete necklace showing both the long chain and the decorative pendant together, laid out in a full U-shape or V-shape, total length 40-60cm, or draped around a neck stand",
+    "耳釘":  "a product photo showing exactly two matching earrings placed side by side or together, a pair of ear studs or drop earrings, always two identical pieces displayed at once",
+    "胸針":  "a product photo of a decorative brooch or lapel pin, an ornamental piece with a pointed pin clasp on the back, designed to be attached to clothing lapels or fabric",
+    "其他":  "a product photo of miscellaneous jewelry items that are clearly not a ring, bracelet, necklace, earring, or pendant, such as a hair pin, hair comb, ankle bracelet, or body jewelry"
   },
   "stone_shape": {
     "橢圓形":  "a jewelry photo featuring an oval shaped gemstone with rounded edges, longer than it is wide",
