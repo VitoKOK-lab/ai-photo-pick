@@ -17,7 +17,7 @@ from config.settings import SQLITE_PATH, BASE_DIR
 
 CATEGORIES = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
 LABELS_FILE = BASE_DIR / "data" / "training_labels.json"
-TARGET_PER_CAT = 15
+TARGET_PER_CAT = 8
 
 
 def show_progress(cat_counts):
