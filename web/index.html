@@ -149,6 +149,18 @@ button { font-family: inherit; cursor: pointer; }
 .db-fav.on { background: #fff0e0; color: var(--gold); border: 1.5px solid var(--gold); }
 .db-sim { background: var(--accent); color: #fff; }
 
+/* ── Edit panel ─────────────────────────────────────────── */
+.db-edit { background: var(--s3); color: var(--text2); }
+.edit-panel { padding: 14px 16px 20px; }
+.edit-row { margin-bottom: 12px; }
+.edit-label { font-size: 11px; font-weight: 600; letter-spacing: .5px; color: var(--text3); margin-bottom: 6px; }
+.edit-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.edit-chip { padding: 6px 13px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface); font-size: 13px; color: var(--text2); cursor: pointer; }
+.edit-chip.on { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
+.edit-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.db-save { background: var(--accent); color: #fff; }
+.db-del { background: #fff0f0; color: #c0392b; border: 1.5px solid #f5c6c6; }
+
 /* similar view */
 .sim-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; }
 .sim-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--s3); cursor: pointer; }
@@ -269,12 +281,40 @@ function Sidebar({ filters, onFilter, onClear, catCounts }) {
 }
 
 /* ── Photo detail ───────────────────────────────────── */
-function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto }) {
-  const [view,    setView]    = useState('detail'); // 'detail' | 'similar'
+function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDeleted, onUpdated }) {
+  const [view,    setView]    = useState('detail'); // 'detail' | 'similar' | 'edit'
   const [similar, setSimilar] = useState(null);
   const [simErr,  setSimErr]  = useState(false);
+  const [editCat, setEditCat] = useState(photo.category || '');
+  const [editSty, setEditSty] = useState(photo.style    || '');
+  const [saving,  setSaving]  = useState(false);
 
-  useEffect(() => { setView('detail'); setSimilar(null); setSimErr(false); }, [photo.id]);
+  useEffect(() => {
+    setView('detail'); setSimilar(null); setSimErr(false);
+    setEditCat(photo.category || ''); setEditSty(photo.style || '');
+  }, [photo.id]);
+
+  const doSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/photos/' + photo.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: editCat, style: editSty }),
+      });
+      const updated = await res.json();
+      onUpdated && onUpdated(updated);
+      setView('detail');
+    } catch { alert('儲存失敗'); }
+    setSaving(false);
+  };
+
+  const doDelete = async () => {
+    if (!confirm('確定刪除這張照片的紀錄？')) return;
+    await fetch('/api/photos/' + photo.id, { method: 'DELETE' });
+    onDeleted && onDeleted(photo.id);
+    onClose();
+  };
 
   const openSimilar = () => {
     setView('similar');
@@ -291,6 +331,46 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto }) {
   const fav  = isFav(photo.id);
   const tags = [photo.category, photo.gemstone, photo.stone_shape, photo.stone_size, photo.style, photo.color, photo.material]
     .filter(v => v && v !== '未定');
+
+  /* Edit view */
+  if (view === 'edit') return (
+    <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="det-panel" style={{flexDirection:'column'}}>
+        <div className="det-hd-bar">
+          <button className="det-back" onClick={() => setView('detail')}>←</button>
+          <span className="det-hd-title">修改分類</span>
+          <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
+        </div>
+        <div className="det-scroll">
+          <img src={photo.full_url} alt="" style={{width:'100%',maxHeight:220,objectFit:'contain',background:'#f9f9f9'}} />
+          <div className="edit-panel">
+            <div className="edit-row">
+              <div className="edit-label">品項</div>
+              <div className="edit-chips">
+                {CFG.category.values.map(v => (
+                  <button key={v} className={'edit-chip' + (editCat === v ? ' on' : '')} onClick={() => setEditCat(v)}>{v}</button>
+                ))}
+              </div>
+            </div>
+            <div className="edit-row">
+              <div className="edit-label">鑽石等級</div>
+              <div className="edit-chips">
+                {CFG.style.values.map(v => (
+                  <button key={v} className={'edit-chip' + (editSty === v ? ' on' : '')} onClick={() => setEditSty(v)}>{v}</button>
+                ))}
+              </div>
+            </div>
+            <div className="edit-actions">
+              <button className="db db-save" onClick={doSave} disabled={saving}>
+                {saving ? '儲存中…' : '✓ 儲存'}
+              </button>
+              <button className="db db-del" onClick={doDelete}>✕ 刪除紀錄</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   /* Similar view */
   if (view === 'similar') return (
@@ -341,6 +421,11 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto }) {
               </button>
               <button className="db db-sim" onClick={openSimilar}>
                 找相似 →
+              </button>
+            </div>
+            <div style={{padding:'0 16px 16px'}}>
+              <button className="db db-edit" style={{width:'100%'}} onClick={() => setView('edit')}>
+                ✏️ 修改分類 / 刪除
               </button>
             </div>
           </div>
@@ -437,6 +522,8 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
           isFav={isFav}
           toggleFav={toggleFav}
           onSelectPhoto={p => setDetail(p)}
+          onDeleted={id => { setPhotos(prev => prev.filter(p => p.id !== id)); setDetail(null); }}
+          onUpdated={updated => { setPhotos(prev => prev.map(p => p.id === updated.id ? {...p, ...updated} : p)); setDetail(updated); }}
         />
       )}
     </>

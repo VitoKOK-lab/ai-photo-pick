@@ -59,20 +59,25 @@ def find_similar(
         raise HTTPException(status_code=404, detail="Photo not found")
     anchor = dict(anchor_row)
 
-    # 同品項，依相似度分組後各組內隨機排列
-    # 相似分：style 符合 +2，price_band 符合 +1，其餘 0
+    # 相似分：gemstone +3, style +2, color +2, material +1, price_band +1
     cur.execute(
         """
         SELECT *,
-          (CASE WHEN style = ? AND style IS NOT NULL AND style != '' THEN 2 ELSE 0 END
-         + CASE WHEN price_band = ? AND price_band IS NOT NULL AND price_band != '' THEN 1 ELSE 0 END
+          (CASE WHEN gemstone  = ? AND gemstone  IS NOT NULL AND gemstone  != '' THEN 3 ELSE 0 END
+         + CASE WHEN style     = ? AND style     IS NOT NULL AND style     != '' THEN 2 ELSE 0 END
+         + CASE WHEN color     = ? AND color     IS NOT NULL AND color     != '' THEN 2 ELSE 0 END
+         + CASE WHEN material  = ? AND material  IS NOT NULL AND material  != '' THEN 1 ELSE 0 END
+         + CASE WHEN price_band= ? AND price_band IS NOT NULL AND price_band!= '' THEN 1 ELSE 0 END
           ) AS sim_score
         FROM photos
         WHERE category = ? AND id != ?
         ORDER BY sim_score DESC, RANDOM()
         """,
         (
-            anchor.get("style") or "",
+            anchor.get("gemstone")   or "",
+            anchor.get("style")      or "",
+            anchor.get("color")      or "",
+            anchor.get("material")   or "",
             anchor.get("price_band") or "",
             anchor.get("category"),
             photo_id,

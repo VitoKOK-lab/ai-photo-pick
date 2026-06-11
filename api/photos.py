@@ -157,3 +157,34 @@ def get_photo(photo_id: int):
     if not row:
         raise HTTPException(status_code=404, detail="Photo not found")
     return _row_to_dict(row)
+
+@router.patch("/{photo_id}")
+def update_photo(photo_id: int, body: dict):
+    allowed = {"category", "style", "color", "gemstone", "material", "price_band"}
+    updates = {k: v for k, v in body.items() if k in allowed}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No valid fields")
+    set_clause = ", ".join(f"{k}=?" for k in updates)
+    values = list(updates.values()) + [photo_id]
+    conn = _conn()
+    conn.execute(f"UPDATE photos SET {set_clause}, updated_at=CURRENT_TIMESTAMP WHERE id=?", values)
+    conn.commit()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM photos WHERE id = ?", (photo_id,))
+    row = cur.fetchone()
+    conn.close()
+    return _row_to_dict(row)
+
+@router.delete("/{photo_id}")
+def delete_photo(photo_id: int):
+    conn = _conn()
+    cur = conn.cursor()
+    cur.execute("SELECT full_path FROM photos WHERE id = ?", (photo_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Photo not found")
+    conn.execute("DELETE FROM photos WHERE id = ?", (photo_id,))
+    conn.commit()
+    conn.close()
+    return {"deleted": photo_id}
