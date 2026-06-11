@@ -116,8 +116,7 @@ button { font-family: inherit; cursor: pointer; }
 .empty-msg { text-align: center; padding: 64px 24px; color: var(--text2); font-size: 14px; line-height: 1.9; }
 
 /* ── Filter dropdown ────────────────────────────────────── */
-.dd-wrap { position: relative; display: inline-block; flex-shrink: 0; }
-.dd-panel { position: absolute; top: calc(100% + 5px); left: 0; min-width: 148px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow2); z-index: 250; overflow: hidden; }
+.dd-panel { position: fixed; min-width: 160px; max-width: min(92vw, 260px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow2); z-index: 9999; overflow-y: auto; max-height: min(60vh, 380px); }
 .dd-item { padding: 11px 15px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer; color: var(--text); border-bottom: 1px solid var(--border); gap: 10px; }
 .dd-item:last-child { border-bottom: none; }
 .dd-item:active, .dd-item:hover { background: var(--s3); }
@@ -218,31 +217,51 @@ function IcoHeart({ fill }) {
 function FilterDropdown({ field, cur, counts, onPick }) {
   const cfg = CFG[field];
   const [open, setOpen] = React.useState(false);
-  const ref = React.useRef(null);
+  const [panelStyle, setPanelStyle] = React.useState({});
+  const btnRef = React.useRef(null);
+  const panelRef = React.useRef(null);
+
+  const toggle = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      const left = Math.min(r.left, window.innerWidth - 168);
+      setPanelStyle({ top: r.bottom + 4, left: Math.max(4, left) });
+    }
+    setOpen(p => !p);
+  };
+
   React.useEffect(() => {
     if (!open) return;
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const h = e => {
+      if (btnRef.current?.contains(e.target)) return;
+      if (panelRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener('mousedown', h);
     document.addEventListener('touchstart', h);
     return () => { document.removeEventListener('mousedown', h); document.removeEventListener('touchstart', h); };
   }, [open]);
+
+  const panel = open && ReactDOM.createPortal(
+    <div ref={panelRef} className="dd-panel" style={panelStyle}>
+      {cur && <div className="dd-item dd-clr" onClick={() => { onPick(null); setOpen(false); }}>清除（全部）</div>}
+      {cfg.values.map(v => (
+        <div key={v} className={'dd-item' + (cur === v ? ' on' : '')}
+          onClick={() => { onPick(v === cur ? null : v); setOpen(false); }}>
+          <span>{v}{cur === v ? ' ✓' : ''}</span>
+          {counts?.[v] != null && <span className="dd-cnt">{counts[v]}</span>}
+        </div>
+      ))}
+    </div>,
+    document.body
+  );
+
   return (
-    <div ref={ref} className="dd-wrap">
-      <button className={'chip' + (cur ? ' on' : '')} onClick={() => setOpen(p => !p)}>
+    <div style={{position:'relative', display:'inline-block', flexShrink:0}}>
+      <button ref={btnRef} className={'chip' + (cur ? ' on' : '')} onClick={toggle}>
         {cur || cfg.label} {cur ? '✕' : '▾'}
       </button>
-      {open && (
-        <div className="dd-panel">
-          {cur && <div className="dd-item dd-clr" onClick={() => { onPick(null); setOpen(false); }}>清除篩選（全部）</div>}
-          {cfg.values.map(v => (
-            <div key={v} className={'dd-item' + (cur === v ? ' on' : '')}
-              onClick={() => { onPick(v === cur ? null : v); setOpen(false); }}>
-              <span>{v}{cur === v ? ' ✓' : ''}</span>
-              {counts?.[v] != null && <span className="dd-cnt">{counts[v]}</span>}
-            </div>
-          ))}
-        </div>
-      )}
+      {panel}
     </div>
   );
 }
