@@ -163,6 +163,49 @@ button { font-family: inherit; cursor: pointer; }
 /* ── Fav empty ──────────────────────────────────────────── */
 .fav-empty { text-align: center; padding: 80px 24px; color: var(--text2); font-size: 14px; line-height: 1.9; }
 
+/* ── Fav budget slider ──────────────────────────────────── */
+.fav-budget { padding: 14px 16px 10px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.fav-budget-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.fav-budget-lbl { font-size: 11px; font-weight: 600; letter-spacing: .5px; color: var(--text3); text-transform: uppercase; }
+.fav-budget-val { font-size: 20px; font-weight: 700; color: var(--accent); }
+.fav-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px; outline: none; margin-bottom: 4px; cursor: pointer; }
+.fav-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+.fav-ticks { display: flex; justify-content: space-between; padding: 0 2px; }
+.fav-tick { font-size: 9px; color: var(--text3); }
+
+/* ── Fav header + grid selection ────────────────────────── */
+.fav-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+.fav-bar-info { font-size: 12px; color: var(--text3); }
+.fav-clr-btn { font-size: 11px; color: #c0392b; background: none; border: 1px solid #f5c6c6; border-radius: 20px; padding: 4px 12px; }
+.card.fav-sel { outline: 3px solid var(--accent); outline-offset: -3px; }
+.fav-sel-num { position: absolute; top: 5px; left: 5px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; z-index: 1; pointer-events: none; }
+.fav-hint { font-size: 11px; color: var(--text3); text-align: center; padding: 6px 0; }
+
+/* ── Fav action bar ─────────────────────────────────────── */
+.fav-act { padding: 10px 16px; background: var(--surface); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.fav-act-info { font-size: 12px; color: var(--text3); }
+.fav-act-btn { background: var(--accent); color: #fff; border: none; border-radius: var(--r); padding: 11px 28px; font-size: 14px; font-weight: 600; }
+
+/* ── Estimate sheet ─────────────────────────────────────── */
+.est-panel { width: 100%; max-height: 88vh; background: var(--surface); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; overflow: hidden; animation: up .25s cubic-bezier(.32,.72,0,1); }
+.est-hd { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.est-title { font-size: 16px; font-weight: 700; }
+.est-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 16px 32px; }
+.est-row { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.est-thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: var(--s3); }
+.est-info { flex: 1; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.est-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.est-sub { font-size: 11px; color: var(--text3); }
+.est-ctrl { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.est-ctrl-lbl { font-size: 11px; color: var(--text3); min-width: 28px; }
+.est-chip { padding: 3px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--s3); font-size: 11px; color: var(--text2); cursor: pointer; }
+.est-chip.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.est-price { font-size: 15px; font-weight: 700; color: var(--accent); }
+.est-price.over { color: #c0392b; }
+.est-over-lbl { font-size: 10px; font-weight: 400; background: #fde8e8; color: #c0392b; border-radius: 8px; padding: 1px 7px; margin-left: 5px; }
+.est-under-lbl { font-size: 10px; font-weight: 400; background: #e8f5e9; color: #388e3c; border-radius: 8px; padding: 1px 7px; margin-left: 5px; }
+.est-total { display: flex; justify-content: space-between; align-items: center; padding: 16px 0 4px; font-size: 14px; font-weight: 700; border-top: 2px solid var(--border); margin-top: 4px; }
+
 /* ── Desktop ≥ 768px ────────────────────────────────────── */
 @media (min-width: 768px) {
   .nav-tabs  { display: flex; }
@@ -173,6 +216,7 @@ button { font-family: inherit; cursor: pointer; }
 
   .det-ovl { align-items: center; justify-content: center; padding: 32px; }
   .det-panel { width: 100%; max-width: 840px; border-radius: 16px; flex-direction: row; max-height: 82vh; animation: pop .2s ease; box-shadow: var(--shadow2); }
+  .est-panel { max-width: 560px; border-radius: 16px; margin: auto; }
   @keyframes pop { from { opacity:0; transform:scale(.96); } to { opacity:1; transform:scale(1); } }
   .det-handle { display: none; }
   .det-left { width: 50%; flex-shrink: 0; }
@@ -299,6 +343,110 @@ function Sidebar({ filters, onFilter, onClear, counts }) {
         </div>
       ))}
     </aside>
+  );
+}
+
+/* ── Price table (可調整) ───────────────────────────── */
+const PRICE = {
+  metal:  { '銀': 1500, '金': 8000 },
+  style:  { '無鑽': 0, '簡約': 4000, '輕奢': 18000, '奢華': 70000 },
+  stone: {
+    '鑽石':   { '1克拉以內': 15000, '1克拉': 45000, '2克拉': 110000, '3克拉': 220000, '5克拉': 450000 },
+    '藍寶石': { '1克拉以內': 8000,  '1克拉': 25000, '2克拉': 60000,  '3克拉': 130000, '5克拉': 280000 },
+    '紅寶石': { '1克拉以內': 10000, '1克拉': 35000, '2克拉': 90000,  '3克拉': 190000, '5克拉': 380000 },
+    '祖母綠': { '1克拉以內': 6000,  '1克拉': 20000, '2克拉': 55000,  '3克拉': 110000, '5克拉': 220000 },
+    '坦桑石': { '1克拉以內': 3000,  '1克拉': 9000,  '2克拉': 22000,  '3克拉': 48000,  '5克拉': 95000  },
+    '海藍寶': { '1克拉以內': 2000,  '1克拉': 7000,  '2克拉': 18000,  '3克拉': 40000,  '5克拉': 85000  },
+    '碧璽':   { '1克拉以內': 2500,  '1克拉': 8000,  '2克拉': 20000,  '3克拉': 45000,  '5克拉': 95000  },
+    '紫水晶': { '1克拉以內': 800,   '1克拉': 2500,  '2克拉': 6000,   '3克拉': 12000,  '5克拉': 25000  },
+  },
+  markup: 1.35,
+};
+
+function calcPrice(photo, metalOvr, styleOvr) {
+  const metal = metalOvr || photo.metal_color || '銀';
+  const style = styleOvr || photo.style       || '無鑽';
+  const stone = photo.gemstone  || '';
+  const size  = photo.stone_size || '1克拉以內';
+  const base    = PRICE.metal[metal] || 1500;
+  const diamond = PRICE.style[style] || 0;
+  const stoneP  = (PRICE.stone[stone] || {})[size] || 0;
+  const mid = (base + diamond + stoneP) * PRICE.markup;
+  return {
+    low:  Math.round(mid * 0.85 / 1000) * 1000,
+    high: Math.round(mid * 1.15 / 1000) * 1000,
+  };
+}
+
+/* ── Estimate sheet ─────────────────────────────────── */
+function EstimateSheet({ photos, budget, onClose }) {
+  const STYLE_VALS = ['無鑽','簡約','輕奢','奢華'];
+  const [metalOvr, setMetalOvr] = useState({});
+  const [styleOvr, setStyleOvr] = useState({});
+
+  const setMetal = (id, v) => setMetalOvr(p => ({...p, [id]: v}));
+  const setStyle = (id, v) => setStyleOvr(p => ({...p, [id]: v}));
+
+  const rows = photos.map(p => {
+    const m = metalOvr[p.id] || p.metal_color || '銀';
+    const s = styleOvr[p.id] || p.style       || '無鑽';
+    const { low, high } = calcPrice(p, m, s);
+    const over  = low  > budget;
+    const under = high < budget * 0.5;
+    return { p, m, s, low, high, over, under };
+  });
+
+  const total = rows.reduce((a, r) => ({ low: a.low + r.low, high: a.high + r.high }), { low:0, high:0 });
+  const fmt = n => n >= 10000 ? (n/10000).toFixed(1)+'萬' : n.toLocaleString();
+
+  return (
+    <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="est-panel">
+        <div className="det-handle" />
+        <div className="est-hd">
+          <span className="est-title">估價</span>
+          <button style={{background:'var(--s3)',border:'none',borderRadius:'50%',width:30,height:30,fontSize:18,color:'var(--text2)'}} onClick={onClose}>×</button>
+        </div>
+        <div className="est-scroll">
+          {rows.map(({ p, m, s, low, high, over, under }) => (
+            <div key={p.id} className="est-row">
+              <img className="est-thumb" src={p.thumb_url} alt="" />
+              <div className="est-info">
+                <div className="est-name">{[p.category, p.gemstone, p.stone_size].filter(Boolean).join(' · ')}</div>
+                <div className="est-ctrl">
+                  <span className="est-ctrl-lbl">台子</span>
+                  {['銀','金'].map(v => (
+                    <button key={v} className={'est-chip'+(m===v?' on':'')} onClick={() => setMetal(p.id, v)}>{v}</button>
+                  ))}
+                </div>
+                <div className="est-ctrl">
+                  <span className="est-ctrl-lbl">鑽石</span>
+                  {STYLE_VALS.map(v => (
+                    <button key={v} className={'est-chip'+(s===v?' on':'')} onClick={() => setStyle(p.id, v)}>{v}</button>
+                  ))}
+                </div>
+                <div className={'est-price'+(over?' over':'')}>
+                  NT${fmt(low)} ～ {fmt(high)}
+                  {over  && <span className="est-over-lbl">超預算</span>}
+                  {under && <span className="est-under-lbl">有空間</span>}
+                </div>
+              </div>
+            </div>
+          ))}
+          {rows.length > 1 && (
+            <div className="est-total">
+              <span>合計 {rows.length} 款</span>
+              <span>NT${fmt(total.low)} ～ {fmt(total.high)}</span>
+            </div>
+          )}
+          <div style={{height:1,background:'var(--border)',margin:'16px 0'}} />
+          <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.7}}>
+            ＊以上為參考估價，實際依石頭品質、款式細節調整。<br/>
+            ＊台子：銀 NT$1,500 / 金 NT$8,000 起
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -626,34 +774,89 @@ function BrowseTab({ isFav, toggleFav }) {
 }
 
 /* ── Favorites tab ──────────────────────────────────── */
-function FavsTab({ favs, isFav, toggleFav }) {
-  const [detail, setDetail] = useState(null);
+function FavsTab({ favs, isFav, toggleFav, clearFavs }) {
+  const [detail,   setDetail]   = useState(null);
+  const [selected, setSelected] = useState(new Set()); // up to 3 ids
+  const [budget,   setBudget]   = useState(50000);
+  const [showEst,  setShowEst]  = useState(false);
+
+  const toggleSel = (p) => setSelected(prev => {
+    const next = new Set(prev);
+    if (next.has(p.id)) { next.delete(p.id); }
+    else if (next.size < 3) { next.add(p.id); }
+    return next;
+  });
+
+  const selPhotos = favs.filter(p => selected.has(p.id));
+  const selCount  = selected.size;
+  const sliderPct = ((budget - 10000) / 90000 * 100).toFixed(0) + '%';
+
   if (favs.length === 0) return (
-    <div className="body-row">
-      <div style={{flex:1}}>
-        <div className="fav-empty">尚無收藏款式<br/><span style={{fontSize:12,color:'var(--text3)'}}>找款頁面點 ♡ 即可收藏</span></div>
-      </div>
-    </div>
+    <div className="body-row"><div style={{flex:1}}>
+      <div className="fav-empty">尚無收藏款式<br/><span style={{fontSize:12,color:'var(--text3)'}}>找款頁面點 ♡ 即可收藏</span></div>
+    </div></div>
   );
+
   return (
     <>
+      {/* 預算拉桿 */}
+      <div className="fav-budget">
+        <div className="fav-budget-row">
+          <span className="fav-budget-lbl">客戶預算</span>
+          <span className="fav-budget-val">NT${(budget/10000).toFixed(0)}萬</span>
+        </div>
+        <input type="range" className="fav-slider" min="10000" max="100000" step="10000"
+          value={budget} onChange={e => setBudget(+e.target.value)}
+          style={{background:`linear-gradient(to right,var(--accent) ${sliderPct},var(--s3) ${sliderPct})`}} />
+        <div className="fav-ticks">
+          {[1,2,3,4,5,6,7,8,9,10].map(n=><span key={n} className="fav-tick">{n}萬</span>)}
+        </div>
+      </div>
+
+      {/* 操作列 */}
+      <div className="fav-bar">
+        <span className="fav-bar-info">
+          收藏 {favs.length} 張
+          {selCount > 0 ? `・已選 ${selCount}/3` : '・點照片最多選 3 張'}
+        </span>
+        <button className="fav-clr-btn" onClick={() => { clearFavs(); setSelected(new Set()); }}>清空收藏</button>
+      </div>
+
+      {/* 格子 */}
       <div className="body-row">
         <div className="main">
           <div className="grid-wrap">
             <div className="grid">
-              {favs.map(p => (
-                <div key={p.id} className="card">
-                  <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
-                  <button className="card-fav on" onClick={e => { e.stopPropagation(); toggleFav(p); }}>♥</button>
-                  <div className="card-lbl" onClick={() => setDetail(p)}>
-                    {[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}
+              {favs.map(p => {
+                const isSel = selected.has(p.id);
+                const idx   = selPhotos.indexOf(p) + 1;
+                return (
+                  <div key={p.id} className={'card' + (isSel ? ' fav-sel' : '')} onClick={() => toggleSel(p)}>
+                    <img src={p.thumb_url} alt="" loading="lazy" />
+                    {isSel && <span className="fav-sel-num">{idx}</span>}
+                    <button className="card-fav on" onClick={e => {
+                      e.stopPropagation();
+                      toggleFav(p);
+                      if (isSel) setSelected(prev => { const n = new Set(prev); n.delete(p.id); return n; });
+                    }}>♥</button>
+                    <div className="card-lbl">{[p.category, p.style].filter(v=>v&&v!=='未定').join(' · ')}</div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
+
+      {/* 底部估價列 */}
+      {selCount > 0 && (
+        <div className="fav-act">
+          <span className="fav-act-info">已選 {selCount} 款・可搭配組合</span>
+          <button className="fav-act-btn" onClick={() => setShowEst(true)}>💰 估價</button>
+        </div>
+      )}
+
+      {showEst && <EstimateSheet photos={selPhotos} budget={budget} onClose={() => setShowEst(false)} />}
       {detail && (
         <PhotoDetail photo={detail} onClose={() => setDetail(null)}
           isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p => setDetail(p)} />
@@ -672,6 +875,7 @@ function App() {
     saveFavs(next);
     return next;
   });
+  const clearFavs = () => { setFavs([]); saveFavs([]); };
   const isFav = id => favs.some(p => p.id === id);
 
   return (
@@ -687,7 +891,7 @@ function App() {
       </header>
       <div className="content">
         {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} />}
-        {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} />}
+        {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} />}
       </div>
       <nav className="tab-bar">
         <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>
