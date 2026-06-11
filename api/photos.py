@@ -20,7 +20,7 @@ def _save_label(photo_id: int, field: str, value: str):
         path = CAT_LABELS_FILE
     elif field == "style":
         path = STYLE_LABELS_FILE
-    elif field == "chain_width":
+    elif field == "setting_amount":
         path = CHAIN_LABELS_FILE
     else:
         return
@@ -76,7 +76,7 @@ def _row_to_dict(row) -> dict:
         "stone_shape":         _safe(row, "stone_shape"),
         "stone_size":          _safe(row, "stone_size"),
         "diamond_status":      _safe(row, "diamond_status"),
-        "chain_width":         _safe(row, "chain_width"),
+        "setting_amount":         _safe(row, "setting_amount"),
         "price_band":          row["price_band"],
         "price_estimate_low":  row["price_estimate_low"],
         "price_estimate_high": row["price_estimate_high"],
@@ -185,7 +185,7 @@ def get_photo(photo_id: int):
 
 @router.patch("/{photo_id}")
 def update_photo(photo_id: int, body: dict):
-    allowed = {"category", "style", "chain_width", "color", "gemstone", "material", "price_band"}
+    allowed = {"category", "style", "setting_amount", "color", "gemstone", "material", "price_band"}
     updates = {k: v for k, v in body.items() if k in allowed}
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields")
@@ -199,7 +199,7 @@ def update_photo(photo_id: int, body: dict):
     row = cur.fetchone()
     conn.close()
     # 把手動修正存回訓練標記，讓 KNN 越用越準
-    for field in ("category", "style", "chain_width"):
+    for field in ("category", "style", "setting_amount"):
         if field in updates and updates[field]:
             _save_label(photo_id, field, updates[field])
     return _row_to_dict(row)

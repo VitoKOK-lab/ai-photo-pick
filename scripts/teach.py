@@ -30,9 +30,9 @@ STYLE_DB_VALS  = ['無鑽', '簡約(5顆鑽內)', '輕奢(20顆鑽內)', '豪鑲
 STYLE_LABELS_FILE = BASE_DIR / "data" / "training_labels_style.json"
 
 # ── 鍊子粗細設定 ──────────────────────────────────────────────
-CHAIN_DISPLAY  = ['無鍊', '細鍊', '中等', '粗鍊']
-CHAIN_DB_VALS  = ['無鍊', '細鍊', '中等', '粗鍊']
-CHAIN_LABELS_FILE = BASE_DIR / "data" / "training_labels_chain.json"
+CHAIN_DISPLAY  = ['少', '正常', '多']
+CHAIN_DB_VALS  = ['少', '正常', '多']
+CHAIN_LABELS_FILE = BASE_DIR / "data" / "training_labels_setting.json"
 
 TARGET_PER_CAT = 8
 
@@ -249,7 +249,7 @@ def run_style():
 
 # ── 鍊子粗細標記 ──────────────────────────────────────────────
 
-def run_chain_width():
+def run_setting_amount():
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
 
@@ -268,7 +268,7 @@ def run_chain_width():
                for i in range(1, len(CHAIN_DISPLAY)+1)}
 
     print("\n" + "=" * 50)
-    print("  鍊子粗細標記  (單鍵送出)")
+    print("  用料多寡標記  (單鍵送出)")
     print("=" * 50)
     print(show_progress(labels, CHAIN_DB_VALS, TARGET_PER_CAT))
     print()
@@ -276,11 +276,10 @@ def run_chain_width():
         print(f"  [{k}] {disp}", end="   ")
     print(f"\n  [s] 跳過   [q] 儲存離開")
     print()
-    print("  說明：")
-    print("    無鍊 = 戒指/耳釘/單獨墜子（沒有鍊子）")
-    print("    細鍊 = 纖細精緻鍊子（< 2mm）")
-    print("    中等 = 標準鍊子（2-4mm）")
-    print("    粗鍊 = 粗重鍊子（> 4mm）\n")
+    print("  台子用料說明（配石、配鑽的份量）：")
+    print("    少  = 極簡，幾乎無配鑲，素金/素銀")
+    print("    正常 = 一般配石，少量小鑽或彩石")
+    print("    多  = 大量配鑲，滿鑽/複雜台座/多層設計\n")
 
     new = 0
     for row in rows_all:
@@ -335,6 +334,6 @@ if __name__ == "__main__":
     if '--style' in sys.argv:
         run_style()
     elif '--chain' in sys.argv:
-        run_chain_width()
+        run_setting_amount()
     else:
         run_category()

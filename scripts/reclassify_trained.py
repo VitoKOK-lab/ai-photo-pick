@@ -25,24 +25,24 @@ from config.settings import SQLITE_PATH, BASE_DIR
 
 CAT_LABELS_FILE    = BASE_DIR / "data" / "training_labels.json"
 STYLE_LABELS_FILE  = BASE_DIR / "data" / "training_labels_style.json"
-CHAIN_LABELS_FILE  = BASE_DIR / "data" / "training_labels_chain.json"
+CHAIN_LABELS_FILE  = BASE_DIR / "data" / "training_labels_setting.json"
 EMBED_CACHE_FILE   = BASE_DIR / "data" / "embeddings_cache.npz"
 CLASSIFIED_DIR     = BASE_DIR / "data" / "02_classified"
 
 CATEGORIES    = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
 STYLE_DB_VALS = ['無鑽', '簡約(5顆鑽內)', '輕奢(20顆鑽內)', '豪鑲滿鑲鑽']
-CHAIN_DB_VALS = ['無鍊', '細鍊', '中等', '粗鍊']
+CHAIN_DB_VALS = ['少', '正常', '多']
 KNN_K = 7
 
 
 def _ensure_chain_column():
-    """確保 photos 表有 chain_width 欄位"""
+    """確保 photos 表有 setting_amount 欄位"""
     conn = sqlite3.connect(SQLITE_PATH)
     cols = {r[1] for r in conn.execute("PRAGMA table_info(photos)")}
-    if 'chain_width' not in cols:
-        conn.execute("ALTER TABLE photos ADD COLUMN chain_width TEXT")
+    if 'setting_amount' not in cols:
+        conn.execute("ALTER TABLE photos ADD COLUMN setting_amount TEXT")
         conn.commit()
-        print("✓ 已新增 chain_width 欄位")
+        print("✓ 已新增 setting_amount 欄位")
     conn.close()
 
 
@@ -104,7 +104,7 @@ def main():
         _ensure_chain_column()
         labels_file = CHAIN_LABELS_FILE
         dim_name    = '鍊子粗細'
-        dim_field   = 'chain_width'
+        dim_field   = 'setting_amount'
         dim_labels  = CHAIN_DB_VALS
         teach_cmd   = 'python3 scripts/teach.py --chain'
     elif mode_style:
@@ -144,9 +144,9 @@ def main():
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
-        "SELECT id, full_path, filename, category, style, chain_width FROM photos ORDER BY id"
+        "SELECT id, full_path, filename, category, style, setting_amount FROM photos ORDER BY id"
         if not mode_chain else
-        "SELECT id, full_path, filename, category, style, COALESCE(chain_width,'') as chain_width FROM photos ORDER BY id"
+        "SELECT id, full_path, filename, category, style, COALESCE(setting_amount,'') as setting_amount FROM photos ORDER BY id"
     ).fetchall()
     conn.close()
     print(f"共 {len(rows)} 張照片")
@@ -215,7 +215,7 @@ def main():
 
         predicted   = knn_predict(train_embs, train_labs, cache[pid])
         if mode_chain:
-            old_val = row['chain_width'] or ''
+            old_val = row['setting_amount'] or ''
         elif mode_style:
             old_val = row['style'] or ''
         else:
@@ -226,7 +226,7 @@ def main():
 
         if mode_style or mode_chain:
             # 只更新 DB 欄位，不動檔案
-            field = 'chain_width' if mode_chain else 'style'
+            field = 'setting_amount' if mode_chain else 'style'
             conn.execute(f"UPDATE photos SET {field}=? WHERE id=?", (predicted, row['id']))
             changed += 1
         else:

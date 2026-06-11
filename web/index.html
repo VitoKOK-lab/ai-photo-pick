@@ -287,12 +287,12 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   const [simErr,  setSimErr]  = useState(false);
   const [editCat,   setEditCat]   = useState(photo.category    || '');
   const [editSty,   setEditSty]   = useState(photo.style       || '');
-  const [editChain, setEditChain] = useState(photo.chain_width || '');
+  const [editChain, setEditChain] = useState(photo.setting_amount || '');
   const [saving,    setSaving]    = useState(false);
 
   useEffect(() => {
     setView('detail'); setSimilar(null); setSimErr(false);
-    setEditCat(photo.category || ''); setEditSty(photo.style || ''); setEditChain(photo.chain_width || '');
+    setEditCat(photo.category || ''); setEditSty(photo.style || ''); setEditChain(photo.setting_amount || '');
   }, [photo.id]);
 
   const doSave = async () => {
@@ -301,7 +301,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
       const res = await fetch('/api/photos/' + photo.id, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: editCat, style: editSty, chain_width: editChain }),
+        body: JSON.stringify({ category: editCat, style: editSty, setting_amount: editChain }),
       });
       const updated = await res.json();
       onUpdated && onUpdated(updated);
@@ -333,7 +333,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   const STYLE_VALS = new Set(['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','豪鑲滿鑲鑽']);
   const tags = [photo.category, photo.style,
     STYLE_VALS.has(photo.gemstone) ? null : photo.gemstone,
-    photo.stone_shape, photo.stone_size, photo.color, photo.material, photo.chain_width]
+    photo.stone_shape, photo.stone_size, photo.color, photo.material, photo.setting_amount]
     .filter(v => v && v !== '未定');
 
   /* Edit view */
@@ -365,9 +365,9 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
               </div>
             </div>
             <div className="edit-row">
-              <div className="edit-label">鍊子粗細</div>
+              <div className="edit-label">用料多寡</div>
               <div className="edit-chips">
-                {['無鍊','細鍊','中等','粗鍊'].map(v => (
+                {['少','正常','多'].map(v => (
                   <button key={v} className={'edit-chip' + (editChain === v ? ' on' : '')} onClick={() => setEditChain(v)}>{v}</button>
                 ))}
               </div>

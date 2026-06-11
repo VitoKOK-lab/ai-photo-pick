@@ -1,4 +1,5 @@
 """main.py - FastAPI 入口"""
+import sqlite3
 import sys
 from pathlib import Path
 from fastapi import FastAPI
@@ -6,7 +7,25 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config.settings import BASE_DIR, PROCESSED_DIR, ALLOWED_ORIGINS
+from config.settings import BASE_DIR, PROCESSED_DIR, ALLOWED_ORIGINS, SQLITE_PATH
+
+
+def _run_migrations():
+    """啟動時確保所有新欄位存在"""
+    new_cols = [
+        ("setting_amount", "TEXT"),
+    ]
+    conn = sqlite3.connect(SQLITE_PATH)
+    existing = {r[1] for r in conn.execute("PRAGMA table_info(photos)")}
+    for col, typ in new_cols:
+        if col not in existing:
+            conn.execute(f"ALTER TABLE photos ADD COLUMN {col} {typ}")
+            print(f"[DB migration] 新增欄位：{col}")
+    conn.commit()
+    conn.close()
+
+
+_run_migrations()
 
 app = FastAPI(title="Jewelry DB API")
 
