@@ -5,6 +5,7 @@
 
 執行：python3 scripts/reindex_from_disk.py
 """
+import hashlib
 import sqlite3
 import sys
 from pathlib import Path
@@ -43,11 +44,13 @@ for jpg in sorted(CLASSIFIED_DIR.rglob("*.jpg")):
         def clean(v):
             return None if v in (None, "未定", "其他") else v
 
+        file_hash = hashlib.md5(str(jpg).encode()).hexdigest()
+
         conn.execute(
             """INSERT INTO photos
                (filename, original_filename, original_path, full_path, thumb_path, micro_path,
-                category, style, color, gemstone, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+                file_hash, category, style, color, gemstone, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
             (
                 filename,
                 jpg.name,
@@ -55,6 +58,7 @@ for jpg in sorted(CLASSIFIED_DIR.rglob("*.jpg")):
                 str(jpg),
                 str(jpg),
                 str(jpg),
+                file_hash,
                 category,
                 clean(style),
                 clean(color),
