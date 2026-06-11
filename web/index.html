@@ -196,7 +196,7 @@ const { useState, useEffect, useRef } = React;
 /* ── Config ─────────────────────────────────────────── */
 const CFG = {
   category:    { label: '品項',   values: ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'] },
-  style:       { label: '鑽石數量', values: ['無鑽','簡約','輕奢','豪鑲'] },
+  style:       { label: '鑽石數量', values: ['無鑽','簡約','輕奢','奢華'] },
   color:       { label: '寶石色', values: ['紅','粉','黃','綠','藍','紫','白','彩'] },
   metal_color: { label: '金工色', values: ['金','銀'] },
 };
@@ -356,7 +356,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   };
 
   const fav  = isFav(photo.id);
-  const STYLE_VALS = new Set(['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','豪鑲滿鑲鑽']);
+  const STYLE_VALS = new Set(['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','奢華滿鑲鑽']);
   const tags = [photo.category, photo.style,
     STYLE_VALS.has(photo.gemstone) ? null : photo.gemstone,
     photo.stone_shape, photo.stone_size, photo.color, photo.metal_color,

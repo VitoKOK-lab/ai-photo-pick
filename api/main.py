@@ -33,11 +33,12 @@ def _run_migrations():
     for old, new in color_renames:
         conn.execute("UPDATE photos SET color=? WHERE color=?", (new, old))
 
-    # 縮短鑽石等級標籤
+    # 縮短鑽石等級標籤，豪鑲改奢華
     style_renames = [
         ('簡約(5顆鑽內)',  '簡約'),
         ('輕奢(20顆鑽內)', '輕奢'),
-        ('豪鑲滿鑲鑽',     '豪鑲'),
+        ('豪鑲滿鑲鑽',     '奢華'),
+        ('豪鑲',           '奢華'),
     ]
     for old, new in style_renames:
         conn.execute("UPDATE photos SET style=? WHERE style=?", (new, old))
@@ -54,7 +55,7 @@ def _run_migrations():
     if labels_path.exists():
         try:
             labels = json.loads(labels_path.read_text(encoding="utf-8"))
-            remap = {'簡約(5顆鑽內)': '簡約', '輕奢(20顆鑽內)': '輕奢', '豪鑲滿鑲鑽': '豪鑲'}
+            remap = {'簡約(5顆鑽內)': '簡約', '輕奢(20顆鑽內)': '輕奢', '豪鑲滿鑲鑽': '奢華', '豪鑲': '奢華'}
             updated = {k: remap.get(v, v) for k, v in labels.items()}
             if updated != labels:
                 labels_path.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
