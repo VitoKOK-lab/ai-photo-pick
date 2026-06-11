@@ -29,7 +29,7 @@ LABELS_FILE      = BASE_DIR / "data" / "training_labels.json"
 EMBED_CACHE_FILE = BASE_DIR / "data" / "embeddings_cache.npz"
 CLASSIFIED_DIR   = BASE_DIR / "data" / "02_classified"
 
-CATEGORIES = ['戒指', '手鏈', '手鐲', '墜子', '項鍊', '耳釘', '胸針', '其他']
+CATEGORIES = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
 KNN_K = 7
 
 

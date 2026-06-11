@@ -15,7 +15,7 @@ import sqlite3
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH, BASE_DIR
 
-CATEGORIES = ['戒指', '手鏈', '手鐲', '墜子', '項鍊', '耳釘', '胸針', '其他']
+CATEGORIES = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
 LABELS_FILE = BASE_DIR / "data" / "training_labels.json"
 TARGET_PER_CAT = 15
 
@@ -42,11 +42,31 @@ def main():
 
     cat_counts = Counter(labels.values())
 
-    # 取得所有照片（隨機順序）
-    rows = conn.execute(
+    # 取得所有照片：按「最缺的品項」優先排序，已夠的品項放最後
+    # 計算每個品項的優先順序（還缺越多 = 越前面）
+    priority_order = sorted(CATEGORIES, key=lambda c: cat_counts.get(c, 0))
+    # 把優先品項對應的照片先撈，其餘隨機附在後面
+    rows = []
+    seen_ids = set()
+    for cat in priority_order:
+        cat_rows = conn.execute(
+            "SELECT id, full_path, filename, category FROM photos "
+            "WHERE full_path IS NOT NULL AND category = ? ORDER BY RANDOM()",
+            (cat,)
+        ).fetchall()
+        for r in cat_rows:
+            if r['id'] not in seen_ids:
+                rows.append(r)
+                seen_ids.add(r['id'])
+    # 其餘（DB 未分類或品項不在清單）
+    other_rows = conn.execute(
         "SELECT id, full_path, filename, category FROM photos "
         "WHERE full_path IS NOT NULL ORDER BY RANDOM()"
     ).fetchall()
+    for r in other_rows:
+        if r['id'] not in seen_ids:
+            rows.append(r)
+            seen_ids.add(r['id'])
     conn.close()
 
     print("\n" + "=" * 55)
