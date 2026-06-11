@@ -16,7 +16,7 @@ def _conn():
     return conn
 
 def _photo_url(d: dict) -> str:
-    full_path = d.get("full_path") or ""
+    full_path = d.get("full_path") or "" if isinstance(d, dict) else (d["full_path"] or "")
     if "02_classified" in str(full_path):
         from config.settings import BASE_DIR
         classified_dir = str(BASE_DIR / "data" / "02_classified")

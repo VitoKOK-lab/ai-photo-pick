@@ -26,7 +26,10 @@ def _safe(row, key, default=None):
 def _photo_url(row) -> str:
     """產生圖片 URL：優先用 03_processed，否則用 02_classified 的 full_path"""
     filename = row["filename"]
-    full_path = row.get("full_path") or ""
+    try:
+        full_path = row["full_path"] or ""
+    except (IndexError, KeyError):
+        full_path = ""
     # 如果 full_path 包含 02_classified，改用 /static/classified/ 並保留子目錄
     if "02_classified" in str(full_path):
         from config.settings import BASE_DIR
