@@ -24,6 +24,16 @@ def _run_migrations():
             conn.execute(f"ALTER TABLE photos ADD COLUMN {col} {typ}")
             print(f"[DB migration] 新增欄位：{col}")
 
+    # 簡化寶石顏色標籤
+    color_renames = [
+        ('紅色', '紅'), ('粉紅色', '粉'), ('橙色', '黃'), ('黃色', '黃'),
+        ('綠色', '綠'), ('藍綠色', '藍'), ('藍色', '藍'),
+        ('紫色', '紫'), ('白色', '白'), ('無色透明', '白'),
+        ('黑色', '彩'), ('灰色', '彩'), ('棕色', '彩'), ('多色', '彩'),
+    ]
+    for old, new in color_renames:
+        conn.execute("UPDATE photos SET color=? WHERE color=?", (new, old))
+
     # 縮短鑽石等級標籤
     style_renames = [
         ('簡約(5顆鑽內)',  '簡約'),

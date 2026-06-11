@@ -1,19 +1,13 @@
 {
   "color": {
-    "紅色":    "a fine jewelry photo dominated by vivid red color from ruby or garnet gemstone",
-    "粉紅色":  "a fine jewelry photo with pink color from pink sapphire or rose quartz gemstone",
-    "橙色":    "a fine jewelry photo with orange color from spessartite garnet or citrine gemstone",
-    "黃色":    "a fine jewelry photo with golden yellow color from yellow sapphire or citrine gemstone",
-    "綠色":    "a fine jewelry photo with green color from emerald or tsavorite garnet gemstone",
-    "藍綠色":  "a fine jewelry photo with teal or blue-green color from paraiba tourmaline or aquamarine",
-    "藍色":    "a fine jewelry photo with deep blue color from sapphire or tanzanite gemstone",
-    "紫色":    "a fine jewelry photo with purple or violet color from amethyst or purple sapphire gemstone",
-    "白色":    "a fine jewelry photo with white or milky color from moonstone or white opal gemstone",
-    "無色透明": "a fine jewelry photo with colorless transparent diamond or crystal gemstone",
-    "黑色":    "a fine jewelry photo with black color from black diamond or black onyx gemstone",
-    "灰色":    "a fine jewelry photo with gray or silver color from labradorite or gray pearl",
-    "棕色":    "a fine jewelry photo with brown or champagne color from chocolate diamond or smoky quartz",
-    "多色":    "a fine jewelry photo with multiple colors from opal or tourmaline or multicolor gemstone"
+    "紅": "a fine jewelry photo dominated by vivid red color from ruby or red garnet gemstone",
+    "粉": "a fine jewelry photo with pink or rose color from pink sapphire or pink tourmaline gemstone",
+    "黃": "a fine jewelry photo with yellow or orange color from yellow sapphire citrine or spessartite garnet gemstone",
+    "綠": "a fine jewelry photo with green color from emerald tsavorite or green tourmaline gemstone",
+    "藍": "a fine jewelry photo with blue or teal color from sapphire tanzanite aquamarine or paraiba tourmaline gemstone",
+    "紫": "a fine jewelry photo with purple or violet color from amethyst or purple sapphire gemstone",
+    "白": "a fine jewelry photo with white colorless or near-colorless gemstone such as diamond moonstone or white opal",
+    "彩": "a fine jewelry photo with multicolor rainbow iridescent black gray or brown gemstone such as opal tourmaline black diamond or labradorite"
   },
   "category": {
     "戒指":  "a product photo of a finger ring with a circular band, the center opening is finger-sized (about 17-19mm diameter), shot from above or angled on a ring display cone, with or without a center gemstone",
