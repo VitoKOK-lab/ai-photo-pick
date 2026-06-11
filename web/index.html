@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>JewelryDB</title>
   <style>
+/* ── Reset ──────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Tokens ─────────────────────────────────────────────── */
 :root {
   --bg:      #f4f4f4;
   --surface: #ffffff;
@@ -24,39 +27,67 @@
   --shadow:  0 1px 4px rgba(0,0,0,.08);
   --shadow2: 0 4px 16px rgba(0,0,0,.12);
 }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+/* ── Base ───────────────────────────────────────────────── */
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
 #root { height: 100%; display: flex; flex-direction: column; }
 button { font-family: inherit; cursor: pointer; }
-.nav { height: var(--nav-h); background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; flex-shrink: 0; box-shadow: var(--shadow); }
+
+/* ── Nav ────────────────────────────────────────────────── */
+.nav {
+  height: var(--nav-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow);
+}
 .nav-logo { font-size: 14px; font-weight: 700; letter-spacing: 2px; color: var(--gold); flex: 1; }
 .nav-tabs { display: none; gap: 4px; }
-.nav-tab { padding: 7px 18px; border-radius: 20px; background: none; border: none; color: var(--text2); font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.nav-tab {
+  padding: 7px 18px;
+  border-radius: 20px;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .nav-tab.on { background: var(--s3); color: var(--text); font-weight: 600; }
 .badge { background: var(--gold); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
+
+/* ── Tab bar (mobile) ───────────────────────────────────── */
 .tab-bar { height: var(--tab-h); background: var(--surface); border-top: 1px solid var(--border); display: flex; flex-shrink: 0; }
 .tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: none; color: var(--text3); font-size: 10px; font-weight: 500; position: relative; }
 .tab-btn.on { color: var(--accent); }
 .tab-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tab-badge { position: absolute; top: 6px; right: calc(50% - 18px); background: var(--gold); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; min-width: 16px; text-align: center; }
+
+/* ── Content ────────────────────────────────────────────── */
 .content { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
-/* chips bar */
-.chips-bar { padding: 10px 14px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; gap: 6px; align-items: center; }
+
+/* ── Chips (mobile) ─────────────────────────────────────── */
+.chips-bar { padding: 10px 14px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .chips-bar::-webkit-scrollbar { display: none; }
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 7px 14px; border-radius: 20px; background: var(--s3); font-size: 13px; color: var(--text2); border: 1px solid var(--border); white-space: nowrap; }
+.chip { display: inline-flex; align-items: center; gap: 3px; padding: 6px 14px; border-radius: 20px; background: var(--s3); font-size: 12px; color: var(--text2); border: 1px solid var(--border); margin-right: 6px; white-space: nowrap; }
 .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
-.chip-clr { display: inline-flex; align-items: center; padding: 7px 14px; border-radius: 20px; background: none; border: 1px solid var(--border); font-size: 13px; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
-/* dropdown */
-.dd-wrap { position: relative; display: inline-block; flex-shrink: 0; }
-.dd-panel { position: absolute; top: calc(100% + 6px); left: 0; min-width: 150px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow2); z-index: 250; overflow: hidden; }
-.dd-item { padding: 11px 15px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer; color: var(--text); border-bottom: 1px solid var(--border); gap: 12px; }
-.dd-item:last-child { border-bottom: none; }
-.dd-item:active, .dd-item:hover { background: var(--s3); }
-.dd-item.on { color: var(--accent); font-weight: 600; }
-.dd-clr { color: var(--text3); font-size: 12px; }
-.dd-cnt { font-size: 12px; color: var(--text3); font-weight: 400; flex-shrink: 0; }
-/* body */
+.chip-clr { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 20px; background: none; border: 1px solid var(--border); font-size: 12px; color: var(--text3); white-space: nowrap; }
+
+/* ── Body row ───────────────────────────────────────────── */
 .body-row { flex: 1; overflow: hidden; display: flex; min-height: 0; }
-/* sidebar */
+
+/* ── Sidebar ────────────────────────────────────────────── */
 .sidebar { display: none; width: var(--side-w); background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; padding: 12px 0 32px; }
 .sb-clear { margin: 6px 14px 12px; padding: 8px 12px; background: none; border: 1px solid var(--border); border-radius: var(--r); color: var(--text3); font-size: 12px; width: calc(100% - 28px); text-align: left; }
 .sb-clear:hover { background: var(--s3); color: var(--text2); }
@@ -66,11 +97,12 @@ button { font-family: inherit; cursor: pointer; }
 .sb-hd.has-val .sb-hd-label { color: var(--accent); }
 .sb-hd-arrow { font-size: 10px; color: var(--text3); }
 .sb-opts { padding: 0 10px 10px; }
-.sb-opt { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 8px; background: none; border: none; color: var(--text2); font-size: 13px; text-align: left; border-radius: 6px; }
+.sb-opt { display: block; width: 100%; padding: 8px 8px; background: none; border: none; color: var(--text2); font-size: 13px; text-align: left; border-radius: 6px; }
 .sb-opt:hover { background: var(--s3); color: var(--text); }
 .sb-opt.on { color: var(--accent); font-weight: 600; }
 .sb-opt-clr { display: block; width: 100%; padding: 5px 8px; background: none; border: none; color: var(--text3); font-size: 11px; text-align: left; }
-/* grid */
+
+/* ── Main + grid ────────────────────────────────────────── */
 .main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 .grid-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 2px; }
@@ -78,14 +110,24 @@ button { font-family: inherit; cursor: pointer; }
 .card img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; background: #fff; }
 .card-fav { position: absolute; top: 7px; right: 7px; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.85); border: none; font-size: 15px; display: flex; align-items: center; justify-content: center; color: var(--text3); box-shadow: var(--shadow); }
 .card-fav.on { color: var(--gold); }
-.card-lbl { padding: 4px 7px 6px; font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-lbl { padding: 6px 9px 8px; font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sentinel { height: 1px; }
 .loading-msg { text-align: center; padding: 28px; color: var(--text3); font-size: 13px; }
 .empty-msg { text-align: center; padding: 64px 24px; color: var(--text2); font-size: 14px; line-height: 1.9; }
-/* detail */
+
+/* ── Filter dropdown ────────────────────────────────────── */
+.dd-wrap { position: relative; display: inline-block; flex-shrink: 0; }
+.dd-panel { position: absolute; top: calc(100% + 5px); left: 0; min-width: 148px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow2); z-index: 250; overflow: hidden; }
+.dd-item { padding: 11px 15px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer; color: var(--text); border-bottom: 1px solid var(--border); gap: 10px; }
+.dd-item:last-child { border-bottom: none; }
+.dd-item:active, .dd-item:hover { background: var(--s3); }
+.dd-item.on { color: var(--accent); font-weight: 600; }
+.dd-clr { color: var(--text3); font-size: 12px; }
+.dd-cnt { font-size: 12px; color: var(--text3); font-weight: 400; flex-shrink: 0; }
+
+/* ── Detail overlay ─────────────────────────────────────── */
 .det-ovl { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; align-items: flex-end; }
 .det-panel { width: 100%; max-height: 90vh; background: var(--surface); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; overflow: hidden; position: relative; animation: up .25s cubic-bezier(.32,.72,0,1); box-shadow: var(--shadow2); }
-@keyframes up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .det-handle { width: 36px; height: 4px; background: var(--s3); border-radius: 2px; margin: 10px auto 0; flex-shrink: 0; }
 .det-x { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%; background: var(--s3); border: none; font-size: 18px; color: var(--text2); display: flex; align-items: center; justify-content: center; z-index: 1; }
 .det-hd-bar { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
@@ -98,10 +140,12 @@ button { font-family: inherit; cursor: pointer; }
 .det-tags { padding: 14px 16px 8px; display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { padding: 4px 11px; background: var(--s3); border-radius: 20px; font-size: 12px; color: var(--text2); }
 .det-btns { padding: 10px 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.db { padding: 13px; border-radius: var(--r); border: none; font-size: 13px; font-weight: 600; touch-action: manipulation; }
+.db { padding: 13px; border-radius: var(--r); border: none; font-size: 13px; font-weight: 600; touch-action: manipulation; position: relative; z-index: 2; }
 .db-fav { background: var(--s3); color: var(--text); }
 .db-fav.on { background: #fff0e0; color: var(--gold); border: 1.5px solid var(--gold); }
 .db-sim { background: var(--accent); color: #fff; }
+
+/* ── Edit panel ─────────────────────────────────────────── */
 .db-edit { background: var(--s3); color: var(--text2); }
 .edit-panel { padding: 14px 16px 20px; }
 .edit-row { margin-bottom: 12px; }
@@ -112,17 +156,24 @@ button { font-family: inherit; cursor: pointer; }
 .edit-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
 .db-save { background: var(--accent); color: #fff; }
 .db-del { background: #fff0f0; color: #c0392b; border: 1.5px solid #f5c6c6; }
+
+/* similar view */
 .sim-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; }
 .sim-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--s3); cursor: pointer; }
+
+/* ── Fav empty ──────────────────────────────────────────── */
 .fav-empty { text-align: center; padding: 80px 24px; color: var(--text2); font-size: 14px; line-height: 1.9; }
+
+/* ── Desktop ≥ 768px ────────────────────────────────────── */
 @media (min-width: 768px) {
   .nav-tabs  { display: flex; }
   .tab-bar   { display: none; }
   .sidebar   { display: block; }
   .chips-bar { display: none; }
-  .grid { grid-template-columns: repeat(3, 1fr); }
+  .grid { grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+
   .det-ovl { align-items: center; justify-content: center; padding: 32px; }
-  .det-panel { width: 100%; max-width: 840px; border-radius: 16px; flex-direction: row; max-height: 82vh; animation: pop .2s ease; }
+  .det-panel { width: 100%; max-width: 840px; border-radius: 16px; flex-direction: row; max-height: 82vh; animation: pop .2s ease; box-shadow: var(--shadow2); }
   @keyframes pop { from { opacity:0; transform:scale(.96); } to { opacity:1; transform:scale(1); } }
   .det-handle { display: none; }
   .det-left { width: 50%; flex-shrink: 0; }
@@ -131,6 +182,8 @@ button { font-family: inherit; cursor: pointer; }
 }
 @media (min-width: 1200px) { .grid { grid-template-columns: repeat(4, 1fr); } }
 @media (min-width: 1600px) { :root { --side-w: 248px; } .grid { grid-template-columns: repeat(5, 1fr); } }
+/* card label narrower to maximise photo area */
+.card-lbl { padding: 4px 7px 6px; font-size: 11px; }
   </style>
 </head>
 <body>
@@ -141,6 +194,7 @@ button { font-family: inherit; cursor: pointer; }
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
+/* ── Config ─────────────────────────────────────────── */
 const CFG = {
   category:    { label: '品項',   values: ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'] },
   style:       { label: '鑽石數量', values: ['無鑽','簡約','輕奢','豪鑲'] },
@@ -148,9 +202,11 @@ const CFG = {
   metal_color: { label: '金工色', values: ['金','銀'] },
 };
 
+/* ── Fav storage ────────────────────────────────────── */
 const loadFavs = () => { try { return JSON.parse(localStorage.getItem('jdb_favs') || '[]'); } catch { return []; } };
 const saveFavs = f => localStorage.setItem('jdb_favs', JSON.stringify(f));
 
+/* ── Icons ──────────────────────────────────────────── */
 function IcoGrid() {
   return <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>;
 }
@@ -158,6 +214,7 @@ function IcoHeart({ fill }) {
   return <svg viewBox="0 0 24 24" fill={fill ? 'currentColor' : 'none'}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
 }
 
+/* ── Filter dropdown ────────────────────────────────── */
 function FilterDropdown({ field, cur, counts, onPick }) {
   const cfg = CFG[field];
   const [open, setOpen] = React.useState(false);
@@ -190,6 +247,7 @@ function FilterDropdown({ field, cur, counts, onPick }) {
   );
 }
 
+/* ── Sidebar ────────────────────────────────────────── */
 function Sidebar({ filters, onFilter, onClear, counts }) {
   const [open, setOpen] = useState({ category: true, style: true, color: false, metal_color: false });
   return (
@@ -213,7 +271,7 @@ function Sidebar({ filters, onFilter, onClear, counts }) {
                   <button key={v} className={'sb-opt' + (filters[field] === v ? ' on' : '')}
                     onClick={() => onFilter(field, filters[field] === v ? null : v)}>
                     <span>{v}</span>
-                    {cnt != null && <span style={{fontSize:11,color:'var(--text3)',fontWeight:400}}>{cnt}</span>}
+                    {cnt != null && <span style={{marginLeft:6,fontSize:11,color:'var(--text3)',fontWeight:400}}>{cnt}</span>}
                   </button>
                 );
               })}
@@ -225,15 +283,16 @@ function Sidebar({ filters, onFilter, onClear, counts }) {
   );
 }
 
+/* ── Photo detail ───────────────────────────────────── */
 function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDeleted, onUpdated }) {
-  const [view,      setView]      = useState('detail');
-  const [similar,   setSimilar]   = useState(null);
-  const [simErr,    setSimErr]    = useState(false);
-  const [editCat,   setEditCat]   = useState(photo.category         || '');
-  const [editSty,   setEditSty]   = useState(photo.style            || '');
-  const [editChain, setEditChain] = useState(photo.setting_amount   || '');
-  const [editCraft, setEditCraft] = useState(photo.craft_complexity || '');
-  const [editMetal, setEditMetal] = useState(photo.metal_color      || '');
+  const [view,    setView]    = useState('detail'); // 'detail' | 'similar' | 'edit'
+  const [similar, setSimilar] = useState(null);
+  const [simErr,  setSimErr]  = useState(false);
+  const [editCat,   setEditCat]   = useState(photo.category        || '');
+  const [editSty,   setEditSty]   = useState(photo.style           || '');
+  const [editChain, setEditChain] = useState(photo.setting_amount  || '');
+  const [editCraft, setEditCraft] = useState(photo.craft_complexity|| '');
+  const [editMetal, setEditMetal] = useState(photo.metal_color     || '');
   const [saving,    setSaving]    = useState(false);
 
   useEffect(() => {
@@ -247,7 +306,8 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
     setSaving(true);
     try {
       const res = await fetch('/api/photos/' + photo.id, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category: editCat, style: editSty, setting_amount: editChain, craft_complexity: editCraft, metal_color: editMetal }),
       });
       const updated = await res.json();
@@ -260,7 +320,8 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   const doDelete = async () => {
     if (!confirm('確定永久刪除這張照片？（檔案會一併刪除，無法復原）')) return;
     await fetch('/api/photos/' + photo.id, { method: 'DELETE' });
-    onDeleted && onDeleted(photo.id); onClose();
+    onDeleted && onDeleted(photo.id);
+    onClose();
   };
 
   const openSimilar = () => {
@@ -275,12 +336,15 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
       .catch(() => { clearTimeout(timer); setSimilar([]); setSimErr(true); });
   };
 
-  const fav = isFav(photo.id);
+  const fav  = isFav(photo.id);
+  const STYLE_VALS = new Set(['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','豪鑲滿鑲鑽']);
   const tags = [photo.category, photo.style,
-    photo.gemstone, photo.stone_shape, photo.stone_size,
-    photo.color, photo.metal_color, photo.setting_amount, photo.craft_complexity]
+    STYLE_VALS.has(photo.gemstone) ? null : photo.gemstone,
+    photo.stone_shape, photo.stone_size, photo.color, photo.metal_color,
+    photo.setting_amount, photo.craft_complexity]
     .filter(v => v && v !== '未定');
 
+  /* Edit view */
   if (view === 'edit') return (
     <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="det-panel" style={{flexDirection:'column'}}>
@@ -292,21 +356,50 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
         <div className="det-scroll">
           <img src={photo.full_url} alt="" style={{width:'100%',maxHeight:220,objectFit:'contain',background:'#f9f9f9'}} />
           <div className="edit-panel">
-            {[['category','品項',CFG.category.values,editCat,setEditCat],
-              ['style','鑽石數量',CFG.style.values,editSty,setEditSty],
-              ['chain','用料多寡',['少','正常','多'],editChain,setEditChain],
-              ['craft','做工複雜',['極簡','普通','複雜','極複雜'],editCraft,setEditCraft],
-              ['metal','金工顏色',['金','銀'],editMetal,setEditMetal],
-            ].map(([key, label, vals, val, setVal]) => (
-              <div key={key} className="edit-row">
-                <div className="edit-label">{label}</div>
-                <div className="edit-chips">
-                  {vals.map(v => <button key={v} className={'edit-chip'+(val===v?' on':'')} onClick={()=>setVal(v)}>{v}</button>)}
-                </div>
+            <div className="edit-row">
+              <div className="edit-label">品項</div>
+              <div className="edit-chips">
+                {CFG.category.values.map(v => (
+                  <button key={v} className={'edit-chip' + (editCat === v ? ' on' : '')} onClick={() => setEditCat(v)}>{v}</button>
+                ))}
               </div>
-            ))}
+            </div>
+            <div className="edit-row">
+              <div className="edit-label">鑽石數量</div>
+              <div className="edit-chips">
+                {CFG.style.values.map(v => (
+                  <button key={v} className={'edit-chip' + (editSty === v ? ' on' : '')} onClick={() => setEditSty(v)}>{v}</button>
+                ))}
+              </div>
+            </div>
+            <div className="edit-row">
+              <div className="edit-label">用料多寡</div>
+              <div className="edit-chips">
+                {['少','正常','多'].map(v => (
+                  <button key={v} className={'edit-chip' + (editChain === v ? ' on' : '')} onClick={() => setEditChain(v)}>{v}</button>
+                ))}
+              </div>
+            </div>
+            <div className="edit-row">
+              <div className="edit-label">做工複雜</div>
+              <div className="edit-chips">
+                {['極簡','普通','複雜','極複雜'].map(v => (
+                  <button key={v} className={'edit-chip' + (editCraft === v ? ' on' : '')} onClick={() => setEditCraft(v)}>{v}</button>
+                ))}
+              </div>
+            </div>
+            <div className="edit-row">
+              <div className="edit-label">金工顏色</div>
+              <div className="edit-chips">
+                {['金','銀'].map(v => (
+                  <button key={v} className={'edit-chip' + (editMetal === v ? ' on' : '')} onClick={() => setEditMetal(v)}>{v}</button>
+                ))}
+              </div>
+            </div>
             <div className="edit-actions">
-              <button className="db db-save" onClick={doSave} disabled={saving}>{saving?'儲存中…':'✓ 儲存'}</button>
+              <button className="db db-save" onClick={doSave} disabled={saving}>
+                {saving ? '儲存中…' : '✓ 儲存'}
+              </button>
               <button className="db db-del" onClick={doDelete}>✕ 刪除</button>
             </div>
           </div>
@@ -315,24 +408,35 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
     </div>
   );
 
+  /* Similar view */
   if (view === 'similar') return (
     <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="det-panel" style={{flexDirection:'column'}}>
         <div className="det-hd-bar">
           <button className="det-back" onClick={() => setView('detail')}>←</button>
-          <span className="det-hd-title">{'相似款 · '+(photo.category||'')}</span>
+          <span className="det-hd-title">{'相似款 · ' + (photo.category || '')}</span>
           <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
         </div>
         <div className="det-scroll">
-          {similar===null ? <div className="loading-msg">載入中…</div>
-           : simErr ? <div className="empty-msg">載入失敗<br/><button style={{marginTop:12,padding:'8px 20px',borderRadius:8,border:'1px solid var(--border)',background:'var(--s3)',fontSize:13,cursor:'pointer'}} onClick={()=>{setSimilar(null);setSimErr(false);openSimilar();}}>重試</button></div>
-           : similar.length===0 ? <div className="empty-msg">找不到相似款</div>
-           : <div className="sim-grid">{similar.map(p=><img key={p.id} src={p.thumb_url} alt="" loading="lazy" onClick={()=>{onSelectPhoto(p);setView('detail');}}/>)}</div>}
+          {similar === null
+            ? <div className="loading-msg">載入中…</div>
+            : simErr
+              ? <div className="empty-msg">載入失敗，請稍後再試<br/><button style={{marginTop:12,padding:'8px 20px',borderRadius:8,border:'1px solid var(--border)',background:'var(--s3)',fontSize:13,cursor:'pointer'}} onClick={() => { setSimilar(null); setSimErr(false); openSimilar(); }}>重試</button></div>
+              : similar.length === 0
+                ? <div className="empty-msg">找不到相似款</div>
+                : <div className="sim-grid">
+                    {similar.map(p => (
+                      <img key={p.id} src={p.thumb_url} alt="" loading="lazy"
+                        onClick={() => { onSelectPhoto(p); setView('detail'); }} />
+                    ))}
+                </div>
+          }
         </div>
       </div>
     </div>
   );
 
+  /* Detail view */
   return (
     <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="det-panel">
@@ -344,15 +448,21 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
         <div className="det-right">
           <div className="det-scroll">
             <div className="det-tags">
-              {tags.map((t,i)=><span key={i} className="tag">{t}</span>)}
-              {photo.price_band&&<span className="tag" style={{color:'var(--text3)'}}>{photo.price_band}</span>}
+              {tags.map((t, i) => <span key={i} className="tag">{t}</span>)}
+              {photo.price_band && <span className="tag" style={{color:'var(--text3)'}}>{photo.price_band}</span>}
             </div>
             <div className="det-btns">
-              <button className={'db db-fav'+(fav?' on':'')} onClick={()=>toggleFav(photo)}>{fav?'♥ 已收藏':'♡ 收藏'}</button>
-              <button className="db db-sim" onClick={openSimilar}>找相似 →</button>
+              <button className={'db db-fav' + (fav ? ' on' : '')} onClick={() => toggleFav(photo)}>
+                {fav ? '♥ 已收藏' : '♡ 收藏'}
+              </button>
+              <button className="db db-sim" onClick={openSimilar}>
+                找相似 →
+              </button>
             </div>
             <div style={{padding:'0 16px 16px'}}>
-              <button className="db db-edit" style={{width:'100%'}} onClick={()=>setView('edit')}>✏️ 修改分類 / 刪除</button>
+              <button className="db db-edit" style={{width:'100%'}} onClick={() => setView('edit')}>
+                ✏️ 修改分類 / 刪除
+              </button>
             </div>
           </div>
         </div>
@@ -361,10 +471,12 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   );
 }
 
+/* ── Photo grid ─────────────────────────────────────── */
 function PhotoGrid({ isFav, toggleFav, filters }) {
   const [photos,  setPhotos]  = useState([]);
   const [loading, setLoading] = useState(false);
   const [detail,  setDetail]  = useState(null);
+
   const loadingRef  = useRef(false);
   const pageRef     = useRef(1);
   const hasMoreRef  = useRef(true);
@@ -375,29 +487,43 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
 
   const doFetch = async () => {
     if (loadingRef.current || !hasMoreRef.current) return;
-    loadingRef.current = true; setLoading(true);
+    loadingRef.current = true;
+    setLoading(true);
     try {
       const qs = new URLSearchParams({ page: pageRef.current, sort: 'random', _r: seedRef.current });
-      Object.entries(filtersRef.current).forEach(([k,v]) => v && qs.set(k,v));
-      const data = await fetch('/api/photos?'+qs).then(r=>r.json());
-      const list = data.photos||[];
-      if (pageRef.current===1) setPhotos(list); else setPhotos(prev=>[...prev,...list]);
+      Object.entries(filtersRef.current).forEach(([k, v]) => v && qs.set(k, v));
+      const res  = await fetch('/api/photos?' + qs);
+      const data = await res.json();
+      const list = data.photos || [];
+      if (pageRef.current === 1) setPhotos(list);
+      else setPhotos(prev => [...prev, ...list]);
       hasMoreRef.current = !!data.has_more;
       pageRef.current += 1;
-    } catch { hasMoreRef.current=false; }
-    finally { loadingRef.current=false; setLoading(false); }
+    } catch { hasMoreRef.current = false; }
+    finally { loadingRef.current = false; setLoading(false); }
   };
   fetchRef.current = doFetch;
 
   useEffect(() => {
-    const s = sentinelRef.current; if (!s) return;
-    const obs = new IntersectionObserver(([e])=>{ if(e.isIntersecting) fetchRef.current?.(); },{rootMargin:'400px'});
-    obs.observe(s); return ()=>obs.disconnect();
+    const s = sentinelRef.current;
+    if (!s) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) fetchRef.current?.(); },
+      { rootMargin: '400px' }
+    );
+    obs.observe(s);
+    return () => obs.disconnect();
   }, []);
+
   useEffect(() => { fetchRef.current?.(); }, []);
+
   useEffect(() => {
-    filtersRef.current=filters||{}; pageRef.current=1; hasMoreRef.current=true;
-    loadingRef.current=false; seedRef.current=Math.random(); setPhotos([]);
+    filtersRef.current = filters || {};
+    pageRef.current    = 1;
+    hasMoreRef.current = true;
+    loadingRef.current = false;
+    seedRef.current    = Math.random();
+    setPhotos([]);
     fetchRef.current?.();
   }, [JSON.stringify(filters)]);
 
@@ -405,58 +531,71 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
     <>
       <div className="grid-wrap">
         <div className="grid">
-          {photos.map(p=>(
+          {photos.map(p => (
             <div key={p.id} className="card">
-              <img src={p.thumb_url} alt="" loading="lazy" onClick={()=>setDetail(p)} />
-              <button className={'card-fav'+(isFav(p.id)?' on':'')} onClick={e=>{e.stopPropagation();toggleFav(p);}}>
-                {isFav(p.id)?'♥':'♡'}
+              <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
+              <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
+                onClick={e => { e.stopPropagation(); toggleFav(p); }}>
+                {isFav(p.id) ? '♥' : '♡'}
               </button>
-              <div className="card-lbl" onClick={()=>setDetail(p)}>
-                {[p.category,p.style].filter(v=>v&&v!=='未定').join(' · ')}
+              <div className="card-lbl" onClick={() => setDetail(p)}>
+                {[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}
               </div>
             </div>
           ))}
         </div>
-        {loading&&<div className="loading-msg">載入中…</div>}
-        {!loading&&photos.length===0&&!hasMoreRef.current&&(
+        {loading && <div className="loading-msg">載入中…</div>}
+        {!loading && photos.length === 0 && !hasMoreRef.current && (
           <div className="empty-msg">沒有符合條件的照片<br/><span style={{fontSize:12,color:'var(--text3)'}}>試著調整篩選條件</span></div>
         )}
         <div ref={sentinelRef} className="sentinel" />
       </div>
-      {detail&&(
-        <PhotoDetail photo={detail} onClose={()=>setDetail(null)} isFav={isFav} toggleFav={toggleFav}
-          onSelectPhoto={p=>setDetail(p)}
-          onDeleted={id=>{setPhotos(prev=>prev.filter(p=>p.id!==id));setDetail(null);}}
-          onUpdated={u=>{setPhotos(prev=>prev.map(p=>p.id===u.id?{...p,...u}:p));setDetail(u);}}
+
+      {detail && (
+        <PhotoDetail
+          photo={detail}
+          onClose={() => setDetail(null)}
+          isFav={isFav}
+          toggleFav={toggleFav}
+          onSelectPhoto={p => setDetail(p)}
+          onDeleted={id => { setPhotos(prev => prev.filter(p => p.id !== id)); setDetail(null); }}
+          onUpdated={updated => { setPhotos(prev => prev.map(p => p.id === updated.id ? {...p, ...updated} : p)); setDetail(updated); }}
         />
       )}
     </>
   );
 }
 
+/* ── Browse tab ─────────────────────────────────────── */
 function BrowseTab({ isFav, toggleFav }) {
   const [filters, setFilters] = useState({});
   const [counts,  setCounts]  = useState({});
 
   useEffect(() => {
     const qs = new URLSearchParams();
-    Object.entries(filters).forEach(([k,v]) => v && qs.set(k,v));
-    fetch('/api/photos/filter-counts?'+qs).then(r=>r.json()).then(d=>setCounts(d)).catch(()=>{});
+    Object.entries(filters).forEach(([k, v]) => v && qs.set(k, v));
+    fetch('/api/photos/filter-counts?' + qs)
+      .then(r => r.json())
+      .then(d => setCounts(d))
+      .catch(() => {});
   }, [JSON.stringify(filters)]);
 
   const setF = (field, value) => setFilters(prev => {
-    const n={...prev}; if(value) n[field]=value; else delete n[field]; return n;
+    const n = { ...prev };
+    if (value) n[field] = value; else delete n[field];
+    return n;
   });
+
   const clearAll = () => setFilters({});
 
   return (
     <>
       <div className="chips-bar">
-        {Object.entries(CFG).map(([field])=>(
-          <FilterDropdown key={field} field={field} cur={filters[field]||null}
-            counts={counts[field]||{}} onPick={v=>setF(field,v)} />
+        {Object.entries(CFG).map(([field]) => (
+          <FilterDropdown key={field} field={field} cur={filters[field] || null}
+            counts={counts[field] || {}} onPick={v => setF(field, v)} />
         ))}
-        {Object.keys(filters).length>0&&<button className="chip-clr" onClick={clearAll}>清除全部</button>}
+        {Object.keys(filters).length > 0 && <button className="chip-clr" onClick={clearAll}>清除全部</button>}
       </div>
       <div className="body-row">
         <Sidebar filters={filters} onFilter={setF} onClear={clearAll} counts={counts} />
@@ -468,57 +607,77 @@ function BrowseTab({ isFav, toggleFav }) {
   );
 }
 
+/* ── Favorites tab ──────────────────────────────────── */
 function FavsTab({ favs, isFav, toggleFav }) {
   const [detail, setDetail] = useState(null);
-  if (favs.length===0) return (
-    <div className="body-row"><div style={{flex:1}}>
-      <div className="fav-empty">尚無收藏款式<br/><span style={{fontSize:12,color:'var(--text3)'}}>找款頁面點 ♡ 即可收藏</span></div>
-    </div></div>
+  if (favs.length === 0) return (
+    <div className="body-row">
+      <div style={{flex:1}}>
+        <div className="fav-empty">尚無收藏款式<br/><span style={{fontSize:12,color:'var(--text3)'}}>找款頁面點 ♡ 即可收藏</span></div>
+      </div>
+    </div>
   );
   return (
     <>
-      <div className="body-row"><div className="main"><div className="grid-wrap"><div className="grid">
-        {favs.map(p=>(
-          <div key={p.id} className="card">
-            <img src={p.thumb_url} alt="" loading="lazy" onClick={()=>setDetail(p)} />
-            <button className="card-fav on" onClick={e=>{e.stopPropagation();toggleFav(p);}}>♥</button>
-            <div className="card-lbl" onClick={()=>setDetail(p)}>{[p.category,p.style].filter(v=>v&&v!=='未定').join(' · ')}</div>
+      <div className="body-row">
+        <div className="main">
+          <div className="grid-wrap">
+            <div className="grid">
+              {favs.map(p => (
+                <div key={p.id} className="card">
+                  <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
+                  <button className="card-fav on" onClick={e => { e.stopPropagation(); toggleFav(p); }}>♥</button>
+                  <div className="card-lbl" onClick={() => setDetail(p)}>
+                    {[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div></div></div></div>
-      {detail&&<PhotoDetail photo={detail} onClose={()=>setDetail(null)} isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p=>setDetail(p)}/>}
+        </div>
+      </div>
+      {detail && (
+        <PhotoDetail photo={detail} onClose={() => setDetail(null)}
+          isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p => setDetail(p)} />
+      )}
     </>
   );
 }
 
+/* ── App ────────────────────────────────────────────── */
 function App() {
   const [tab,  setTab]  = useState('browse');
   const [favs, setFavs] = useState(loadFavs);
+
   const toggleFav = photo => setFavs(prev => {
-    const next = prev.find(p=>p.id===photo.id) ? prev.filter(p=>p.id!==photo.id) : [...prev,photo];
-    saveFavs(next); return next;
+    const next = prev.find(p => p.id === photo.id) ? prev.filter(p => p.id !== photo.id) : [...prev, photo];
+    saveFavs(next);
+    return next;
   });
-  const isFav = id => favs.some(p=>p.id===id);
+  const isFav = id => favs.some(p => p.id === id);
+
   return (
     <React.Fragment>
       <header className="nav">
         <span className="nav-logo">JEWELRY DB</span>
         <div className="nav-tabs">
-          <button className={'nav-tab'+(tab==='browse'?' on':'')} onClick={()=>setTab('browse')}>找款</button>
-          <button className={'nav-tab'+(tab==='favorites'?' on':'')} onClick={()=>setTab('favorites')}>
-            收藏 {favs.length>0&&<span className="badge">{favs.length}</span>}
+          <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>找款</button>
+          <button className={'nav-tab' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
+            收藏 {favs.length > 0 && <span className="badge">{favs.length}</span>}
           </button>
         </div>
       </header>
       <div className="content">
-        {tab==='browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav}/>}
-        {tab==='favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav}/>}
+        {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} />}
+        {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} />}
       </div>
       <nav className="tab-bar">
-        <button className={'tab-btn'+(tab==='browse'?' on':'')} onClick={()=>setTab('browse')}><IcoGrid/><span>找款</span></button>
-        <button className={'tab-btn'+(tab==='favorites'?' on':'')} onClick={()=>setTab('favorites')}>
-          <IcoHeart fill={tab==='favorites'}/><span>收藏</span>
-          {favs.length>0&&<span className="tab-badge">{favs.length}</span>}
+        <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>
+          <IcoGrid /><span>找款</span>
+        </button>
+        <button className={'tab-btn' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
+          <IcoHeart fill={tab === 'favorites'} /><span>收藏</span>
+          {favs.length > 0 && <span className="tab-badge">{favs.length}</span>}
         </button>
       </nav>
     </React.Fragment>

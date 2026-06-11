@@ -33,7 +33,7 @@ def _save_label(photo_id: int, field: str, value: str):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
-        pass
+        pass  # 不因儲存失敗中斷主流程
 
 router = APIRouter(prefix="/api/photos", tags=["photos"])
 
@@ -79,9 +79,9 @@ def _row_to_dict(row) -> dict:
         "stone_shape":         _safe(row, "stone_shape"),
         "stone_size":          _safe(row, "stone_size"),
         "diamond_status":      _safe(row, "diamond_status"),
-        "setting_amount":      _safe(row, "setting_amount"),
-        "craft_complexity":    _safe(row, "craft_complexity"),
-        "metal_color":         _safe(row, "metal_color"),
+        "setting_amount":         _safe(row, "setting_amount"),
+        "craft_complexity":       _safe(row, "craft_complexity"),
+        "metal_color":            _safe(row, "metal_color"),
         "price_band":          row["price_band"],
         "price_estimate_low":  row["price_estimate_low"],
         "price_estimate_high": row["price_estimate_high"],
@@ -147,16 +147,20 @@ def list_photos(
         order_clause = "ORDER BY id"
 
     offset = (page - 1) * PAGE_SIZE
+
     conn = _conn()
     cur = conn.cursor()
+
     cur.execute(f"SELECT COUNT(*) FROM photos {where_clause}", params)
     total = cur.fetchone()[0]
+
     cur.execute(
         f"SELECT * FROM photos {where_clause} {order_clause} LIMIT ? OFFSET ?",
         params + [PAGE_SIZE, offset]
     )
     rows = cur.fetchall()
     conn.close()
+
     photos = [_row_to_dict(r) for r in rows]
     return {
         "photos":   photos,
@@ -167,6 +171,7 @@ def list_photos(
 
 @router.get("/category-counts")
 def category_counts():
+    """回傳各 category 的照片數量"""
     conn = _conn()
     cur = conn.cursor()
     cur.execute("SELECT category, COUNT(*) as cnt FROM photos WHERE category IS NOT NULL AND category != '' GROUP BY category")
@@ -181,7 +186,7 @@ def filter_counts(
     color:       Optional[str] = None,
     metal_color: Optional[str] = None,
 ):
-    """根據目前已選篩選器，回傳各維度每個値的照片數量（faceted counts）。"""
+    """根據目前已選篩選器，回傳各維度每個值的照片數量（faceted counts）。"""
     CFG_VALS = {
         "category":    ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'],
         "style":       ['無鑽','簡約','輕奢','豪鑲'],
@@ -237,6 +242,7 @@ def update_photo(photo_id: int, body: dict):
     cur.execute("SELECT * FROM photos WHERE id = ?", (photo_id,))
     row = cur.fetchone()
     conn.close()
+    # 把手動修正存回訓練標記，讓 KNN 越用越準
     for field in ("category", "style", "setting_amount", "craft_complexity"):
         if field in updates and updates[field]:
             _save_label(photo_id, field, updates[field])
@@ -254,6 +260,7 @@ def delete_photo(photo_id: int):
     conn.execute("DELETE FROM photos WHERE id = ?", (photo_id,))
     conn.commit()
     conn.close()
+    # 刪除磁碟上的實際檔案
     if row["full_path"]:
         try:
             Path(row["full_path"]).unlink(missing_ok=True)
