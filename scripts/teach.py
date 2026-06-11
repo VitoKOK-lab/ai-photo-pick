@@ -27,7 +27,7 @@ CAT_LABELS_FILE = BASE_DIR / "data" / "training_labels.json"
 
 # ── 鑽石等級設定 ──────────────────────────────────────────────
 STYLE_DISPLAY  = ['無鑽', '簡約', '輕奢', '豪鑲']
-STYLE_DB_VALS  = ['無鑽', '簡約(5顆鑽內)', '輕奢(20顆鑽內)', '豪鑲滿鑲鑽']
+STYLE_DB_VALS  = ['無鑽', '簡約', '輕奢', '豪鑲']
 STYLE_LABELS_FILE = BASE_DIR / "data" / "training_labels_style.json"
 
 # ── 鍊子粗細設定 ──────────────────────────────────────────────

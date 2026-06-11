@@ -15,6 +15,7 @@ def _run_migrations():
     new_cols = [
         ("setting_amount",   "TEXT"),
         ("craft_complexity", "TEXT"),
+        ("metal_color",      "TEXT"),
     ]
     conn = sqlite3.connect(SQLITE_PATH)
     existing = {r[1] for r in conn.execute("PRAGMA table_info(photos)")}
@@ -22,8 +23,36 @@ def _run_migrations():
         if col not in existing:
             conn.execute(f"ALTER TABLE photos ADD COLUMN {col} {typ}")
             print(f"[DB migration] 新增欄位：{col}")
+
+    # 縮短鑽石等級標籤
+    style_renames = [
+        ('簡約(5顆鑽內)',  '簡約'),
+        ('輕奢(20顆鑽內)', '輕奢'),
+        ('豪鑲滿鑲鑽',     '豪鑲'),
+    ]
+    for old, new in style_renames:
+        conn.execute("UPDATE photos SET style=? WHERE style=?", (new, old))
+
+    # 從 material 自動推導 metal_color
+    conn.execute("UPDATE photos SET metal_color='金' WHERE metal_color IS NULL AND material IN ('18K黃金','18K玫瑰金')")
+    conn.execute("UPDATE photos SET metal_color='銀' WHERE metal_color IS NULL AND material IN ('18K白金','925銀','鉑金')")
+
     conn.commit()
     conn.close()
+
+    # 同步更新 training_labels_style.json 裡的舊標籤
+    import json
+    labels_path = BASE_DIR / "data" / "training_labels_style.json"
+    if labels_path.exists():
+        try:
+            labels = json.loads(labels_path.read_text(encoding="utf-8"))
+            remap = {'簡約(5顆鑽內)': '簡約', '輕奢(20顆鑽內)': '輕奢', '豪鑲滿鑲鑽': '豪鑲'}
+            updated = {k: remap.get(v, v) for k, v in labels.items()}
+            if updated != labels:
+                labels_path.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
+                print("[DB migration] training_labels_style.json 標籤已縮短")
+        except Exception:
+            pass
 
 
 _run_migrations()

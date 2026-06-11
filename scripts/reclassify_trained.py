@@ -31,7 +31,7 @@ EMBED_CACHE_FILE   = BASE_DIR / "data" / "embeddings_cache.npz"
 CLASSIFIED_DIR     = BASE_DIR / "data" / "02_classified"
 
 CATEGORIES     = ['戒指', '手鏈', '墜子', '項鍊', '耳釘', '胸針', '其他']
-STYLE_DB_VALS  = ['無鑽', '簡約(5顆鑽內)', '輕奢(20顆鑽內)', '豪鑲滿鑲鑽']
+STYLE_DB_VALS  = ['無鑽', '簡約', '輕奢', '豪鑲']
 CHAIN_DB_VALS  = ['少', '正常', '多']
 CRAFT_DB_VALS  = ['極簡', '普通', '複雜', '極複雜']
 KNN_K = 7

@@ -81,6 +81,7 @@ def _row_to_dict(row) -> dict:
         "diamond_status":      _safe(row, "diamond_status"),
         "setting_amount":         _safe(row, "setting_amount"),
         "craft_complexity":       _safe(row, "craft_complexity"),
+        "metal_color":            _safe(row, "metal_color"),
         "price_band":          row["price_band"],
         "price_estimate_low":  row["price_estimate_low"],
         "price_estimate_high": row["price_estimate_high"],
@@ -100,6 +101,7 @@ def list_photos(
     style:        Optional[str] = None,
     stone_shape:  Optional[str] = None,
     stone_size:   Optional[str] = None,
+    metal_color:  Optional[str] = None,
     page:         int = Query(1, ge=1),
     sort:         str = Query("random", pattern="^(random|newest|popular)$"),
     exclude_seen: bool = False,
@@ -125,6 +127,7 @@ def list_photos(
     add_in("style",          style)
     add_in("stone_shape",    stone_shape)
     add_in("stone_size",     stone_size)
+    add_in("metal_color",    metal_color)
 
     if exclude_seen and session_id:
         wheres.append(
@@ -189,7 +192,7 @@ def get_photo(photo_id: int):
 
 @router.patch("/{photo_id}")
 def update_photo(photo_id: int, body: dict):
-    allowed = {"category", "style", "setting_amount", "craft_complexity", "color", "gemstone", "material", "price_band"}
+    allowed = {"category", "style", "setting_amount", "craft_complexity", "metal_color", "color", "gemstone", "material", "price_band"}
     updates = {k: v for k, v in body.items() if k in allowed}
     if not updates:
         raise HTTPException(status_code=400, detail="No valid fields")
