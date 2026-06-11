@@ -90,8 +90,8 @@
     "頂級":  "a photo of ultra-luxury collector grade jewelry with extraordinary rare gemstones"
   },
   "setting_amount": {
-    "少": "a photo of jewelry with minimal metal work and almost no stone setting — plain polished band, solitaire with bare prongs, or completely undecorated surface with no pave, no halo, no side stones",
-    "正常": "a photo of jewelry with moderate setting work — a center gemstone with a small halo or a few side accent diamonds, simple pave on part of the band, standard four-prong or bezel solitaire with minor decoration",
-    "多": "a photo of jewelry with heavy elaborate setting work — full pave diamonds covering most surfaces, multi-row stone bands, complex layered designs with many gemstones, eternity rings, or pieces where metal is mostly hidden under dense stone coverage"
+    "少": "a photo of jewelry with simple minimal setting — plain solitaire with prongs, or a center stone with a small number of accent diamonds only on the band shoulders or simple channel-set side stones, clean understated design where the main gemstone is clearly the dominant focus",
+    "正常": "a photo of jewelry with moderate setting work — a center gemstone surrounded by a full halo of diamonds, pave diamonds spread across a significant portion of the band, multiple rows of accent stones, or side stones extending well beyond the shoulder area",
+    "多": "a photo of jewelry with heavy elaborate setting work — full pave diamonds covering nearly all metal surfaces, eternity rings or bands fully set with stones all around, complex multi-tier or layered designs, ornate frame or cage-style settings enclosing the stone, micro-pave everywhere, or pieces where the metal structure is almost entirely hidden under dense stone coverage"
   }
 }
