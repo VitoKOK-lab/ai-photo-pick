@@ -15,14 +15,27 @@ def _conn():
     conn.row_factory = sqlite3.Row
     return conn
 
+def _photo_url(d: dict) -> str:
+    full_path = d.get("full_path") or ""
+    if "02_classified" in str(full_path):
+        from config.settings import BASE_DIR
+        classified_dir = str(BASE_DIR / "data" / "02_classified")
+        rel = str(full_path).replace(classified_dir, "").lstrip("/\\")
+        if rel and not rel.endswith(('.jpg','.jpeg','.png','.webp')):
+            rel += ".jpg"
+        if rel:
+            return f"/static/classified/{rel}"
+    return f"/static/full/{d['filename']}"
+
 def _to_dict(row) -> dict:
     d = dict(row)
+    url = _photo_url(d)
     return {
         "id":         d["id"],
         "filename":   d["filename"],
-        "micro_url":  f"/static/micro/{d['filename']}",
-        "thumb_url":  f"/static/thumb/{d['filename']}",
-        "full_url":   f"/static/full/{d['filename']}",
+        "micro_url":  url,
+        "thumb_url":  url,
+        "full_url":   url,
         "category":   d.get("category"),
         "style":      d.get("style"),
         "material":   d.get("material"),

@@ -18,10 +18,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 靜態圖片
-app.mount("/static/full",  StaticFiles(directory=str(PROCESSED_DIR / "full")),  name="full")
-app.mount("/static/thumb", StaticFiles(directory=str(PROCESSED_DIR / "thumb")), name="thumb")
-app.mount("/static/micro", StaticFiles(directory=str(PROCESSED_DIR / "micro")), name="micro")
+# 靜態圖片：優先用 03_processed，沒有則 fallback 到 02_classified
+_full_dir  = PROCESSED_DIR / "full"
+_thumb_dir = PROCESSED_DIR / "thumb"
+_micro_dir = PROCESSED_DIR / "micro"
+_classified_dir = BASE_DIR / "data" / "02_classified"
+
+_full_dir.mkdir(parents=True, exist_ok=True)
+_thumb_dir.mkdir(parents=True, exist_ok=True)
+_micro_dir.mkdir(parents=True, exist_ok=True)
+_classified_dir.mkdir(parents=True, exist_ok=True)
+
+app.mount("/static/full",       StaticFiles(directory=str(_full_dir)),       name="full")
+app.mount("/static/thumb",      StaticFiles(directory=str(_thumb_dir)),      name="thumb")
+app.mount("/static/micro",      StaticFiles(directory=str(_micro_dir)),      name="micro")
+app.mount("/static/classified", StaticFiles(directory=str(_classified_dir)), name="classified")
 
 
 @app.get("/api/health")
