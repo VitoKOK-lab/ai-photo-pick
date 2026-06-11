@@ -16,15 +16,15 @@
     "多色":    "a fine jewelry photo with multiple colors from opal or tourmaline or multicolor gemstone"
   },
   "category": {
-    "手鏈":   "a photo of a flexible chain or beaded bracelet jewelry worn loosely around the wrist",
-    "墜子":   "a photo of a pendant or charm jewelry piece without a chain, meant to hang from a necklace",
-    "耳釘":   "a photo of earrings or ear studs jewelry worn on the ear lobe",
-    "項鏈":   "a photo of a necklace with a chain and pendant or collar jewelry worn around the neck",
-    "胸針":   "a photo of a brooch or decorative pin jewelry worn on clothing",
-    "多用途":  "a photo of convertible jewelry that can be worn as both a brooch and pendant, or multiple ways",
-    "戒指":   "a photo of a ring jewelry worn on a finger, showing a circular band with or without a gemstone",
-    "手鐲":   "a photo of a rigid bangle or cuff bracelet jewelry that does not flex",
-    "其他":   "a photo of other jewelry accessories that do not fit standard categories"
+    "手鏈":   "a product photo of a flexible chain or beaded bracelet jewelry, shown lying flat or draped, not rigid",
+    "墜子":   "a product photo of a single pendant or charm jewelry piece only, no chain attached, isolated on background",
+    "耳釘":   "a product photo of a pair of earrings or ear studs jewelry, two matching pieces shown together",
+    "項鏈":   "a product photo of a necklace with a long chain and pendant worn around the neck or laid out in full length",
+    "胸針":   "a product photo of a brooch or decorative pin jewelry with a pin clasp on the back, worn on clothing",
+    "多用途":  "a product photo of convertible jewelry that can be worn as both a brooch and pendant, or in multiple ways",
+    "戒指":   "a product photo of a ring jewelry with a circular band shape, shown lying flat on surface, from above, on a display stand, or held between fingers, with or without a center gemstone",
+    "手鐲":   "a product photo of a rigid solid bangle or cuff bracelet jewelry that holds its circular shape and does not flex",
+    "其他":   "a product photo of miscellaneous jewelry accessories such as hair pins, anklets, or body jewelry that clearly does not look like a ring, bracelet, necklace, earring or pendant"
   },
   "stone_shape": {
     "橢圓形":  "a jewelry photo featuring an oval shaped gemstone with rounded edges, longer than it is wide",
