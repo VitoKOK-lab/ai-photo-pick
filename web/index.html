@@ -330,7 +330,10 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   };
 
   const fav  = isFav(photo.id);
-  const tags = [photo.category, photo.gemstone, photo.stone_shape, photo.stone_size, photo.style, photo.color, photo.material]
+  const STYLE_VALS = new Set(['無鑽','簡約(5顆鑽內)','輕奢(20顆鑽內)','豪鑲滿鑲鑽']);
+  const tags = [photo.category, photo.style,
+    STYLE_VALS.has(photo.gemstone) ? null : photo.gemstone,
+    photo.stone_shape, photo.stone_size, photo.color, photo.material, photo.chain_width]
     .filter(v => v && v !== '未定');
 
   /* Edit view */
