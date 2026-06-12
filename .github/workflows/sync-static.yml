@@ -21,6 +21,8 @@ jobs:
           # sync docs/ contents (except thumbs which user manages locally)
           cp $GITHUB_WORKSPACE/docs/index.html .
           cp $GITHUB_WORKSPACE/docs/.nojekyll . 2>/dev/null || true
-          git add index.html .nojekyll
+          # sync banner images
+          cp $GITHUB_WORKSPACE/docs/ｂ*.png . 2>/dev/null || true
+          git add index.html .nojekyll ｂ*.png
           git diff --cached --quiet || git commit -m "Sync from ai-photo-pick: ${{ github.sha }}"
           git push

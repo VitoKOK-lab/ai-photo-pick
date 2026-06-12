@@ -136,6 +136,7 @@ button { font-family:inherit; cursor:pointer; }
 <script type="text/babel">
 const { useState, useEffect, useRef, useMemo } = React;
 const PAGE = 18;
+const BANNERS = ['ｂ1.png','ｂ2.png','ｂ3.png','ｂ4.png','ｂ5.png','ｂ6.png','ｂ7.png','ｂ8.png','ｂ9.png','ｂ10.png'];
 
 const CATS = ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'];
 const CFG = {
@@ -426,12 +427,10 @@ function PhotoGrid({ allPhotos, filtered, isFav, toggleFav }) {
               </div>
             );
             if ((i + 1) % 60 === 0) {
-              const bp = visible[i - 4] || p;
+              const bannerSrc = BANNERS[Math.floor(i / 60) % BANNERS.length];
               return [card, (
-                <div key={`bn-${i}`} className="grid-banner" style={{animationDelay:`${(i % PAGE) * 0.28 + 0.15}s`}}
-                  onClick={() => setDetail(bp)}>
-                  <img src={bp.thumb_url} alt="" loading="lazy" />
-                  <div className="grid-banner-lbl">{bp.category || ''}</div>
+                <div key={`bn-${i}`} className="grid-banner" style={{animationDelay:`${(i % PAGE) * 0.28 + 0.15}s`}}>
+                  <img src={bannerSrc} alt="" loading="lazy" />
                 </div>
               )];
             }
