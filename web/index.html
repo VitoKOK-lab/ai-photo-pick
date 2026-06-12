@@ -77,8 +77,20 @@ button { font-family: inherit; cursor: pointer; }
 /* ── Content ────────────────────────────────────────────── */
 .content { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
 
-/* ── Chips (mobile) ─────────────────────────────────────── */
-.chips-bar { padding: 10px 14px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+/* ── Category tabs ───────────────────────────────────────── */
+.cat-tabs { display:flex; overflow-x:auto; scrollbar-width:none; padding:10px 10px 6px; gap:6px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
+.cat-tabs::-webkit-scrollbar { display:none; }
+.cat-tab { display:flex; flex-direction:column; align-items:center; gap:4px; border:none; background:none; padding:4px 6px; border-radius:10px; cursor:pointer; min-width:56px; flex-shrink:0; touch-action:manipulation; }
+.cat-tab.on { background:var(--s3); }
+.cat-tab-img { width:52px; height:52px; border-radius:8px; object-fit:cover; border:2px solid transparent; }
+.cat-tab.on .cat-tab-img { border-color:var(--accent); }
+.cat-tab-all { width:52px; height:52px; border-radius:8px; background:var(--s3); display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--text2); border:2px solid transparent; }
+.cat-tab.on .cat-tab-all { border-color:var(--accent); }
+.cat-tab span { font-size:11px; color:var(--text2); white-space:nowrap; }
+.cat-tab.on span { color:var(--text); font-weight:600; }
+
+/* ── Chips ───────────────────────────────────────────────── */
+.chips-bar { padding: 8px 14px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .chips-bar::-webkit-scrollbar { display: none; }
 .chip { display: inline-flex; align-items: center; gap: 3px; padding: 6px 14px; border-radius: 20px; background: var(--s3); font-size: 12px; color: var(--text2); border: 1px solid var(--border); margin-right: 6px; white-space: nowrap; }
 .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
@@ -199,8 +211,8 @@ button { font-family: inherit; cursor: pointer; }
 const { useState, useEffect, useRef } = React;
 
 /* ── Config ─────────────────────────────────────────── */
+const CATS = ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'];
 const CFG = {
-  category:    { label: '品項',   values: ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'] },
   style:       { label: '鑽石數量', values: ['無鑽','簡約','輕奢','奢華'] },
   color:       { label: '寶石色', values: ['紅','粉','黃','綠','藍','紫','白','彩'] },
   metal_color: { label: '金工色', values: ['金','銀'] },
@@ -216,6 +228,45 @@ function IcoGrid() {
 }
 function IcoHeart({ fill }) {
   return <svg viewBox="0 0 24 24" fill={fill ? 'currentColor' : 'none'}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
+}
+
+/* ── Category tabs ──────────────────────────────────── */
+function CategoryTabs({ active, onSelect }) {
+  const [reps, setReps] = useState({});
+
+  useEffect(() => {
+    Promise.all(
+      CATS.map(cat =>
+        fetch(`/api/photos?category=${encodeURIComponent(cat)}&sort=popular&page=1`)
+          .then(r => r.json())
+          .then(d => d.photos?.[0] ? [cat, d.photos[0].thumb_url] : null)
+          .catch(() => null)
+      )
+    ).then(results => {
+      const map = {};
+      results.filter(Boolean).forEach(([cat, url]) => { map[cat] = url; });
+      setReps(map);
+    });
+  }, []);
+
+  return (
+    <div className="cat-tabs">
+      <button className={'cat-tab' + (!active ? ' on' : '')} onClick={() => onSelect(null)}>
+        <div className="cat-tab-all">▦</div>
+        <span>全部</span>
+      </button>
+      {CATS.map(cat => (
+        <button key={cat} className={'cat-tab' + (active === cat ? ' on' : '')}
+          onClick={() => onSelect(cat)}>
+          {reps[cat]
+            ? <img className="cat-tab-img" src={reps[cat]} alt="" loading="lazy" />
+            : <div className="cat-tab-all" style={{fontSize:13}}>{cat}</div>
+          }
+          <span>{cat}</span>
+        </button>
+      ))}
+    </div>
+  );
 }
 
 /* ── Filter dropdown ────────────────────────────────── */
@@ -592,17 +643,21 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
 
 /* ── Browse tab ─────────────────────────────────────── */
 function BrowseTab({ isFav, toggleFav }) {
+  const [catFilter, setCatFilter] = useState(null);
   const [filters, setFilters] = useState({});
   const [counts,  setCounts]  = useState({});
 
+  const allFilters = catFilter ? { ...filters, category: catFilter } : filters;
+
   useEffect(() => {
     const qs = new URLSearchParams();
+    if (catFilter) qs.set('category', catFilter);
     Object.entries(filters).forEach(([k, v]) => v && qs.set(k, v));
     fetch('/api/photos/filter-counts?' + qs)
       .then(r => r.json())
       .then(d => setCounts(d))
       .catch(() => {});
-  }, [JSON.stringify(filters)]);
+  }, [catFilter, JSON.stringify(filters)]);
 
   const setF = (field, value) => setFilters(prev => {
     const n = { ...prev };
@@ -610,20 +665,19 @@ function BrowseTab({ isFav, toggleFav }) {
     return n;
   });
 
-  const clearAll = () => setFilters({});
-
   return (
     <>
+      <CategoryTabs active={catFilter} onSelect={setCatFilter} />
       <div className="chips-bar">
         {Object.entries(CFG).map(([field]) => (
           <FilterDropdown key={field} field={field} cur={filters[field] || null}
             counts={counts[field] || {}} onPick={v => setF(field, v)} />
         ))}
-        {Object.keys(filters).length > 0 && <button className="chip-clr" onClick={clearAll}>清除全部</button>}
+        {Object.keys(filters).length > 0 && <button className="chip-clr" onClick={() => setFilters({})}>清除</button>}
       </div>
       <div className="body-row">
         <div className="main">
-          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={filters} />
+          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} />
         </div>
       </div>
     </>
