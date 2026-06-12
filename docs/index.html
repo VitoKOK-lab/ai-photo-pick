@@ -64,6 +64,12 @@ button { font-family:inherit; cursor:pointer; }
 .card-fav.on { color:var(--gold); }
 .card-lbl { padding:4px 7px 6px; font-size:11px; color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .sentinel { height:1px; }
+
+/* ── Grid banner ─────────────────────────────────────── */
+.grid-banner { grid-column:1/-1; position:relative; cursor:pointer; overflow:hidden; animation:fadeUp 2.2s cubic-bezier(.22,.68,0,1.2) both; }
+.grid-banner img { width:100%; aspect-ratio:16/7; object-fit:cover; display:block; transition:transform .6s cubic-bezier(.25,.46,.45,.94); }
+.grid-banner:active img { transform:scale(1.04); }
+.grid-banner-lbl { position:absolute; bottom:0; left:0; right:0; padding:40px 20px 16px; background:linear-gradient(transparent,rgba(0,0,0,.42)); color:#fff; font-size:13px; letter-spacing:3px; font-weight:300; text-transform:uppercase; }
 .loading-msg { text-align:center; padding:28px; color:var(--text3); font-size:13px; }
 .empty-msg { text-align:center; padding:64px 24px; color:var(--text2); font-size:14px; line-height:1.9; }
 
@@ -406,18 +412,31 @@ function PhotoGrid({ allPhotos, filtered, isFav, toggleFav }) {
     <>
       <div className="grid-wrap" ref={gridWrapRef}>
         <div className="grid">
-          {visible.map((p, i) => (
-            <div key={p.id} className="card" style={{animationDelay:`${(i % PAGE) * 0.28}s`}} onClick={() => setDetail(p)}>
-              <img src={p.thumb_url} alt="" loading="lazy" />
-              <button className={'card-fav'+(isFav(p.id)?' on':'')}
-                onClick={e => { e.stopPropagation(); toggleFav(p); }}>
-                {isFav(p.id)?'♥':'♡'}
-              </button>
-              <div className="card-lbl">
-                {[p.category,p.style].filter(v=>v&&v!=='未定').join(' · ')}
+          {visible.flatMap((p, i) => {
+            const card = (
+              <div key={p.id} className="card" style={{animationDelay:`${(i % PAGE) * 0.28}s`}} onClick={() => setDetail(p)}>
+                <img src={p.thumb_url} alt="" loading="lazy" />
+                <button className={'card-fav'+(isFav(p.id)?' on':'')}
+                  onClick={e => { e.stopPropagation(); toggleFav(p); }}>
+                  {isFav(p.id)?'♥':'♡'}
+                </button>
+                <div className="card-lbl">
+                  {[p.category,p.style].filter(v=>v&&v!=='未定').join(' · ')}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+            if ((i + 1) % 12 === 0) {
+              const bp = visible[i - 4] || p;
+              return [card, (
+                <div key={`bn-${i}`} className="grid-banner" style={{animationDelay:`${(i % PAGE) * 0.28 + 0.15}s`}}
+                  onClick={() => setDetail(bp)}>
+                  <img src={bp.thumb_url} alt="" loading="lazy" />
+                  <div className="grid-banner-lbl">{bp.category || ''}</div>
+                </div>
+              )];
+            }
+            return [card];
+          })}
         </div>
         {visible.length===0 && (
           <div className="empty-msg">沒有符合條件的照片<br/><span style={{fontSize:12,color:'var(--text3)'}}>試著調整篩選條件</span></div>
