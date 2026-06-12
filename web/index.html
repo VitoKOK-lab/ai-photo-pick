@@ -125,7 +125,7 @@ button { font-family: inherit; cursor: pointer; }
 .main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 .grid-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 2px; }
-.card { background: var(--surface); cursor: pointer; overflow: hidden; position: relative; border-radius: 0; animation: fadeUp 2.2s cubic-bezier(.22,.68,0,1.2) both; transition: transform .15s ease; }
+.card { background: var(--surface); cursor: pointer; overflow: hidden; position: relative; border-radius: 0; animation: fadeUp 1.5s cubic-bezier(.22,.68,0,1.2) both; transition: transform .15s ease; }
 .card:active { transform: scale(.97); }
 @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
 .card img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; background: #fff; transition: opacity .2s; }
@@ -136,7 +136,7 @@ button { font-family: inherit; cursor: pointer; }
 .sentinel { height: 1px; }
 
 /* ── Grid banner (full-width editorial) ─────────────── */
-.grid-banner { grid-column: 1 / -1; position: relative; cursor: pointer; overflow: hidden; animation: fadeUp 2.2s cubic-bezier(.22,.68,0,1.2) both; }
+.grid-banner { grid-column: 1 / -1; position: relative; cursor: pointer; overflow: hidden; animation: fadeUp 1.5s cubic-bezier(.22,.68,0,1.2) both; }
 .grid-banner img { width: 100%; aspect-ratio: 16/7; object-fit: cover; display: block; transition: transform .6s cubic-bezier(.25,.46,.45,.94); }
 .grid-banner:active img { transform: scale(1.04); }
 .grid-banner-lbl { position: absolute; bottom: 0; left: 0; right: 0; padding: 40px 20px 16px; background: linear-gradient(transparent, rgba(0,0,0,.42)); color: #fff; font-size: 13px; letter-spacing: 3px; font-weight: 300; text-transform: uppercase; }
@@ -187,7 +187,7 @@ button { font-family: inherit; cursor: pointer; }
 
 /* similar view */
 .sim-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 3px; }
-.sim-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--s3); cursor: pointer; animation: fadeUp 2.2s cubic-bezier(.22,.68,0,1.2) both; }
+.sim-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--s3); cursor: pointer; animation: fadeUp 1.5s cubic-bezier(.22,.68,0,1.2) both; }
 
 /* ── Dark-bg cleaner ────────────────────────────────────── */
 .darkbg-btn { font-size: 11px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text2); cursor: pointer; white-space: nowrap; }
@@ -412,7 +412,7 @@ function SimilarInfiniteGrid({ items, onSelectPhoto, setView }) {
     <div className="sim-grid">
       {displayed.map((p, i) => (
         <img key={p._key} src={p.thumb_url} alt="" loading="lazy"
-          style={{animationDelay:`${(i % 9) * 0.28}s`}}
+          style={{animationDelay:`${(i % 9) * 0.19}s`}}
           onClick={() => { onSelectPhoto(p); setView('detail'); }} />
       ))}
       <div ref={sentinelRef} style={{gridColumn:'1/-1', height:60}} />
@@ -692,7 +692,7 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
         <div className="grid">
           {photos.flatMap((p, i) => {
             const card = (
-              <div key={p.id} className="card" style={{animationDelay:`${(i % 9) * 0.28}s`}}>
+              <div key={p.id} className="card" style={{animationDelay:`${(i % 9) * 0.19}s`}}>
                 <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
                 <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
                   onClick={e => { e.stopPropagation(); toggleFav(p); }}>
@@ -706,7 +706,7 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
             if ((i + 1) % 40 === 0) {
               const bannerSrc = BANNERS[Math.floor(i / 40) % BANNERS.length];
               return [card, (
-                <div key={`bn-${i}`} className="grid-banner" style={{animationDelay:`${(i % 9) * 0.28 + 0.15}s`}}>
+                <div key={`bn-${i}`} className="grid-banner" style={{animationDelay:`${(i % 9) * 0.19 + 0.15}s`}}>
                   <img src={bannerSrc} alt="" loading="lazy" />
                 </div>
               )];
