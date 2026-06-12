@@ -106,6 +106,15 @@ button { font-family:inherit; cursor:pointer; }
 .sim-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:3px; padding:3px; }
 .sim-grid img { width:100%; aspect-ratio:1; object-fit:cover; display:block; background:var(--s3); cursor:pointer; animation:fadeUp 1.5s cubic-bezier(.22,.68,0,1.2) both; }
 
+/* ── Splash ─────────────────────────────────────────── */
+.splash { position:fixed; inset:0; background:#fff; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; animation:splashOut .6s ease 2.2s forwards; pointer-events:none; }
+@keyframes splashOut { to{opacity:0;} }
+.splash-logo { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.splash-name { font-size:clamp(22px,6vw,36px); font-weight:200; letter-spacing:8px; color:#1a1a1a; text-transform:uppercase; animation:splashIn .9s cubic-bezier(.22,.68,0,1.2) .1s both; }
+.splash-sel { font-size:clamp(11px,3vw,15px); letter-spacing:6px; color:var(--gold); font-weight:400; text-transform:uppercase; animation:splashIn .9s cubic-bezier(.22,.68,0,1.2) .4s both; }
+.splash-line { width:40px; height:1px; background:var(--gold); animation:splashIn .9s ease .7s both; }
+@keyframes splashIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
 .fav-empty { text-align:center; padding:80px 24px; color:var(--text2); font-size:14px; line-height:1.9; }
 .fav-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; flex-shrink:0; border-bottom:1px solid var(--border); }
 .fav-bar-info { font-size:12px; color:var(--text3); }
@@ -538,8 +547,26 @@ function FavsTab({ favs, allPhotos, isFav, toggleFav, clearFavs }) {
   );
 }
 
+/* ── Splash screen ─────────────────────────────────── */
+function Splash({ onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2800);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="splash">
+      <div className="splash-logo">
+        <div className="splash-name">Tahir Zainab</div>
+        <div className="splash-line" />
+        <div className="splash-sel">Selection</div>
+      </div>
+    </div>
+  );
+}
+
 /* ── App ─────────────────────────────────────────────── */
 function App() {
+  const [splash, setSplash] = useState(true);
   const [allPhotos, setAllPhotos] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState('browse');
@@ -573,6 +600,7 @@ function App() {
 
   return (
     <React.Fragment>
+      {splash && <Splash onDone={() => setSplash(false)} />}
       <header className="nav">
         <span className="nav-logo">Jewelry Selection</span>
         <div className="nav-tabs">
