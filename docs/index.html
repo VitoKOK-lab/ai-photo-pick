@@ -17,7 +17,8 @@ html,body { height:100%; background:var(--bg); color:var(--text); font-family:-a
 #root { height:100%; display:flex; flex-direction:column; }
 button { font-family:inherit; cursor:pointer; }
 
-.nav { height:var(--nav-h); background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 20px; flex-shrink:0; box-shadow:var(--shadow); }
+.nav { height:var(--nav-h); background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 20px; flex-shrink:0; box-shadow:var(--shadow); position:sticky; top:0; z-index:200; transition:transform .4s cubic-bezier(.4,0,.2,1); }
+.browse-hdr { position:sticky; top:0; z-index:150; background:var(--surface); transition:transform .4s cubic-bezier(.4,0,.2,1); }
 .nav-logo { font-size:14px; font-weight:700; letter-spacing:2px; color:var(--gold); flex:1; }
 .nav-tabs { display:none; gap:4px; }
 .nav-tab { padding:7px 18px; border-radius:20px; background:none; border:none; color:var(--text2); font-size:14px; font-weight:500; display:flex; align-items:center; gap:6px; }
@@ -333,6 +334,7 @@ function PhotoGrid({ allPhotos, filtered, isFav, toggleFav }) {
   const [shown, setShown] = useState(PAGE);
   const [detail, setDetail] = useState(null);
   const sentinelRef = useRef(null);
+  const gridWrapRef = useRef(null);
 
   useEffect(() => { setShown(PAGE); }, [filtered]);
 
@@ -347,11 +349,37 @@ function PhotoGrid({ allPhotos, filtered, isFav, toggleFav }) {
     return () => obs.disconnect();
   }, [filtered]);
 
+  useEffect(() => {
+    const el = gridWrapRef.current;
+    if (!el) return;
+    let lastY = 0;
+    const onScroll = () => {
+      const y = el.scrollTop;
+      const nav = document.querySelector('.nav');
+      const browseHdr = document.querySelector('.browse-hdr');
+      if (y < 20) {
+        if (nav) nav.style.transform = '';
+        if (browseHdr) browseHdr.style.transform = '';
+      } else if (y > lastY) {
+        const navH = nav ? nav.offsetHeight : 0;
+        const hdrH = browseHdr ? browseHdr.offsetHeight : 0;
+        if (nav) nav.style.transform = `translateY(-${navH}px)`;
+        if (browseHdr) browseHdr.style.transform = `translateY(-${navH + hdrH}px)`;
+      } else {
+        if (nav) nav.style.transform = '';
+        if (browseHdr) browseHdr.style.transform = '';
+      }
+      lastY = y;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
   const visible = filtered.slice(0, shown);
 
   return (
     <>
-      <div className="grid-wrap">
+      <div className="grid-wrap" ref={gridWrapRef}>
         <div className="grid">
           {visible.map((p, i) => (
             <div key={p.id} className="card" style={{animationDelay:`${(i % PAGE) * 0.28}s`}} onClick={() => setDetail(p)}>
@@ -398,15 +426,17 @@ function BrowseTab({ allPhotos, isFav, toggleFav }) {
 
   return (
     <>
-      <CategoryTabs allPhotos={allPhotos} active={catFilter} onSelect={setCatFilter} />
-      <div className="chips-bar">
-        {Object.entries(CFG).map(([field]) => (
-          <FilterDropdown key={field} field={field} cur={filters[field]||null}
-            counts={counts[field]||{}} onPick={v=>setF(field,v)} />
-        ))}
-        {Object.keys(filters).length>0 && (
-          <button className="chip-clr" onClick={()=>setFilters({})}>清除</button>
-        )}
+      <div className="browse-hdr">
+        <CategoryTabs allPhotos={allPhotos} active={catFilter} onSelect={setCatFilter} />
+        <div className="chips-bar">
+          {Object.entries(CFG).map(([field]) => (
+            <FilterDropdown key={field} field={field} cur={filters[field]||null}
+              counts={counts[field]||{}} onPick={v=>setF(field,v)} />
+          ))}
+          {Object.keys(filters).length>0 && (
+            <button className="chip-clr" onClick={()=>setFilters({})}>清除</button>
+          )}
+        </div>
       </div>
       <div className="body-row">
         <div className="main">
@@ -493,7 +523,7 @@ function App() {
   return (
     <React.Fragment>
       <header className="nav">
-        <span className="nav-logo">TAHIR ZAINAB Jewelry Selection</span>
+        <span className="nav-logo">Jewelry Selection</span>
         <div className="nav-tabs">
           <button className={'nav-tab'+(tab==='browse'?' on':'')} onClick={()=>setTab('browse')}>找款</button>
           <button className={'nav-tab'+(tab==='favorites'?' on':'')} onClick={()=>setTab('favorites')}>
