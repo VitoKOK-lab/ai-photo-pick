@@ -1,8 +1,10 @@
 """main.py - FastAPI 入口"""
+import io
 import sqlite3
 import sys
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -94,6 +96,39 @@ app.mount("/static/classified", StaticFiles(directory=str(_classified_dir)), nam
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/thumb/{photo_id}")
+def get_thumb(photo_id: int, size: int = 320):
+    """動態生成縮圖並快取到 thumb 目錄。"""
+    cache_path = _thumb_dir / f"{photo_id}_{size}.jpg"
+    if cache_path.exists():
+        return Response(content=cache_path.read_bytes(), media_type="image/jpeg")
+
+    conn = sqlite3.connect(SQLITE_PATH)
+    row = conn.execute("SELECT full_path, filename FROM photos WHERE id=?", (photo_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404)
+
+    full_path = Path(row[0]) if row[0] else None
+    if full_path is None or not full_path.exists():
+        # fallback: try classified dir
+        full_path = _classified_dir / row[1] if row[1] else None
+    if full_path is None or not full_path.exists():
+        raise HTTPException(status_code=404)
+
+    try:
+        from PIL import Image
+        img = Image.open(full_path).convert("RGB")
+        img.thumbnail((size, size), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=82, optimize=True)
+        data = buf.getvalue()
+        cache_path.write_bytes(data)
+        return Response(content=data, media_type="image/jpeg")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 from api.photos       import router as photos_router

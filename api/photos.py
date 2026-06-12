@@ -64,12 +64,13 @@ def _photo_url(row) -> str:
     return f"/static/full/{row['filename']}"
 
 def _row_to_dict(row) -> dict:
-    url = _photo_url(row)
+    url   = _photo_url(row)
+    thumb = f"/api/thumb/{row['id']}"
     return {
         "id":                  row["id"],
         "filename":            row["filename"],
-        "micro_url":           url,
-        "thumb_url":           url,
+        "micro_url":           thumb,
+        "thumb_url":           thumb,
         "full_url":            url,
         "color":               row["color"],
         "category":            row["category"],
