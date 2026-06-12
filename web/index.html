@@ -91,11 +91,11 @@ button { font-family: inherit; cursor: pointer; }
 .cat-tab.on span { color:var(--text); font-weight:600; }
 
 /* ── Chips ───────────────────────────────────────────────── */
-.chips-bar { padding: 8px 14px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.chips-bar { display: flex; align-items: center; overflow-x: auto; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .chips-bar::-webkit-scrollbar { display: none; }
-.chip { display: inline-flex; align-items: center; gap: 3px; padding: 6px 14px; border-radius: 8px; background: var(--s3); font-size: 12px; color: var(--text2); border: 1px solid var(--border); margin-right: 6px; white-space: nowrap; transition: background .15s, color .15s; }
-.chip.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
-.chip-clr { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 8px; background: none; border: 1px solid var(--border); font-size: 12px; color: var(--text3); white-space: nowrap; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 8px 18px; background: none; border: none; border-right: 1px solid var(--border); font-size: 13px; color: var(--text2); white-space: nowrap; transition: color .15s; flex-shrink: 0; }
+.chip.on { color: var(--accent); font-weight: 600; }
+.chip-clr { display: inline-flex; align-items: center; padding: 8px 18px; background: none; border: none; font-size: 13px; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
 
 /* ── Body row ───────────────────────────────────────────── */
 .body-row { flex: 1; overflow: hidden; display: flex; min-height: 0; }
@@ -256,10 +256,6 @@ function CategoryTabs({ active, onSelect }) {
 
   return (
     <div className="cat-tabs">
-      <button className={'cat-tab' + (!active ? ' on' : '')} onClick={() => onSelect(null)}>
-        <div className="cat-tab-all">▦</div>
-        <span>全部</span>
-      </button>
       {CATS.map(cat => (
         <button key={cat} className={'cat-tab' + (active === cat ? ' on' : '')}
           onClick={() => onSelect(cat)}>
