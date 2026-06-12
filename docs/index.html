@@ -305,11 +305,13 @@ function PhotoDetail({ photo, allPhotos, onClose, isFav, toggleFav, onSelectPhot
   const [view, setView] = useState('detail');
   const [similar, setSimilar] = useState(null);
   const fav = isFav(photo.id);
+  const simScrollRef = useRef(null);
 
   useEffect(() => { setView('detail'); setSimilar(null); }, [photo.id]);
 
   const openSimilar = () => {
     setView('similar');
+    setTimeout(() => { if (simScrollRef.current) simScrollRef.current.scrollTop = 0; }, 0);
     if (similar !== null) return;
     setSimilar(findSimilar(photo, allPhotos));
   };
@@ -326,7 +328,7 @@ function PhotoDetail({ photo, allPhotos, onClose, isFav, toggleFav, onSelectPhot
           <span className="det-hd-title">{'相似款 · '+(photo.category||'')}</span>
           <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
         </div>
-        <div className="det-scroll">
+        <div className="det-scroll" ref={simScrollRef}>
           {!similar
             ? <div className="loading-msg">計算中…</div>
             : similar.length===0
@@ -371,7 +373,10 @@ function PhotoGrid({ allPhotos, filtered, isFav, toggleFav }) {
   const sentinelRef = useRef(null);
   const gridWrapRef = useRef(null);
 
-  useEffect(() => { setShown(PAGE); }, [filtered]);
+  useEffect(() => {
+    setShown(PAGE);
+    if (gridWrapRef.current) gridWrapRef.current.scrollTop = 0;
+  }, [filtered]);
 
   useEffect(() => {
     const s = sentinelRef.current;

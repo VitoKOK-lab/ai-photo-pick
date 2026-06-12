@@ -416,6 +416,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   const [editCraft, setEditCraft] = useState(photo.craft_complexity|| '');
   const [editMetal, setEditMetal] = useState(photo.metal_color     || '');
   const [saving,    setSaving]    = useState(false);
+  const simScrollRef = useRef(null);
 
   useEffect(() => {
     setView('detail'); setSimilar(null); setSimErr(false);
@@ -448,6 +449,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
 
   const openSimilar = () => {
     setView('similar');
+    setTimeout(() => { if (simScrollRef.current) simScrollRef.current.scrollTop = 0; }, 0);
     if (similar !== null) return;
     setSimErr(false);
     const ctrl = new AbortController();
@@ -539,7 +541,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
           <span className="det-hd-title">{'相似款 · ' + (photo.category || '')}</span>
           <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
         </div>
-        <div className="det-scroll">
+        <div className="det-scroll" ref={simScrollRef}>
           {similar === null
             ? <div className="loading-msg">載入中…</div>
             : simErr
@@ -665,6 +667,7 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
     loadingRef.current = false;
     seedRef.current    = Math.random();
     setPhotos([]);
+    if (gridWrapRef.current) gridWrapRef.current.scrollTop = 0;
     fetchRef.current?.();
   }, [JSON.stringify(filters)]);
 
