@@ -421,12 +421,12 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
                 ))}
               </div>
             </div>
-            <div className="edit-actions">
-              <button className="db db-save" onClick={doSave} disabled={saving}>
-                {saving ? '儲存中…' : '✓ 儲存'}
-              </button>
-            </div>
           </div>
+        </div>
+        <div style={{padding:'10px 16px 20px',borderTop:'1px solid var(--border)',flexShrink:0}}>
+          <button className="db db-save" style={{width:'100%'}} onClick={doSave} disabled={saving}>
+            {saving ? '儲存中…' : '✓ 儲存'}
+          </button>
         </div>
       </div>
     </div>
