@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Tahir Zainab Jewelry Selection</title>
+  <title>Tahir Zainab Selection</title>
   <style>
 /* ── Reset ──────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -54,7 +54,7 @@ button { font-family: inherit; cursor: pointer; }
   transition: transform .4s cubic-bezier(.4,0,.2,1);
 }
 .browse-hdr { position: fixed; top: var(--nav-h); left: 0; right: 0; z-index: 150; background: var(--surface); transition: transform .4s cubic-bezier(.4,0,.2,1); }
-.nav-logo { font-size: 14px; font-weight: 700; letter-spacing: 2px; color: var(--gold); flex: 1; }
+.nav-logo { font-size: 13px; font-weight: 200; letter-spacing: 5px; color: var(--gold); flex: 1; text-transform: uppercase; }
 .nav-tabs { display: none; gap: 4px; }
 .nav-tab {
   padding: 7px 18px;
@@ -960,7 +960,7 @@ function App() {
     <React.Fragment>
       {splash && <Splash onDone={() => setSplash(false)} />}
       <header className="nav">
-        <span className="nav-logo">Jewelry Selection</span>
+        <span className="nav-logo">Tahir Zainab Selection</span>
         <button className="darkbg-btn" onClick={() => setShowDarkBg(true)}>清黑底</button>
         <div className="nav-tabs">
           <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>找款</button>
