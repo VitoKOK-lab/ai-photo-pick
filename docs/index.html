@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tahir Zainab Jewelry Selection</title>
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#f4f4f4; --surface:#fff; --s2:#f9f9f9; --s3:#efefef;
+  --text:#1a1a1a; --text2:#777; --text3:#bbb;
+  --border:#e8e8e8; --accent:#1a1a1a; --gold:#b8935a;
+  --r:10px; --nav-h:52px; --tab-h:58px;
+  --shadow:0 1px 4px rgba(0,0,0,.08); --shadow2:0 4px 16px rgba(0,0,0,.12);
+}
+html,body { height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; -webkit-tap-highlight-color:transparent; }
+#root { height:100%; display:flex; flex-direction:column; }
+button { font-family:inherit; cursor:pointer; }
+
+.nav { height:var(--nav-h); background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 20px; flex-shrink:0; box-shadow:var(--shadow); }
+.nav-logo { font-size:14px; font-weight:700; letter-spacing:2px; color:var(--gold); flex:1; }
+.nav-tabs { display:none; gap:4px; }
+.nav-tab { padding:7px 18px; border-radius:20px; background:none; border:none; color:var(--text2); font-size:14px; font-weight:500; display:flex; align-items:center; gap:6px; }
+.nav-tab.on { background:var(--s3); color:var(--text); font-weight:600; }
+.badge { background:var(--gold); color:#fff; font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; min-width:18px; text-align:center; }
+
+.tab-bar { height:var(--tab-h); background:var(--surface); border-top:1px solid var(--border); display:flex; flex-shrink:0; }
+.tab-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:none; border:none; color:var(--text3); font-size:10px; font-weight:500; position:relative; }
+.tab-btn.on { color:var(--accent); }
+.tab-btn svg { width:22px; height:22px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.tab-badge { position:absolute; top:6px; right:calc(50% - 18px); background:var(--gold); color:#fff; font-size:9px; font-weight:700; padding:1px 5px; border-radius:8px; min-width:16px; text-align:center; }
+
+.content { flex:1; overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+
+.chips-bar { padding:10px 14px; overflow-x:auto; white-space:nowrap; scrollbar-width:none; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
+.chips-bar::-webkit-scrollbar { display:none; }
+.chip { display:inline-flex; align-items:center; gap:3px; padding:6px 14px; border-radius:20px; background:var(--s3); font-size:12px; color:var(--text2); border:1px solid var(--border); margin-right:6px; white-space:nowrap; }
+.chip.on { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
+.chip-clr { display:inline-flex; align-items:center; padding:6px 14px; border-radius:20px; background:none; border:1px solid var(--border); font-size:12px; color:var(--text3); white-space:nowrap; }
+
+.body-row { flex:1; overflow:hidden; display:flex; min-height:0; }
+.main { flex:1; overflow:hidden; display:flex; flex-direction:column; min-width:0; }
+.grid-wrap { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.grid { display:grid; grid-template-columns:repeat(2,1fr); gap:2px; padding:2px; }
+.card { background:var(--surface); cursor:pointer; overflow:hidden; position:relative; }
+.card img { width:100%; aspect-ratio:1; object-fit:contain; display:block; background:#fff; }
+.card-fav { position:absolute; top:7px; right:7px; width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,.85); border:none; font-size:15px; display:flex; align-items:center; justify-content:center; color:var(--text3); box-shadow:var(--shadow); }
+.card-fav.on { color:var(--gold); }
+.card-lbl { padding:4px 7px 6px; font-size:11px; color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sentinel { height:1px; }
+.loading-msg { text-align:center; padding:28px; color:var(--text3); font-size:13px; }
+.empty-msg { text-align:center; padding:64px 24px; color:var(--text2); font-size:14px; line-height:1.9; }
+
+.dd-panel { position:fixed; min-width:160px; max-width:min(92vw,260px); background:var(--surface); border:1px solid var(--border); border-radius:var(--r); box-shadow:var(--shadow2); z-index:9999; overflow-y:auto; max-height:min(60vh,380px); }
+.dd-item { padding:11px 15px; display:flex; align-items:center; justify-content:space-between; font-size:14px; cursor:pointer; color:var(--text); border-bottom:1px solid var(--border); gap:10px; }
+.dd-item:last-child { border-bottom:none; }
+.dd-item:active,.dd-item:hover { background:var(--s3); }
+.dd-item.on { color:var(--accent); font-weight:600; }
+.dd-clr { color:var(--text3); font-size:12px; }
+.dd-cnt { font-size:12px; color:var(--text3); font-weight:400; flex-shrink:0; }
+
+.det-ovl { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:300; display:flex; align-items:flex-end; }
+.det-panel { width:100%; max-height:90vh; background:var(--surface); border-radius:18px 18px 0 0; display:flex; flex-direction:column; overflow:hidden; position:relative; animation:up .25s cubic-bezier(.32,.72,0,1); box-shadow:var(--shadow2); }
+@keyframes up { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.det-handle { width:36px; height:4px; background:var(--s3); border-radius:2px; margin:10px auto 0; flex-shrink:0; }
+.det-x { position:absolute; top:14px; right:14px; width:30px; height:30px; border-radius:50%; background:var(--s3); border:none; font-size:18px; color:var(--text2); display:flex; align-items:center; justify-content:center; z-index:1; }
+.det-hd-bar { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.det-back { width:32px; height:32px; border-radius:50%; background:var(--s3); border:none; font-size:16px; display:flex; align-items:center; justify-content:center; color:var(--text); }
+.det-hd-title { font-size:15px; font-weight:600; flex:1; }
+.det-left { flex-shrink:0; }
+.det-img { width:100%; max-height:56vw; object-fit:contain; display:block; background:var(--s3); }
+.det-right { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
+.det-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.det-tags { padding:14px 16px 8px; display:flex; flex-wrap:wrap; gap:6px; }
+.tag { padding:4px 11px; background:var(--s3); border-radius:20px; font-size:12px; color:var(--text2); }
+.det-btns { padding:10px 16px 20px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.db { padding:13px; border-radius:var(--r); border:none; font-size:13px; font-weight:600; touch-action:manipulation; }
+.db-fav { background:var(--s3); color:var(--text); }
+.db-fav.on { background:#fff0e0; color:var(--gold); border:1.5px solid var(--gold); }
+.db-sim { background:var(--accent); color:#fff; }
+
+.sim-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; padding:3px; }
+.sim-grid img { width:100%; aspect-ratio:1; object-fit:cover; display:block; background:var(--s3); cursor:pointer; }
+
+.fav-empty { text-align:center; padding:80px 24px; color:var(--text2); font-size:14px; line-height:1.9; }
+.fav-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; flex-shrink:0; border-bottom:1px solid var(--border); }
+.fav-bar-info { font-size:12px; color:var(--text3); }
+.fav-clr-btn { font-size:11px; color:#c0392b; background:none; border:1px solid #f5c6c6; border-radius:20px; padding:4px 12px; }
+
+@media (min-width:768px) {
+  .nav-tabs { display:flex; }
+  .tab-bar  { display:none; }
+  .chips-bar { display:flex; }
+  .grid { grid-template-columns:repeat(3,1fr); }
+  .det-ovl { align-items:center; justify-content:center; padding:32px; }
+  .det-panel { width:100%; max-width:840px; border-radius:16px; flex-direction:row; max-height:82vh; animation:pop .2s ease; }
+  @keyframes pop { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }
+  .det-handle { display:none; }
+  .det-left { width:50%; flex-shrink:0; }
+  .det-img { width:100%; height:100%; max-height:none; border-radius:16px 0 0 16px; }
+  .det-right { flex:1; min-height:0; }
+}
+@media (min-width:1200px) { .grid { grid-template-columns:repeat(4,1fr); } }
+@media (min-width:1600px) { .grid { grid-template-columns:repeat(5,1fr); } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+const PAGE = 18;
+
+const CFG = {
+  category:    { label:'品項',    values:['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'] },
+  style:       { label:'鑽石數量', values:['無鑽','簡約','輕奢','奢華'] },
+  color:       { label:'寶石色',  values:['紅','粉','黃','綠','藍','紫','白','彩'] },
+  metal_color: { label:'金工色',  values:['金','銀'] },
+};
+
+const loadFavs = () => { try { return JSON.parse(localStorage.getItem('jdb_favs')||'[]'); } catch { return []; } };
+const saveFavs = f => localStorage.setItem('jdb_favs', JSON.stringify(f));
+
+/* ── Client-side helpers ─────────────────────────────── */
+function applyFilters(photos, filters) {
+  return photos.filter(p =>
+    Object.entries(filters).every(([k, v]) => !v || p[k] === v)
+  );
+}
+
+function computeCounts(photos, filters) {
+  const result = {};
+  for (const [field, cfg] of Object.entries(CFG)) {
+    const others = Object.entries(filters).filter(([k, v]) => k !== field && v);
+    const sub = others.length ? photos.filter(p => others.every(([k,v]) => p[k]===v)) : photos;
+    result[field] = {};
+    for (const v of cfg.values) result[field][v] = sub.filter(p => p[field]===v).length;
+  }
+  return result;
+}
+
+function findSimilar(anchor, photos, limit=12) {
+  return photos
+    .filter(p => p.category === anchor.category && p.id !== anchor.id)
+    .map(p => ({...p, _s:
+      (p.gemstone===anchor.gemstone && p.gemstone ? 3:0) +
+      (p.style===anchor.style && p.style ? 2:0) +
+      (p.color===anchor.color && p.color ? 2:0) +
+      (p.setting_amount===anchor.setting_amount && p.setting_amount ? 2:0) +
+      (p.material===anchor.material && p.material ? 1:0) +
+      (p.price_band===anchor.price_band && p.price_band ? 1:0)
+    }))
+    .sort((a,b) => b._s - a._s || Math.random()-.5)
+    .slice(0, limit);
+}
+
+/* ── Icons ───────────────────────────────────────────── */
+function IcoGrid() {
+  return <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>;
+}
+function IcoHeart({ fill }) {
+  return <svg viewBox="0 0 24 24" fill={fill?'currentColor':'none'}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
+}
+
+/* ── Filter dropdown ─────────────────────────────────── */
+function FilterDropdown({ field, cur, counts, onPick }) {
+  const cfg = CFG[field];
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({});
+  const btnRef = useRef(null);
+  const panelRef = useRef(null);
+
+  const toggle = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom+4, left: Math.max(4, Math.min(r.left, window.innerWidth-168)) });
+    }
+    setOpen(p => !p);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const h = e => {
+      if (btnRef.current?.contains(e.target)) return;
+      if (panelRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', h);
+    document.addEventListener('touchstart', h);
+    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('touchstart', h); };
+  }, [open]);
+
+  const panel = open && ReactDOM.createPortal(
+    <div ref={panelRef} className="dd-panel" style={pos}>
+      {cur && <div className="dd-item dd-clr" onClick={() => { onPick(null); setOpen(false); }}>清除（全部）</div>}
+      {cfg.values.map(v => (
+        <div key={v} className={'dd-item'+(cur===v?' on':'')}
+          onClick={() => { onPick(v===cur?null:v); setOpen(false); }}>
+          <span>{v}{cur===v?' ✓':''}</span>
+          {counts?.[v] != null && <span className="dd-cnt">{counts[v]}</span>}
+        </div>
+      ))}
+    </div>, document.body
+  );
+
+  return (
+    <div style={{position:'relative',display:'inline-block',flexShrink:0}}>
+      <button ref={btnRef} className={'chip'+(cur?' on':'')} onClick={toggle}>
+        {cur||cfg.label} {cur?'✕':'▾'}
+      </button>
+      {panel}
+    </div>
+  );
+}
+
+/* ── Photo detail ────────────────────────────────────── */
+function PhotoDetail({ photo, allPhotos, onClose, isFav, toggleFav, onSelectPhoto }) {
+  const [view, setView] = useState('detail');
+  const [similar, setSimilar] = useState(null);
+  const fav = isFav(photo.id);
+
+  useEffect(() => { setView('detail'); setSimilar(null); }, [photo.id]);
+
+  const openSimilar = () => {
+    setView('similar');
+    if (similar !== null) return;
+    setSimilar(findSimilar(photo, allPhotos));
+  };
+
+  const tags = [photo.category, photo.style, photo.gemstone, photo.stone_shape,
+    photo.stone_size, photo.color, photo.metal_color, photo.setting_amount, photo.craft_complexity]
+    .filter(v => v && v !== '未定');
+
+  if (view === 'similar') return (
+    <div className="det-ovl" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="det-panel" style={{flexDirection:'column'}}>
+        <div className="det-hd-bar">
+          <button className="det-back" onClick={() => setView('detail')}>←</button>
+          <span className="det-hd-title">{'相似款 · '+(photo.category||'')}</span>
+          <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
+        </div>
+        <div className="det-scroll">
+          {!similar
+            ? <div className="loading-msg">計算中…</div>
+            : similar.length===0
+              ? <div className="empty-msg">找不到相似款</div>
+              : <div className="sim-grid">
+                  {similar.map(p => (
+                    <img key={p.id} src={p.thumb_url} alt="" loading="lazy"
+                      onClick={() => { onSelectPhoto(p); setView('detail'); }} />
+                  ))}
+                </div>
+          }
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="det-ovl" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="det-panel">
+        <button className="det-x" onClick={onClose}>×</button>
+        <div className="det-left">
+          <div className="det-handle" />
+          <img className="det-img" src={photo.thumb_url} alt="" loading="lazy" />
+        </div>
+        <div className="det-right">
+          <div className="det-scroll">
+            <div className="det-tags">
+              {tags.map((t,i) => <span key={i} className="tag">{t}</span>)}
+            </div>
+            <div className="det-btns">
+              <button className={'db db-fav'+(fav?' on':'')} onClick={() => toggleFav(photo)}>
+                {fav?'♥ 已收藏':'♡ 收藏'}
+              </button>
+              <button className="db db-sim" onClick={openSimilar}>找相似 →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Photo grid ──────────────────────────────────────── */
+function PhotoGrid({ allPhotos, filtered, isFav, toggleFav }) {
+  const [shown, setShown] = useState(PAGE);
+  const [detail, setDetail] = useState(null);
+  const sentinelRef = useRef(null);
+
+  useEffect(() => { setShown(PAGE); }, [filtered]);
+
+  useEffect(() => {
+    const s = sentinelRef.current;
+    if (!s) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) setShown(n => Math.min(n+PAGE, filtered.length)); },
+      { rootMargin:'400px' }
+    );
+    obs.observe(s);
+    return () => obs.disconnect();
+  }, [filtered]);
+
+  const visible = filtered.slice(0, shown);
+
+  return (
+    <>
+      <div className="grid-wrap">
+        <div className="grid">
+          {visible.map(p => (
+            <div key={p.id} className="card" onClick={() => setDetail(p)}>
+              <img src={p.thumb_url} alt="" loading="lazy" />
+              <button className={'card-fav'+(isFav(p.id)?' on':'')}
+                onClick={e => { e.stopPropagation(); toggleFav(p); }}>
+                {isFav(p.id)?'♥':'♡'}
+              </button>
+              <div className="card-lbl">
+                {[p.category,p.style].filter(v=>v&&v!=='未定').join(' · ')}
+              </div>
+            </div>
+          ))}
+        </div>
+        {visible.length===0 && (
+          <div className="empty-msg">沒有符合條件的照片<br/><span style={{fontSize:12,color:'var(--text3)'}}>試著調整篩選條件</span></div>
+        )}
+        <div ref={sentinelRef} className="sentinel" />
+      </div>
+
+      {detail && (
+        <PhotoDetail photo={detail} allPhotos={allPhotos}
+          onClose={() => setDetail(null)} isFav={isFav} toggleFav={toggleFav}
+          onSelectPhoto={p => setDetail(p)} />
+      )}
+    </>
+  );
+}
+
+/* ── Browse tab ──────────────────────────────────────── */
+function BrowseTab({ allPhotos, isFav, toggleFav }) {
+  const [filters, setFilters] = useState({});
+
+  const filtered = useMemo(() => applyFilters(allPhotos, filters), [allPhotos, filters]);
+  const counts   = useMemo(() => computeCounts(allPhotos, filters), [allPhotos, filters]);
+
+  const setF = (field, value) => setFilters(prev => {
+    const n = {...prev};
+    if (value) n[field]=value; else delete n[field];
+    return n;
+  });
+
+  return (
+    <>
+      <div className="chips-bar">
+        {Object.entries(CFG).map(([field]) => (
+          <FilterDropdown key={field} field={field} cur={filters[field]||null}
+            counts={counts[field]||{}} onPick={v=>setF(field,v)} />
+        ))}
+        {Object.keys(filters).length>0 && (
+          <button className="chip-clr" onClick={()=>setFilters({})}>清除全部</button>
+        )}
+      </div>
+      <div className="body-row">
+        <div className="main">
+          <PhotoGrid allPhotos={allPhotos} filtered={filtered} isFav={isFav} toggleFav={toggleFav} />
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ── Favorites tab ───────────────────────────────────── */
+function FavsTab({ favs, allPhotos, isFav, toggleFav, clearFavs }) {
+  const [detail, setDetail] = useState(null);
+
+  if (favs.length===0) return (
+    <div className="body-row"><div style={{flex:1}}>
+      <div className="fav-empty">尚無收藏款式<br/><span style={{fontSize:12,color:'var(--text3)'}}>找款頁面點 ♡ 即可收藏</span></div>
+    </div></div>
+  );
+
+  return (
+    <>
+      <div className="fav-bar">
+        <span className="fav-bar-info">收藏 {favs.length} 張</span>
+        <button className="fav-clr-btn" onClick={clearFavs}>清空收藏</button>
+      </div>
+      <div className="body-row">
+        <div className="main">
+          <div className="grid-wrap">
+            <div className="grid">
+              {favs.map(p => (
+                <div key={p.id} className="card" onClick={() => setDetail(p)}>
+                  <img src={p.thumb_url} alt="" loading="lazy" />
+                  <button className="card-fav on" onClick={e => { e.stopPropagation(); toggleFav(p); }}>♥</button>
+                  <div className="card-lbl">{[p.category,p.style].filter(v=>v&&v!=='未定').join(' · ')}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      {detail && (
+        <PhotoDetail photo={detail} allPhotos={allPhotos}
+          onClose={() => setDetail(null)} isFav={isFav} toggleFav={toggleFav}
+          onSelectPhoto={p => setDetail(p)} />
+      )}
+    </>
+  );
+}
+
+/* ── App ─────────────────────────────────────────────── */
+function App() {
+  const [allPhotos, setAllPhotos] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [tab, setTab] = useState('browse');
+  const [favs, setFavs] = useState(loadFavs);
+
+  useEffect(() => {
+    fetch('photos.json')
+      .then(r => r.json())
+      .then(data => {
+        // shuffle once on load
+        const arr = [...data].sort(() => Math.random()-.5);
+        setAllPhotos(arr);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  const toggleFav = photo => setFavs(prev => {
+    const next = prev.find(p=>p.id===photo.id) ? prev.filter(p=>p.id!==photo.id) : [...prev, photo];
+    saveFavs(next);
+    return next;
+  });
+  const clearFavs = () => { setFavs([]); saveFavs([]); };
+  const isFav = id => favs.some(p=>p.id===id);
+
+  if (!loaded) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',color:'var(--text3)',fontSize:14}}>
+      載入中…
+    </div>
+  );
+
+  return (
+    <React.Fragment>
+      <header className="nav">
+        <span className="nav-logo">TAHIR ZAINAB</span>
+        <div className="nav-tabs">
+          <button className={'nav-tab'+(tab==='browse'?' on':'')} onClick={()=>setTab('browse')}>找款</button>
+          <button className={'nav-tab'+(tab==='favorites'?' on':'')} onClick={()=>setTab('favorites')}>
+            收藏 {favs.length>0 && <span className="badge">{favs.length}</span>}
+          </button>
+        </div>
+      </header>
+      <div className="content">
+        {tab==='browse'    && <BrowseTab allPhotos={allPhotos} isFav={isFav} toggleFav={toggleFav} />}
+        {tab==='favorites' && <FavsTab favs={favs} allPhotos={allPhotos} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} />}
+      </div>
+      <nav className="tab-bar">
+        <button className={'tab-btn'+(tab==='browse'?' on':'')} onClick={()=>setTab('browse')}>
+          <IcoGrid /><span>找款</span>
+        </button>
+        <button className={'tab-btn'+(tab==='favorites'?' on':'')} onClick={()=>setTab('favorites')}>
+          <IcoHeart fill={tab==='favorites'} /><span>收藏</span>
+          {favs.length>0 && <span className="tab-badge">{favs.length}</span>}
+        </button>
+      </nav>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
