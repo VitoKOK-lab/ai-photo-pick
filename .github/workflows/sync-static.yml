@@ -1,0 +1,26 @@
+name: Sync static site to Jewelry-Selection
+
+on:
+  push:
+    branches: [claude/great-darwin-auI2D, main]
+    paths:
+      - 'docs/**'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push docs/ to Jewelry-Selection
+        run: |
+          git clone https://x-access-token:${{ secrets.JEWELRY_PAT }}@github.com/VitoKOK-lab/Jewelry-Selection.git /tmp/js
+          cd /tmp/js
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          # sync docs/ contents (except thumbs which user manages locally)
+          cp $GITHUB_WORKSPACE/docs/index.html .
+          cp $GITHUB_WORKSPACE/docs/.nojekyll . 2>/dev/null || true
+          git add index.html .nojekyll
+          git diff --cached --quiet || git commit -m "Sync from ai-photo-pick: ${{ github.sha }}"
+          git push
