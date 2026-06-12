@@ -77,7 +77,7 @@ button { font-family:inherit; cursor:pointer; }
 .dd-cnt { font-size:12px; color:var(--text3); font-weight:400; flex-shrink:0; }
 
 .det-ovl { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:300; display:flex; align-items:flex-end; }
-.det-panel { width:100%; max-height:90vh; background:var(--surface); border-radius:18px 18px 0 0; display:flex; flex-direction:column; overflow:hidden; position:relative; animation:up .25s cubic-bezier(.32,.72,0,1); box-shadow:var(--shadow2); }
+.det-panel { width:100%; max-height:80vh; background:var(--surface); border-radius:18px 18px 0 0; display:flex; flex-direction:column; overflow:hidden; position:relative; animation:up .25s cubic-bezier(.32,.72,0,1); box-shadow:var(--shadow2); }
 @keyframes up { from{transform:translateY(100%)} to{transform:translateY(0)} }
 .det-handle { width:36px; height:4px; background:var(--s3); border-radius:2px; margin:10px auto 0; flex-shrink:0; }
 .det-x { position:absolute; top:14px; right:14px; width:30px; height:30px; border-radius:50%; background:var(--s3); border:none; font-size:18px; color:var(--text2); display:flex; align-items:center; justify-content:center; z-index:1; }
@@ -96,7 +96,7 @@ button { font-family:inherit; cursor:pointer; }
 .db-fav.on { background:#fff0e0; color:var(--gold); border:1.5px solid var(--gold); }
 .db-sim { background:var(--accent); color:#fff; }
 
-.sim-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; padding:3px; }
+.sim-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:3px; padding:3px; }
 .sim-grid img { width:100%; aspect-ratio:1; object-fit:cover; display:block; background:var(--s3); cursor:pointer; animation:fadeUp 2.2s cubic-bezier(.22,.68,0,1.2) both; }
 
 .fav-empty { text-align:center; padding:80px 24px; color:var(--text2); font-size:14px; line-height:1.9; }
@@ -109,6 +109,7 @@ button { font-family:inherit; cursor:pointer; }
   .tab-bar  { display:none; }
   .chips-bar { display:flex; }
   .grid { grid-template-columns:repeat(3,1fr); }
+  .sim-grid { grid-template-columns:repeat(3,1fr); }
   .det-ovl { align-items:center; justify-content:center; padding:32px; }
   .det-panel { width:100%; max-width:840px; border-radius:16px; flex-direction:row; max-height:82vh; animation:pop .2s ease; }
   @keyframes pop { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }
@@ -259,6 +260,39 @@ function FilterDropdown({ field, cur, counts, onPick }) {
   );
 }
 
+/* ── Similar infinite grid ───────────────────────────── */
+function SimilarInfiniteGrid({ items, onSelectPhoto, setView }) {
+  const [displayed, setDisplayed] = React.useState(() => items.map((p, i) => ({...p, _key: i})));
+  const sentinelRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || items.length === 0) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        const shuffled = [...items].sort(() => Math.random() - 0.5);
+        setDisplayed(prev => {
+          const base = prev.length;
+          return [...prev, ...shuffled.map((p, i) => ({...p, _key: base + i + Math.random()}))];
+        });
+      }
+    }, { threshold: 0.1 });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [items]);
+
+  return (
+    <div className="sim-grid">
+      {displayed.map((p, i) => (
+        <img key={p._key} src={p.thumb_url} alt="" loading="lazy"
+          style={{animationDelay:`${(i % 9) * 0.28}s`}}
+          onClick={() => { onSelectPhoto(p); setView('detail'); }} />
+      ))}
+      <div ref={sentinelRef} style={{gridColumn:'1/-1', height:60}} />
+    </div>
+  );
+}
+
 /* ── Photo detail ────────────────────────────────────── */
 function PhotoDetail({ photo, allPhotos, onClose, isFav, toggleFav, onSelectPhoto }) {
   const [view, setView] = useState('detail');
@@ -290,13 +324,7 @@ function PhotoDetail({ photo, allPhotos, onClose, isFav, toggleFav, onSelectPhot
             ? <div className="loading-msg">計算中…</div>
             : similar.length===0
               ? <div className="empty-msg">找不到相似款</div>
-              : <div className="sim-grid">
-                  {similar.map((p, i) => (
-                    <img key={p.id} src={p.thumb_url} alt="" loading="lazy"
-                      style={{animationDelay:`${i * 0.28}s`}}
-                      onClick={() => { onSelectPhoto(p); setView('detail'); }} />
-                  ))}
-                </div>
+              : <SimilarInfiniteGrid items={similar} onSelectPhoto={onSelectPhoto} setView={setView} />
           }
         </div>
       </div>
