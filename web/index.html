@@ -684,7 +684,7 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
                 </div>
               </div>
             );
-            if ((i + 1) % 12 === 0) {
+            if ((i + 1) % 60 === 0) {
               const bp = photos[i - 4] || p;
               return [card, (
                 <div key={`bn-${i}`} className="grid-banner" style={{animationDelay:`${(i % 9) * 0.28 + 0.15}s`}}

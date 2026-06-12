@@ -425,7 +425,7 @@ function PhotoGrid({ allPhotos, filtered, isFav, toggleFav }) {
                 </div>
               </div>
             );
-            if ((i + 1) % 12 === 0) {
+            if ((i + 1) % 60 === 0) {
               const bp = visible[i - 4] || p;
               return [card, (
                 <div key={`bn-${i}`} className="grid-banner" style={{animationDelay:`${(i % PAGE) * 0.28 + 0.15}s`}}
