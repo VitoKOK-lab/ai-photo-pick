@@ -613,7 +613,7 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
     const hide = () => { if (nav) nav.style.transform=`translateY(-${total}px)`; if (browseHdr) browseHdr.style.transform=`translateY(-${total}px)`; };
     const onScroll = () => {
       const y = el.scrollTop;
-      if (y < 30) show();
+      if (y < total) show();
       else if (y > lastY) hide();
       else show();
       lastY = y;
