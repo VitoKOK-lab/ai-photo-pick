@@ -227,7 +227,7 @@ button { font-family: inherit; cursor: pointer; }
 const { useState, useEffect, useRef } = React;
 
 /* ── Config ─────────────────────────────────────────── */
-const BANNERS = ['/banners/ｂ1.png','/banners/ｂ2.png','/banners/ｂ3.png','/banners/ｂ4.png','/banners/ｂ5.png','/banners/ｂ6.png','/banners/ｂ7.png','/banners/ｂ8.png','/banners/ｂ9.png','/banners/ｂ10.png'];
+const BANNERS = ['/banners/ｂ1.png','/banners/ｂ2.png','/banners/ｂ3.png','/banners/ｂ4.png','/banners/ｂ5.png','/banners/ｂ6.png','/banners/ｂ7.png','/banners/ｂ8.png','/banners/ｂ9.png','/banners/ｂ10.png'].sort(() => Math.random() - 0.5);
 const CATS = ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'];
 const CFG = {
   style:       { label: '鑽石數量', values: ['無鑽','簡約','輕奢','奢華'] },
@@ -688,8 +688,8 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
                 </div>
               </div>
             );
-            if ((i + 1) % 60 === 0) {
-              const bannerSrc = BANNERS[Math.floor(i / 60) % BANNERS.length];
+            if ((i + 1) % 40 === 0) {
+              const bannerSrc = BANNERS[Math.floor(i / 40) % BANNERS.length];
               return [card, (
                 <div key={`bn-${i}`} className="grid-banner" style={{animationDelay:`${(i % 9) * 0.28 + 0.15}s`}}>
                   <img src={bannerSrc} alt="" loading="lazy" />
