@@ -82,10 +82,10 @@ button { font-family: inherit; cursor: pointer; }
 .cat-tabs::-webkit-scrollbar { display:none; }
 .cat-tab { display:flex; flex-direction:column; align-items:center; gap:4px; border:none; background:none; padding:4px 6px; border-radius:10px; cursor:pointer; min-width:56px; flex-shrink:0; touch-action:manipulation; transition:background .2s; }
 .cat-tab.on { background:var(--s3); }
-.cat-tab-img { width:52px; height:52px; border-radius:8px; object-fit:cover; border:2px solid transparent; transition:border-color .2s, transform .15s; }
+.cat-tab-img { width:72px; height:72px; border-radius:8px; object-fit:cover; border:2px solid transparent; transition:border-color .2s, transform .15s; }
 .cat-tab:active .cat-tab-img { transform:scale(.93); }
 .cat-tab.on .cat-tab-img { border-color:var(--accent); }
-.cat-tab-all { width:52px; height:52px; border-radius:8px; background:var(--s3); display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--text2); border:2px solid transparent; }
+.cat-tab-all { width:72px; height:72px; border-radius:8px; background:var(--s3); display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--text2); border:2px solid transparent; }
 .cat-tab.on .cat-tab-all { border-color:var(--accent); }
 .cat-tab span { font-size:11px; color:var(--text2); white-space:nowrap; }
 .cat-tab.on span { color:var(--text); font-weight:600; }
@@ -118,7 +118,7 @@ button { font-family: inherit; cursor: pointer; }
 /* ── Main + grid ────────────────────────────────────────── */
 .main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 .grid-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 2px; padding: 2px; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 2px; }
 .card { background: var(--surface); cursor: pointer; overflow: hidden; position: relative; border-radius: 0; animation: fadeUp 2.2s cubic-bezier(.22,.68,0,1.2) both; transition: transform .15s ease; }
 .card:active { transform: scale(.97); }
 @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
@@ -191,7 +191,7 @@ button { font-family: inherit; cursor: pointer; }
   .tab-bar   { display: none; }
   .sidebar   { display: none; }
   .chips-bar { display: flex; }
-  .grid { grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 2px; }
+  .grid { grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
 
   .det-ovl { align-items: center; justify-content: center; padding: 32px; }
   .det-panel { width: 100%; max-width: 840px; border-radius: 16px; flex-direction: row; max-height: 82vh; animation: pop .2s ease; box-shadow: var(--shadow2); }
@@ -201,8 +201,8 @@ button { font-family: inherit; cursor: pointer; }
   .det-img { width: 100%; height: 100%; max-height: none; border-radius: 16px 0 0 16px; }
   .det-right { flex: 1; min-height: 0; }
 }
-@media (min-width: 1200px) { .grid { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1600px) { :root { --side-w: 248px; } .grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1200px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1600px) { :root { --side-w: 248px; } .grid { grid-template-columns: repeat(5, 1fr); } }
 /* card label narrower to maximise photo area */
 .card-lbl { padding: 4px 7px 6px; font-size: 11px; }
   </style>
