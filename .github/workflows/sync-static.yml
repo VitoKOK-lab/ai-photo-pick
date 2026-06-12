@@ -21,8 +21,15 @@ jobs:
           # sync docs/ contents (except thumbs which user manages locally)
           cp $GITHUB_WORKSPACE/docs/index.html .
           cp $GITHUB_WORKSPACE/docs/.nojekyll . 2>/dev/null || true
-          # sync banner images
+          # sync banner and category images
           cp $GITHUB_WORKSPACE/docs/ｂ*.png . 2>/dev/null || true
-          git add index.html .nojekyll ｂ*.png
+          cp $GITHUB_WORKSPACE/docs/戒指.png . 2>/dev/null || true
+          cp $GITHUB_WORKSPACE/docs/手鏈.png . 2>/dev/null || true
+          cp $GITHUB_WORKSPACE/docs/墜子.png . 2>/dev/null || true
+          cp $GITHUB_WORKSPACE/docs/項鍊.png . 2>/dev/null || true
+          cp $GITHUB_WORKSPACE/docs/耳釘.png . 2>/dev/null || true
+          cp $GITHUB_WORKSPACE/docs/胸針.png . 2>/dev/null || true
+          cp $GITHUB_WORKSPACE/docs/其他.png . 2>/dev/null || true
+          git add index.html .nojekyll ｂ*.png 戒指.png 手鏈.png 墜子.png 項鍊.png 耳釘.png 胸針.png 其他.png
           git diff --cached --quiet || git commit -m "Sync from ai-photo-pick: ${{ github.sha }}"
           git push

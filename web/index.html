@@ -269,33 +269,21 @@ function IcoHeart({ fill }) {
   return <svg viewBox="0 0 24 24" fill={fill ? 'currentColor' : 'none'}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
 }
 
+const CAT_IMGS = {
+  '戒指': '/banners/戒指.png', '手鏈': '/banners/手鏈.png', '墜子': '/banners/墜子.png',
+  '項鍊': '/banners/項鍊.png', '耳釘': '/banners/耳釘.png', '胸針': '/banners/胸針.png', '其他': '/banners/其他.png',
+};
+
 /* ── Category tabs ──────────────────────────────────── */
 function CategoryTabs({ active, onSelect }) {
-  const [reps, setReps] = useState({});
-
-  useEffect(() => {
-    Promise.all(
-      CATS.map(cat =>
-        fetch(`/api/photos?category=${encodeURIComponent(cat)}&sort=popular&page=1`)
-          .then(r => r.json())
-          .then(d => d.photos?.[0] ? [cat, d.photos[0].thumb_url] : null)
-          .catch(() => null)
-      )
-    ).then(results => {
-      const map = {};
-      results.filter(Boolean).forEach(([cat, url]) => { map[cat] = url; });
-      setReps(map);
-    });
-  }, []);
-
   return (
     <div className="cat-tabs">
       {CATS.map(cat => (
         <button key={cat} className={'cat-tab' + (active === cat ? ' on' : '')}
           onClick={() => onSelect(cat)}>
           <div className="cat-tab-thumb">
-            {reps[cat]
-              ? <img src={reps[cat]} alt="" loading="lazy" />
+            {CAT_IMGS[cat]
+              ? <img src={CAT_IMGS[cat]} alt="" loading="lazy" />
               : <div className="cat-tab-all" style={{fontSize:13,width:'100%',height:'100%',borderRadius:8}}>{cat}</div>
             }
           </div>
