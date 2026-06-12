@@ -3,8 +3,9 @@ import json
 import sqlite3
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Query, HTTPException
+from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH, BASE_DIR
@@ -216,6 +217,70 @@ def filter_counts(
         result[field] = counts
     conn.close()
     return result
+
+def _is_dark_bg(thumb_path: str, threshold: int = 45) -> bool:
+    """取縮圖四個角落 20x20 px，平均亮度低於 threshold 就視為黑底。"""
+    try:
+        from PIL import Image
+        p = Path(thumb_path)
+        if not p.exists():
+            return False
+        img = Image.open(p).convert("RGB")
+        w, h = img.size
+        sz = min(20, w // 4, h // 4)
+        corners = [
+            img.crop((0, 0, sz, sz)),
+            img.crop((w - sz, 0, w, sz)),
+            img.crop((0, h - sz, sz, h)),
+            img.crop((w - sz, h - sz, w, h)),
+        ]
+        pixels = []
+        for c in corners:
+            pixels.extend(list(c.getdata()))
+        brightness = sum(0.299 * r + 0.587 * g + 0.114 * b for r, g, b in pixels) / len(pixels)
+        return brightness < threshold
+    except Exception:
+        return False
+
+
+@router.get("/dark-bg")
+def scan_dark_bg(threshold: int = Query(45, ge=10, le=120)):
+    """偵測並回傳黑底照片清單（不刪除）。"""
+    conn = _conn()
+    rows = conn.execute("SELECT * FROM photos").fetchall()
+    conn.close()
+    results = [_row_to_dict(row) for row in rows
+               if row["thumb_path"] and _is_dark_bg(row["thumb_path"], threshold)]
+    return {"photos": results, "count": len(results)}
+
+
+class BulkDeleteBody(BaseModel):
+    ids: List[int]
+
+@router.delete("/bulk")
+def bulk_delete(body: BulkDeleteBody):
+    """批次永久刪除照片（含磁碟檔案）。"""
+    if not body.ids:
+        return {"deleted": []}
+    conn = _conn()
+    placeholders = ",".join("?" * len(body.ids))
+    rows = conn.execute(
+        f"SELECT id, full_path, thumb_path, micro_path FROM photos WHERE id IN ({placeholders})",
+        body.ids
+    ).fetchall()
+    conn.execute(f"DELETE FROM photos WHERE id IN ({placeholders})", body.ids)
+    conn.commit()
+    conn.close()
+    for row in rows:
+        for col in ("full_path", "thumb_path", "micro_path"):
+            p = row[col]
+            if p:
+                try:
+                    Path(p).unlink(missing_ok=True)
+                except Exception:
+                    pass
+    return {"deleted": [r["id"] for r in rows]}
+
 
 @router.get("/{photo_id}")
 def get_photo(photo_id: int):

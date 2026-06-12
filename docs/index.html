@@ -36,13 +36,15 @@ button { font-family:inherit; cursor:pointer; }
 .cat-tabs { display:flex; overflow-x:auto; scrollbar-width:none; padding:10px 10px 6px; gap:6px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
 .cat-tabs::-webkit-scrollbar { display:none; }
 .cat-tab { display:flex; flex-direction:column; align-items:center; gap:4px; border:none; background:none; padding:4px 6px; border-radius:10px; cursor:pointer; min-width:56px; flex-shrink:0; touch-action:manipulation; transition:background .2s; }
-.cat-tab.on { background:#fde8ee; }
-.cat-tab-img { width:72px; height:72px; border-radius:8px; object-fit:cover; border:2px solid transparent; transition:border-color .2s, transform .15s; }
-.cat-tab:active .cat-tab-img { transform:scale(.93); }
-.cat-tab.on .cat-tab-img { border-color:transparent; }
+.cat-tab.on { background:none; }
+.cat-tab-thumb { position:relative; width:72px; height:72px; flex-shrink:0; }
+.cat-tab-thumb img { width:100%; height:100%; object-fit:cover; border-radius:8px; display:block; }
+.cat-tab-thumb::after { content:''; position:absolute; inset:0; border-radius:8px; background:rgba(184,147,90,0); transition:background .2s; pointer-events:none; }
+.cat-tab.on .cat-tab-thumb::after { background:rgba(184,147,90,.38); }
+.cat-tab:active .cat-tab-thumb { transform:scale(.93); }
 .cat-tab-all { width:72px; height:72px; border-radius:8px; background:var(--s3); display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--text2); border:none; }
 .cat-tab span { font-size:11px; color:var(--text2); white-space:nowrap; }
-.cat-tab.on span { color:#c0607a; font-weight:600; }
+.cat-tab.on span { color:var(--gold); font-weight:600; }
 
 .chips-bar { display:flex; align-items:center; overflow-x:auto; scrollbar-width:none; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
 .chips-bar::-webkit-scrollbar { display:none; }
@@ -204,10 +206,12 @@ function CategoryTabs({ allPhotos, active, onSelect }) {
       {CATS.map(cat => (
         <button key={cat} className={'cat-tab' + (active === cat ? ' on' : '')}
           onClick={() => onSelect(cat)}>
-          {reps[cat]
-            ? <img className="cat-tab-img" src={reps[cat]} alt="" loading="lazy" />
-            : <div className="cat-tab-all" style={{fontSize:13}}>{cat}</div>
-          }
+          <div className="cat-tab-thumb">
+            {reps[cat]
+              ? <img src={reps[cat]} alt="" loading="lazy" />
+              : <div className="cat-tab-all" style={{fontSize:13,width:'100%',height:'100%',borderRadius:8}}>{cat}</div>
+            }
+          </div>
           <span>{cat}</span>
         </button>
       ))}

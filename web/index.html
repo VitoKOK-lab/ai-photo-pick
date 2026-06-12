@@ -85,13 +85,16 @@ button { font-family: inherit; cursor: pointer; }
 .cat-tabs { display:flex; overflow-x:auto; scrollbar-width:none; padding:10px 10px 6px; gap:6px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
 .cat-tabs::-webkit-scrollbar { display:none; }
 .cat-tab { display:flex; flex-direction:column; align-items:center; gap:4px; border:none; background:none; padding:4px 6px; border-radius:10px; cursor:pointer; min-width:56px; flex-shrink:0; touch-action:manipulation; transition:background .2s; }
-.cat-tab.on { background:#fde8ee; }
-.cat-tab-img { width:72px; height:72px; border-radius:8px; object-fit:cover; border:2px solid transparent; transition:border-color .2s, transform .15s; }
+.cat-tab.on { background:none; }
+.cat-tab-img { width:72px; height:72px; border-radius:8px; object-fit:cover; border:none; transition:transform .15s; }
 .cat-tab:active .cat-tab-img { transform:scale(.93); }
-.cat-tab.on .cat-tab-img { border-color:transparent; }
+.cat-tab-thumb { position:relative; width:72px; height:72px; flex-shrink:0; }
+.cat-tab-thumb img { width:100%; height:100%; object-fit:cover; border-radius:8px; display:block; }
+.cat-tab-thumb::after { content:''; position:absolute; inset:0; border-radius:8px; background:rgba(184,147,90,0); transition:background .2s; pointer-events:none; }
+.cat-tab.on .cat-tab-thumb::after { background:rgba(184,147,90,.38); }
 .cat-tab-all { width:72px; height:72px; border-radius:8px; background:var(--s3); display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--text2); border:none; }
 .cat-tab span { font-size:11px; color:var(--text2); white-space:nowrap; }
-.cat-tab.on span { color:#c0607a; font-weight:600; }
+.cat-tab.on span { color:var(--gold); font-weight:600; }
 
 /* ── Chips ───────────────────────────────────────────────── */
 .chips-bar { display: flex; align-items: center; overflow-x: auto; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -186,6 +189,17 @@ button { font-family: inherit; cursor: pointer; }
 .sim-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 3px; }
 .sim-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: var(--s3); cursor: pointer; animation: fadeUp 2.2s cubic-bezier(.22,.68,0,1.2) both; }
 
+/* ── Dark-bg cleaner ────────────────────────────────────── */
+.darkbg-btn { font-size: 11px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text2); cursor: pointer; white-space: nowrap; }
+.darkbg-ovl { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 400; display: flex; align-items: flex-end; }
+.darkbg-panel { width: 100%; max-height: 85vh; background: var(--surface); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; overflow: hidden; animation: up .25s cubic-bezier(.32,.72,0,1); }
+.darkbg-hd { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.darkbg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; overflow-y: auto; flex: 1; }
+.darkbg-card { position: relative; cursor: pointer; }
+.darkbg-card img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+.darkbg-card.exclude::after { content: '✓'; position: absolute; inset: 0; background: rgba(0,200,100,.35); display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; }
+.darkbg-footer { padding: 12px 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-shrink: 0; }
+
 /* ── Fav empty ──────────────────────────────────────────── */
 .fav-empty { text-align: center; padding: 80px 24px; color: var(--text2); font-size: 14px; line-height: 1.9; }
 
@@ -270,10 +284,12 @@ function CategoryTabs({ active, onSelect }) {
       {CATS.map(cat => (
         <button key={cat} className={'cat-tab' + (active === cat ? ' on' : '')}
           onClick={() => onSelect(cat)}>
-          {reps[cat]
-            ? <img className="cat-tab-img" src={reps[cat]} alt="" loading="lazy" />
-            : <div className="cat-tab-all" style={{fontSize:13}}>{cat}</div>
-          }
+          <div className="cat-tab-thumb">
+            {reps[cat]
+              ? <img src={reps[cat]} alt="" loading="lazy" />
+              : <div className="cat-tab-all" style={{fontSize:13,width:'100%',height:'100%',borderRadius:8}}>{cat}</div>
+            }
+          </div>
           <span>{cat}</span>
         </button>
       ))}
@@ -804,10 +820,106 @@ function FavsTab({ favs, isFav, toggleFav, clearFavs }) {
   );
 }
 
+/* ── Dark-bg cleaner modal ─────────────────────────── */
+function DarkBgModal({ onClose, onDeleted }) {
+  const [phase, setPhase] = useState('idle'); // idle | scanning | confirm | deleting | done
+  const [photos, setPhotos] = useState([]);
+  const [excluded, setExcluded] = useState(new Set()); // IDs to keep (untick)
+  const [count, setCount] = useState(0);
+
+  const scan = () => {
+    setPhase('scanning');
+    fetch('/api/photos/dark-bg')
+      .then(r => r.json())
+      .then(d => { setPhotos(d.photos); setPhase('confirm'); })
+      .catch(() => { alert('掃描失敗'); setPhase('idle'); });
+  };
+
+  const toggle = id => setExcluded(prev => {
+    const s = new Set(prev);
+    s.has(id) ? s.delete(id) : s.add(id);
+    return s;
+  });
+
+  const doDelete = async () => {
+    const ids = photos.filter(p => !excluded.has(p.id)).map(p => p.id);
+    if (!ids.length) { onClose(); return; }
+    setPhase('deleting');
+    const res = await fetch('/api/photos/bulk', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    const d = await res.json();
+    setCount(d.deleted.length);
+    setPhase('done');
+    onDeleted && onDeleted(d.deleted);
+  };
+
+  const toDelete = photos.filter(p => !excluded.has(p.id));
+
+  return (
+    <div className="darkbg-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="darkbg-panel">
+        <div className="darkbg-hd">
+          <button className="det-back" onClick={onClose}>×</button>
+          <span style={{flex:1,fontSize:15,fontWeight:600}}>清除黑底照片</span>
+        </div>
+
+        {phase === 'idle' && (
+          <div style={{padding:'40px 24px',textAlign:'center',color:'var(--text2)',fontSize:14,lineHeight:1.9}}>
+            偵測縮圖四個角落亮度<br/>自動找出黑色背景的照片<br/>
+            <button className="db db-save" style={{marginTop:20,padding:'10px 32px'}} onClick={scan}>開始掃描</button>
+          </div>
+        )}
+
+        {phase === 'scanning' && (
+          <div className="loading-msg" style={{padding:60}}>掃描中，請稍候…</div>
+        )}
+
+        {phase === 'confirm' && (
+          <>
+            <div style={{padding:'8px 16px',fontSize:12,color:'var(--text2)',flexShrink:0}}>
+              找到 <b>{photos.length}</b> 張黑底圖・點擊可取消勾選保留・將刪除 <b>{toDelete.length}</b> 張
+            </div>
+            {photos.length === 0
+              ? <div className="empty-msg">沒有找到黑底照片</div>
+              : <div className="darkbg-grid">
+                  {photos.map(p => (
+                    <div key={p.id} className={'darkbg-card' + (excluded.has(p.id) ? ' exclude' : '')}
+                      onClick={() => toggle(p.id)}>
+                      <img src={p.thumb_url} alt="" loading="lazy" />
+                    </div>
+                  ))}
+                </div>
+            }
+            <div className="darkbg-footer">
+              <button className="db" style={{flex:1,border:'1px solid var(--border)',background:'none'}} onClick={onClose}>取消</button>
+              <button className="db db-save" style={{flex:2}} onClick={doDelete} disabled={toDelete.length===0}>
+                永久刪除 {toDelete.length} 張
+              </button>
+            </div>
+          </>
+        )}
+
+        {phase === 'deleting' && <div className="loading-msg" style={{padding:60}}>刪除中…</div>}
+
+        {phase === 'done' && (
+          <div style={{padding:'40px 24px',textAlign:'center',fontSize:14,color:'var(--text2)',lineHeight:2}}>
+            ✅ 已刪除 {count} 張黑底照片<br/>
+            <button className="db db-save" style={{marginTop:16,padding:'10px 32px'}} onClick={onClose}>完成</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── App ────────────────────────────────────────────── */
 function App() {
   const [tab,  setTab]  = useState('browse');
   const [favs, setFavs] = useState(loadFavs);
+  const [showDarkBg, setShowDarkBg] = useState(false);
 
   const toggleFav = photo => setFavs(prev => {
     const next = prev.find(p => p.id === photo.id) ? prev.filter(p => p.id !== photo.id) : [...prev, photo];
@@ -821,6 +933,7 @@ function App() {
     <React.Fragment>
       <header className="nav">
         <span className="nav-logo">Jewelry Selection</span>
+        <button className="darkbg-btn" onClick={() => setShowDarkBg(true)}>清黑底</button>
         <div className="nav-tabs">
           <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>找款</button>
           <button className={'nav-tab' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
@@ -828,6 +941,12 @@ function App() {
           </button>
         </div>
       </header>
+      {showDarkBg && (
+        <DarkBgModal
+          onClose={() => setShowDarkBg(false)}
+          onDeleted={() => { setShowDarkBg(false); window.location.reload(); }}
+        />
+      )}
       <div className="content">
         {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} />}
         {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} />}
