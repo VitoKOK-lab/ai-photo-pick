@@ -47,14 +47,13 @@ button { font-family: inherit; cursor: pointer; }
   display: flex;
   align-items: center;
   padding: 0 20px;
-  flex-shrink: 0;
   box-shadow: var(--shadow);
-  position: sticky;
-  top: 0;
+  position: fixed;
+  top: 0; left: 0; right: 0;
   z-index: 200;
   transition: transform .4s cubic-bezier(.4,0,.2,1);
 }
-.browse-hdr { position: sticky; top: 0; z-index: 150; background: var(--surface); transition: transform .4s cubic-bezier(.4,0,.2,1); }
+.browse-hdr { position: fixed; top: var(--nav-h); left: 0; right: 0; z-index: 150; background: var(--surface); transition: transform .4s cubic-bezier(.4,0,.2,1); }
 .nav-logo { font-size: 14px; font-weight: 700; letter-spacing: 2px; color: var(--gold); flex: 1; }
 .nav-tabs { display: none; gap: 4px; }
 .nav-tab {
@@ -603,27 +602,24 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
   useEffect(() => {
     const el = gridWrapRef.current;
     if (!el) return;
+    const nav = document.querySelector('.nav');
+    const browseHdr = document.querySelector('.browse-hdr');
+    const navH = nav ? nav.offsetHeight : 52;
+    const hdrH = browseHdr ? browseHdr.offsetHeight : 0;
+    const total = navH + hdrH;
+    el.style.paddingTop = total + 'px';
     let lastY = 0;
+    const show = () => { if (nav) nav.style.transform=''; if (browseHdr) browseHdr.style.transform=''; };
+    const hide = () => { if (nav) nav.style.transform=`translateY(-${total}px)`; if (browseHdr) browseHdr.style.transform=`translateY(-${total}px)`; };
     const onScroll = () => {
       const y = el.scrollTop;
-      const nav = document.querySelector('.nav');
-      const browseHdr = document.querySelector('.browse-hdr');
-      if (y < 20) {
-        if (nav) nav.style.transform = '';
-        if (browseHdr) browseHdr.style.transform = '';
-      } else if (y > lastY) {
-        const navH = nav ? nav.offsetHeight : 0;
-        const hdrH = browseHdr ? browseHdr.offsetHeight : 0;
-        if (nav) nav.style.transform = `translateY(-${navH}px)`;
-        if (browseHdr) browseHdr.style.transform = `translateY(-${navH + hdrH}px)`;
-      } else {
-        if (nav) nav.style.transform = '';
-        if (browseHdr) browseHdr.style.transform = '';
-      }
+      if (y < 30) show();
+      else if (y > lastY) hide();
+      else show();
       lastY = y;
     };
     el.addEventListener('scroll', onScroll, { passive: true });
-    return () => { el.removeEventListener('scroll', onScroll); };
+    return () => { el.removeEventListener('scroll', onScroll); show(); };
   }, []);
 
   useEffect(() => {
@@ -725,20 +721,20 @@ function FavsTab({ favs, isFav, toggleFav, clearFavs }) {
   const [detail, setDetail] = useState(null);
 
   if (favs.length === 0) return (
-    <div className="body-row"><div style={{flex:1}}>
+    <div className="body-row" style={{paddingTop:'var(--nav-h)'}}><div style={{flex:1}}>
       <div className="fav-empty">尚無收藏款式<br/><span style={{fontSize:12,color:'var(--text3)'}}>找款頁面點 ♡ 即可收藏</span></div>
     </div></div>
   );
 
   return (
     <>
-      <div className="fav-bar">
+      <div className="fav-bar" style={{marginTop:'var(--nav-h)'}}>
         <span className="fav-bar-info">收藏 {favs.length} 張</span>
         <button className="fav-clr-btn" onClick={clearFavs}>清空收藏</button>
       </div>
       <div className="body-row">
         <div className="main">
-          <div className="grid-wrap">
+          <div className="grid-wrap" style={{paddingTop:'var(--nav-h)'}}>
             <div className="grid">
               {favs.map(p => (
                 <div key={p.id} className="card" onClick={() => setDetail(p)}>
