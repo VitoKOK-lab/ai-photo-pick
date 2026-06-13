@@ -503,6 +503,41 @@ class TestCSWorkflow:
         s1 = next(i for i in allitems if i["order_number"] == "S1")
         assert s1["action"] == "台灣會計確認入帳"
 
+    def test_advance_stage_one_step(self, client):
+        _import(client, WORKFLOW_CSV)
+        oid = client.get("/api/cs/orders?view=all&q=S1").json()[0]["id"]
+        # S1 起始為「下單待入帳」→ 一鍵推進到「待叫貨」
+        r = client.post(f"/api/cs/orders/{oid}/advance", json={"by": "台灣-阿May"})
+        o = r.json()
+        assert o["track_status"] == "待叫貨"
+        assert o["last_handler"] == "台灣-阿May"
+        assert any(e["kind"] == "stage" and "待叫貨" in e["content"] for e in o["timeline"])
+
+    def test_advance_stamps_handoff_time_person(self, client):
+        _import(client, WORKFLOW_CSV)
+        oid = client.get("/api/cs/orders?view=all&q=S1").json()[0]["id"]
+        # 推進到「出貨給客人」會自動蓋出貨時間+人
+        for _ in range(7):
+            o = client.post(f"/api/cs/orders/{oid}/advance", json={"by": "深圳-阿明"}).json()
+            if o["track_status"] == "已出貨給客人":
+                break
+        assert o["track_status"] == "已出貨給客人"
+        assert o["ship_to_customer_at"]
+        assert o["ship_by"] == "深圳-阿明"
+
+    def test_update_extended_fields_whitelist(self, client):
+        _import(client, WORKFLOW_CSV)
+        oid = client.get("/api/cs/orders?view=all&q=S1").json()[0]["id"]
+        client.put(f"/api/cs/orders/{oid}", json={"handler": "台灣-阿May", "fields": {
+            "accounting_by": "會計-珍", "main_stone": "綠碧璽", "ring_size": "17",
+            "evil_column": "DROP",  # 白名單外，應被忽略
+        }})
+        o = client.get(f"/api/cs/orders/{oid}").json()
+        assert o["accounting_by"] == "會計-珍"
+        assert o["main_stone"] == "綠碧璽"
+        assert o["ring_size"] == "17"
+        assert "evil_column" not in o
+
     def test_notify_done_clears_from_urgent(self, client):
         _import(client, WORKFLOW_CSV)
         oid = client.get("/api/cs/orders?view=all&q=S2").json()[0]["id"]

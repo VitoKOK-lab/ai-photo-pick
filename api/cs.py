@@ -202,6 +202,26 @@ class OrderUpdate(BaseModel):
     notes: Optional[str] = None
     archived: Optional[bool] = None
     handler: Optional[str] = None       # 操作者（誰在動這張單）— 用於旅程記錄
+    fields: Optional[dict] = None       # 其餘總表欄位（會計確認、叫貨人、各交接點…），白名單過濾
+
+
+class StageAdvance(BaseModel):
+    by: Optional[str] = None            # 操作人
+    note: Optional[str] = None          # 順手記一句（可空）
+
+
+# 員工/主管可編輯的總表延伸欄位（白名單，防止亂寫欄位）
+EDITABLE_COLUMNS = {
+    "sales_rep", "gold_work_date", "accounting_by", "accounting_at",
+    "order_goods_by", "order_goods_at", "stone_source", "main_stone",
+    "main_stone_photo", "custom_style_photo", "weight_ct", "dimensions",
+    "material", "side_stone", "plating", "item_kind", "unit", "ring_size",
+    "chase_by", "factory", "model3d_img", "model3d_confirmed",
+    "arrival_date", "arrival_photo", "product_video",
+    "ship_from", "warranty_card", "ecard_link", "ship_to_tw_at", "ship_tracking",
+    "arrive_tw_at", "tw_receiver", "ship_to_customer_at", "ship_by",
+    "review_ecard", "order_closed", "aftersale", "aftersale_notes",
+}
 
 
 class EventCreate(BaseModel):
@@ -855,6 +875,14 @@ def update_order(order_id: int, body: OrderUpdate):
          next_action, due_date, is_risk, risk_type, notes, completed_at, archived, order_id),
     )
 
+    # 其餘總表延伸欄位（白名單過濾後寫入）
+    if body.fields:
+        extra = {k: v for k, v in body.fields.items() if k in EDITABLE_COLUMNS}
+        if extra:
+            sets = ", ".join(f"{k}=?" for k in extra)
+            conn.execute(f"UPDATE cs_orders SET {sets} WHERE id=?",
+                         (*extra.values(), order_id))
+
     # 旅程記錄：進度推進 / 標記異常（誰、何時）
     who = handler or owner or "員工"
     if track_status != row["track_status"]:
@@ -869,6 +897,54 @@ def update_order(order_id: int, body: OrderUpdate):
     o["timeline"] = _timeline(conn, order_id)
     conn.close()
     return o
+
+
+@router.post("/orders/{order_id}/advance")
+def advance_stage(order_id: int, body: StageAdvance):
+    """一鍵推進到下一關（員工版核心）：移到流程下一關、自動記時間+操作人，
+    並依新關卡自動蓋上對應交接點的時間/人（如出貨回台、出貨給客人）。"""
+    conn = _conn()
+    row = conn.execute("SELECT * FROM cs_orders WHERE id=?", (order_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Order not found")
+    who = (body.by or "").strip() or "員工"
+    stages = TRACK_STATUSES
+    cur = row["track_status"]
+    idx = stages.index(cur) if cur in stages else -1
+    if idx < 0 or idx >= len(stages) - 1:
+        conn.close()
+        raise HTTPException(400, "已在最後一關，無法再推進")
+    nxt = stages[idx + 1]
+
+    # 進入特定關卡時，自動蓋章「時間＋操作人」到對應交接欄位
+    extra_sql, extra_args = "", []
+    stamp = {
+        "出貨回台灣(在途)": ("ship_to_tw_at", "ship_by"),
+        "台灣已收待出貨":   ("arrive_tw_at", "tw_receiver"),
+        "已出貨給客人":     ("ship_to_customer_at", "ship_by"),
+    }.get(nxt)
+    if stamp:
+        extra_sql = f", {stamp[0]}=?, {stamp[1]}=?"
+        extra_args = [_now(), who]
+    completed_at = row["completed_at"]
+    if nxt == "已完成結案" and not completed_at:
+        completed_at = _today()
+
+    conn.execute(
+        f"UPDATE cs_orders SET track_status=?, last_handler=?, completed_at=?{extra_sql}, "
+        "updated_at=CURRENT_TIMESTAMP WHERE id=?",
+        (nxt, who, completed_at, *extra_args, order_id),
+    )
+    msg = f"完成「{cur}」→ 進入「{nxt}」"
+    if body.note:
+        msg += f"：{body.note}"
+    _log_event(conn, order_id, "staff", who, "stage", msg)
+    conn.commit()
+    out = _decorate(conn.execute("SELECT * FROM cs_orders WHERE id=?", (order_id,)).fetchone())
+    out["timeline"] = _timeline(conn, order_id)
+    conn.close()
+    return out
 
 
 @router.post("/orders/{order_id}/events", status_code=201)
