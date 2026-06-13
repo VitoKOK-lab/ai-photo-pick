@@ -550,6 +550,22 @@ class TestCSWorkflow:
         assert not any(i["order_number"] == "S2" and i["notify_due"] for i in wl["urgent"])
 
 
+class TestCSReport:
+    def test_boss_report_sections(self, client):
+        _import(client, WORKFLOW_CSV)
+        oid = client.get("/api/cs/orders?view=all&q=S1").json()[0]["id"]
+        client.post(f"/api/cs/orders/{oid}/advance", json={"by": "台灣-阿May"})
+        rpt = client.get("/api/cs/report").json()
+        # ① 員工處理量：阿May 有動作
+        assert any(s["actor"] == "台灣-阿May" and s["actions"] >= 1
+                   for s in rpt["staff"]["activity"])
+        # ② 關卡瓶頸：含目前在辦關卡
+        assert sum(rpt["shipping"]["bottleneck"].values()) >= 1
+        # ③ 客訴風險：三類數字都在
+        for k in ("overdue", "need_notify", "flagged", "aftersale"):
+            assert k in rpt["complaint_risk"]
+
+
 class TestCSHandover:
     def test_create_and_ack(self, client):
         r = client.post("/api/cs/handover", json={

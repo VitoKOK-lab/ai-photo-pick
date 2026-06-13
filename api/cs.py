@@ -652,6 +652,55 @@ def worklist(owner: Optional[str] = Query(None)):
             "counts": {"urgent": len(urgent), "today": len(today_list)}}
 
 
+@router.get("/report")
+def boss_report(days: int = Query(30)):
+    """老闆報表（目標③）：員工處理量/效率、出貨準時/關卡瓶頸、客訴風險。"""
+    conn = _conn()
+    since = _add_days(_today(), -days)
+
+    # ① 員工處理量/效率
+    staff_activity = [dict(r) for r in conn.execute(
+        "SELECT actor, COUNT(*) actions FROM cs_order_events "
+        "WHERE actor_type='staff' AND substr(occurred_at,1,10) >= ? "
+        "GROUP BY actor ORDER BY actions DESC", (since,)).fetchall()]
+    staff_load = [dict(r) for r in conn.execute(
+        "SELECT last_handler AS actor, COUNT(*) open_orders FROM cs_orders "
+        "WHERE archived=0 AND track_status!='已完成結案' "
+        "AND last_handler IS NOT NULL AND last_handler!='' "
+        "GROUP BY last_handler ORDER BY open_orders DESC").fetchall()]
+
+    # ② 出貨準時 / 關卡瓶頸
+    bottleneck = {r["track_status"]: r["n"] for r in conn.execute(
+        "SELECT track_status, COUNT(*) n FROM cs_orders "
+        "WHERE archived=0 AND track_status!='已完成結案' GROUP BY track_status").fetchall()}
+    d = conn.execute(
+        "SELECT COUNT(*) n, "
+        "SUM(CASE WHEN completed_at<=due_ship_date THEN 1 ELSE 0 END) ontime "
+        "FROM cs_orders WHERE completed_at IS NOT NULL AND due_ship_date IS NOT NULL").fetchone()
+    on_time_rate = round(100 * (d["ontime"] or 0) / d["n"]) if d["n"] else None
+
+    # ③ 客訴風險（即時快照）
+    active = conn.execute(
+        "SELECT * FROM cs_orders WHERE archived=0 AND track_status!='已完成結案'").fetchall()
+    today = _today()
+    risk_overdue = sum(1 for r in active if r["due_ship_date"] and r["due_ship_date"] < today)
+    risk_notify = sum(1 for r in active if _due_notify(r))
+    risk_flag = sum(1 for r in active if r["is_risk"])
+    risk_after = conn.execute(
+        "SELECT COUNT(*) FROM cs_orders WHERE archived=0 AND "
+        "((aftersale IS NOT NULL AND aftersale!='') OR return_status IS NOT NULL)").fetchone()[0]
+    conn.close()
+
+    return {
+        "period_days": days,
+        "staff": {"activity": staff_activity, "open_load": staff_load},
+        "shipping": {"on_time_rate": on_time_rate, "completed_with_due": d["n"],
+                     "bottleneck": bottleneck},
+        "complaint_risk": {"overdue": risk_overdue, "need_notify": risk_notify,
+                           "flagged": risk_flag, "aftersale": risk_after},
+    }
+
+
 @router.post("/orders/{order_id}/notify")
 def notify_customer_done(order_id: int, body: NotifyDone):
     """標記『已主動通知客人進度』（7/14/21 里程碑），記人+時間並寫進購物旅程。"""
