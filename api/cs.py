@@ -44,6 +44,8 @@ PRODUCT_TYPES = WORKFLOW.get("product_types", {"規格": {"sla_days": 14}})
 DEFAULT_PRODUCT_TYPE = WORKFLOW.get("default_product_type", "規格")
 # 規格與訂製共用同一套進度關卡（依內部追蹤總表）
 TRACK_STATUSES = WORKFLOW.get("stages", ["下單待入帳", "已完成結案"])
+# 每關「員工該做什麼」一句話提示（今日待辦用）
+STAGE_ACTIONS = WORKFLOW.get("stage_actions", {})
 # 客戶追蹤通知天數（從下單日起算）
 CUSTOMER_NOTIFY_DAYS = WORKFLOW.get("customer_notify_days", [7, 14, 21])
 # 已完成後幾天自動封存（退換貨期）
@@ -213,6 +215,11 @@ class ReturnAction(BaseModel):
     action: str                         # request 申請 / approve 核准 / reject 駁回 / cancel 取消
     by: Optional[str] = None            # 操作/簽核人
     reason: Optional[str] = None        # 退貨原因（申請時）
+
+
+class NotifyDone(BaseModel):
+    day: int                            # 7 / 14 / 21（客戶追蹤通知里程碑）
+    by: Optional[str] = None            # 通知的客服
 
 
 class HandoverCreate(BaseModel):
@@ -559,6 +566,94 @@ def import_log(limit: int = Query(20)):
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# ─── 今日待辦（員工端核心：知道現在該做什麼、不漏單→不被客訴）────────────────
+
+def _due_notify(row) -> Optional[int]:
+    """回傳『該通知客人』的最大里程碑天數（下單日+N<=今天 且尚未通知），無則 None。"""
+    od = (row["order_date"] or "")[:10]
+    try:
+        d0 = date.fromisoformat(od)
+    except ValueError:
+        return None
+    keys = row.keys()
+    # 取「已到期里程碑中的最大者」；它若已通知 → 視為已盡到通知義務（較早的不再追）
+    due_ns = [n for n in CUSTOMER_NOTIFY_DAYS if d0 + timedelta(days=n) <= date.today()]
+    if not due_ns:
+        return None
+    n = max(due_ns)
+    col = f"notify_{n}d_at"
+    done = row[col] if col in keys else None
+    return None if done else n
+
+
+@router.get("/worklist")
+def worklist(owner: Optional[str] = Query(None)):
+    """今日待辦：系統排好順序，每筆寫『為什麼 + 該做什麼』。
+    🔴 急(可能被客訴) 排最前：異常 / 出貨逾期 / 該通知客人(7/14/21)。
+    🟠 今天該推進：快到期或一般待推進。"""
+    conn = _conn()
+    where = ["archived=0", "track_status != '已完成結案'"]
+    args: list = []
+    if owner:
+        where.append("owner=?")
+        args.append(owner)
+    rows = conn.execute(
+        f"SELECT * FROM cs_orders WHERE {' AND '.join(where)} "
+        "ORDER BY (due_ship_date IS NULL) ASC, due_ship_date ASC", args
+    ).fetchall()
+    conn.close()
+
+    urgent, today_list = [], []
+    for r in rows:
+        o = _decorate(r)
+        nd = _due_notify(r)
+        bucket, reason = "today", None
+        if r["is_risk"]:
+            bucket, reason = "urgent", f"🔴 異常：{r['risk_type'] or '待處理'}"
+        elif o["ship_overdue"]:
+            bucket, reason = "urgent", f"出貨已逾期 {abs(o['days_left'])} 天"
+        elif nd:
+            bucket, reason = "urgent", f"下單滿 {nd} 天，該主動通知客人進度"
+        elif o["due_soon"]:
+            bucket, reason = "today", f"出貨期僅剩 {o['days_left']} 天"
+        item = {
+            "id": r["id"], "order_number": r["order_number"],
+            "customer_name": r["customer_name"], "product_type": r["product_type"],
+            "track_status": r["track_status"], "due_ship_date": r["due_ship_date"],
+            "days_left": o["days_left"], "is_risk": bool(r["is_risk"]),
+            "notify_due": nd, "reason": reason,
+            "action": STAGE_ACTIONS.get(r["track_status"], ""),
+            "last_handler": r["last_handler"],
+        }
+        (urgent if bucket == "urgent" else today_list).append(item)
+    return {"urgent": urgent, "today": today_list,
+            "counts": {"urgent": len(urgent), "today": len(today_list)}}
+
+
+@router.post("/orders/{order_id}/notify")
+def notify_customer_done(order_id: int, body: NotifyDone):
+    """標記『已主動通知客人進度』（7/14/21 里程碑），記人+時間並寫進購物旅程。"""
+    if body.day not in CUSTOMER_NOTIFY_DAYS:
+        raise HTTPException(400, f"day 需為 {CUSTOMER_NOTIFY_DAYS} 之一")
+    conn = _conn()
+    row = conn.execute("SELECT id FROM cs_orders WHERE id=?", (order_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Order not found")
+    who = (body.by or "").strip() or "員工"
+    conn.execute(
+        f"UPDATE cs_orders SET notify_{body.day}d_at=?, notify_{body.day}d_by=?, "
+        "last_handler=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+        (_now(), who, who, order_id),
+    )
+    _log_event(conn, order_id, "staff", who, "note", f"已主動通知客人進度（下單滿 {body.day} 天）")
+    conn.commit()
+    out = _decorate(conn.execute("SELECT * FROM cs_orders WHERE id=?", (order_id,)).fetchone())
+    out["timeline"] = _timeline(conn, order_id)
+    conn.close()
+    return out
 
 
 # ─── 看板 ────────────────────────────────────────────────────────────────────

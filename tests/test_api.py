@@ -491,6 +491,29 @@ class TestCSWorkflow:
         assert o["return_signed_at"]
         assert any(e["kind"] == "return" and "核准" in e["content"] for e in o["timeline"])
 
+    def test_worklist_prioritises_and_suggests_action(self, client):
+        _import(client, WORKFLOW_CSV)
+        wl = client.get("/api/cs/worklist").json()
+        # S2（下單 5/01）早已過 7/14/21 → 該主動通知客人 → 排進「急」
+        assert any(i["order_number"] == "S2" and i["notify_due"] == 21 for i in wl["urgent"])
+        assert any("通知客人" in (i["reason"] or "") for i in wl["urgent"])
+        # 每筆待辦都帶「該做什麼」一句話（目標②：員工知道做什麼）
+        allitems = wl["urgent"] + wl["today"]
+        assert all("action" in i for i in allitems)
+        s1 = next(i for i in allitems if i["order_number"] == "S1")
+        assert s1["action"] == "台灣會計確認入帳"
+
+    def test_notify_done_clears_from_urgent(self, client):
+        _import(client, WORKFLOW_CSV)
+        oid = client.get("/api/cs/orders?view=all&q=S2").json()[0]["id"]
+        r = client.post(f"/api/cs/orders/{oid}/notify", json={"day": 21, "by": "台灣-阿May"})
+        assert r.status_code == 200
+        o = client.get(f"/api/cs/orders/{oid}").json()
+        assert any("通知客人" in e["content"] for e in o["timeline"])
+        # 通知後不再因「該通知」而列入急件
+        wl = client.get("/api/cs/worklist").json()
+        assert not any(i["order_number"] == "S2" and i["notify_due"] for i in wl["urgent"])
+
 
 class TestCSHandover:
     def test_create_and_ack(self, client):
