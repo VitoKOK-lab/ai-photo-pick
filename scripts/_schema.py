@@ -187,6 +187,50 @@ CREATE TABLE IF NOT EXISTS cs_orders (
     risk_type TEXT,                      -- 異常類型
     notes TEXT,
     customer_id TEXT,                    -- SHOPLINE 顧客 ID（串客人歷史用）
+    -- ── 取自內部追蹤總表的真實欄位 ──
+    customer_source TEXT,               -- 客戶來源（官網/LINE/維修）〔SHOPLINE〕
+    sales_rep TEXT,                     -- 銷售業務〔SHOPLINE/員工〕
+    payment_method TEXT,               -- 付款方式/匯款後五碼〔SHOPLINE〕
+    gold_work_date TEXT,               -- 上訂金工日期〔員工〕
+    accounting_by TEXT,                -- 會計確認人〔員工〕
+    accounting_at TEXT,                -- 會計確認時間〔員工〕
+    notify_7d_at TEXT, notify_7d_by TEXT,   -- 客戶追蹤通知 7 天（下單日起算）
+    notify_14d_at TEXT, notify_14d_by TEXT, -- 14 天
+    notify_21d_at TEXT, notify_21d_by TEXT, -- 21 天
+    order_goods_by TEXT,               -- 叫貨登記人
+    order_goods_at TEXT,               -- 叫貨日期
+    stone_source TEXT,                 -- 裸石出處
+    main_stone TEXT,                   -- 主石
+    main_stone_photo TEXT,             -- 主石照片（連結）
+    custom_style_photo TEXT,           -- 訂製款式照片（連結）
+    weight_ct TEXT,                    -- 重量 ct
+    dimensions TEXT,                   -- 長*寬*厚
+    material TEXT,                     -- 材質
+    side_stone TEXT,                   -- 配鑽
+    plating TEXT,                      -- 鍍金
+    item_kind TEXT,                    -- 品項
+    unit TEXT,                         -- 單位
+    ring_size TEXT,                    -- 圍數
+    chase_by TEXT,                     -- 追單人
+    factory TEXT,                      -- 工廠
+    model3d_img TEXT,                  -- 3D圖（連結）
+    model3d_confirmed TEXT,            -- 3D圖確認完（日期/打勾）
+    arrival_date TEXT,                 -- 到貨日期
+    arrival_photo TEXT,                -- 到貨照片（連結）
+    product_video TEXT,                -- 成品視頻檔案連結
+    ship_from TEXT,                    -- 出貨地點
+    warranty_card TEXT,                -- 保卡/證書
+    ecard_link TEXT,                   -- 電子保卡連結
+    ship_to_tw_at TEXT,                -- 寄回台灣時間
+    ship_tracking TEXT,                -- 寄件編號/寄送方式
+    arrive_tw_at TEXT,                 -- 到台灣時間
+    tw_receiver TEXT,                  -- 台灣接貨點檢貨收貨人
+    ship_to_customer_at TEXT,          -- 出貨時間（給客人）
+    ship_by TEXT,                      -- 出貨/寄件人
+    review_ecard TEXT,                 -- 5星好評/電子保卡確定交貨
+    order_closed TEXT,                 -- 官網結案
+    aftersale TEXT,                    -- 退換貨/維修
+    aftersale_notes TEXT,              -- 售後進度備註
     return_status TEXT,                  -- 退貨簽核：待簽核/已核准/已駁回（NULL=無退貨）
     return_reason TEXT,                  -- 退貨原因
     return_signed_by TEXT,               -- 簽核人

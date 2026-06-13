@@ -42,6 +42,10 @@ RISK_TYPES = WORKFLOW.get("risk_types", ["其他"])
 RETURN_STATUSES = WORKFLOW.get("return_statuses", ["待簽核", "已核准", "已駁回"])
 PRODUCT_TYPES = WORKFLOW.get("product_types", {"規格": {"sla_days": 14}})
 DEFAULT_PRODUCT_TYPE = WORKFLOW.get("default_product_type", "規格")
+# 規格與訂製共用同一套進度關卡（依內部追蹤總表）
+TRACK_STATUSES = WORKFLOW.get("stages", ["下單待入帳", "已完成結案"])
+# 客戶追蹤通知天數（從下單日起算）
+CUSTOMER_NOTIFY_DAYS = WORKFLOW.get("customer_notify_days", [7, 14, 21])
 # 已完成後幾天自動封存（退換貨期）
 ARCHIVE_AFTER_COMPLETE_DAYS = int(WORKFLOW.get("archive_after_complete_days", 7))
 
@@ -50,16 +54,9 @@ def _type_cfg(product_type: str) -> dict:
     return PRODUCT_TYPES.get(product_type) or PRODUCT_TYPES.get(DEFAULT_PRODUCT_TYPE, {})
 
 
-def _stages_for(product_type: str) -> list:
-    return _type_cfg(product_type).get("stages", ["待處理", "已完成"])
-
-
-# 所有品項關卡的聯集（搜尋/驗證/相容用）
-TRACK_STATUSES = []
-for _pt in PRODUCT_TYPES:
-    for _s in _stages_for(_pt):
-        if _s not in TRACK_STATUSES:
-            TRACK_STATUSES.append(_s)
+def _stages_for(product_type: str = None) -> list:
+    """規格/訂製共用同一套關卡。"""
+    return TRACK_STATUSES
 
 
 def _detect_product_type(item_summary: str) -> str:
@@ -103,6 +100,23 @@ _EXTRA_COLUMNS = {
     "return_reason": "TEXT",
     "return_signed_by": "TEXT",
     "return_signed_at": "TEXT",
+    # 內部追蹤總表欄位
+    "customer_source": "TEXT", "sales_rep": "TEXT", "payment_method": "TEXT",
+    "gold_work_date": "TEXT", "accounting_by": "TEXT", "accounting_at": "TEXT",
+    "notify_7d_at": "TEXT", "notify_7d_by": "TEXT",
+    "notify_14d_at": "TEXT", "notify_14d_by": "TEXT",
+    "notify_21d_at": "TEXT", "notify_21d_by": "TEXT",
+    "order_goods_by": "TEXT", "order_goods_at": "TEXT",
+    "stone_source": "TEXT", "main_stone": "TEXT", "main_stone_photo": "TEXT",
+    "custom_style_photo": "TEXT", "weight_ct": "TEXT", "dimensions": "TEXT",
+    "material": "TEXT", "side_stone": "TEXT", "plating": "TEXT",
+    "item_kind": "TEXT", "unit": "TEXT", "ring_size": "TEXT",
+    "chase_by": "TEXT", "factory": "TEXT", "model3d_img": "TEXT", "model3d_confirmed": "TEXT",
+    "arrival_date": "TEXT", "arrival_photo": "TEXT", "product_video": "TEXT",
+    "ship_from": "TEXT", "warranty_card": "TEXT", "ecard_link": "TEXT",
+    "ship_to_tw_at": "TEXT", "ship_tracking": "TEXT", "arrive_tw_at": "TEXT", "tw_receiver": "TEXT",
+    "ship_to_customer_at": "TEXT", "ship_by": "TEXT", "review_ecard": "TEXT", "order_closed": "TEXT",
+    "aftersale": "TEXT", "aftersale_notes": "TEXT",
 }
 
 
@@ -292,18 +306,15 @@ def _resolve_columns(fieldnames: List[str], mapping: dict) -> dict:
 
 def _initial_track_status(payment: str, shipping: str, order_status: str,
                           product_type: str = None) -> str:
-    """依 SHOPLINE 狀態 + 品項，落到該品項流程的初始關卡。"""
-    stages = _stages_for(product_type or DEFAULT_PRODUCT_TYPE)
+    """依 SHOPLINE 狀態，落到內部流程的初始關卡。
+    新單一律從『下單待入帳』起（台灣會計確認入帳是第一關，員工手動推進）。
+    已出貨/完成的歷史單則落到對應後段，避免回到最前面。"""
     if _contains_any(order_status, ["已完成", "completed"]) or \
        _contains_any(shipping, _COMPLETED_KEYWORDS):
-        return "已完成"
+        return "已完成結案"
     if _contains_any(shipping, ["已發貨", "發貨中", "已出貨", "已寄出", "配送中", "運送中", "shipped"]):
-        return "已寄台灣(在途)" if "已寄台灣(在途)" in stages else stages[-1]
-    if _contains_any(shipping, ["備貨中", "處理中", "理貨"]) or _contains_any(payment, _PAID_KEYWORDS):
-        initial = _type_cfg(product_type or DEFAULT_PRODUCT_TYPE).get("initial_paid")
-        if initial in stages:
-            return initial
-    return "待處理"
+        return "出貨回台灣(在途)"
+    return TRACK_STATUSES[0] if TRACK_STATUSES else "下單待入帳"
 
 
 def _clean_order_no(value: str) -> str:
@@ -352,6 +363,9 @@ def _group_orders(rows: List[dict], cols: dict, datemode: int) -> List[dict]:
                 "customer_name": cv(row, "customer_name"),
                 "phone": cv(row, "phone"),
                 "customer_id": cv(row, "customer_id"),
+                "customer_source": cv(row, "customer_source"),
+                "sales_rep": cv(row, "sales_rep"),
+                "payment_method": cv(row, "payment_method"),
                 "order_date": cv(row, "order_date", is_date=True),
                 "total": cv(row, "total"),
                 "sl_order_status": cv(row, "sl_order_status"),
@@ -450,12 +464,15 @@ async def import_report(file: UploadFile = File(...), source: str = Query("manua
                            "SHOPLINE 顯示已完成（送達），退換貨期起算", _now())
             conn.execute(
                 """UPDATE cs_orders SET
-                       customer_name=?, phone=?, customer_id=?, order_date=?, total=?, item_summary=?,
+                       customer_name=?, phone=?, customer_id=?,
+                       customer_source=?, sales_rep=?, payment_method=?,
+                       order_date=?, total=?, item_summary=?,
                        sl_order_status=?, sl_payment_status=?, sl_shipping_status=?,
                        shipped_at=?, completed_at=?, raw_json=?, updated_at=CURRENT_TIMESTAMP
                    WHERE order_number=?""",
-                (o["customer_name"], o["phone"], o["customer_id"], o["order_date"],
-                 o["total"], o["item_summary"],
+                (o["customer_name"], o["phone"], o["customer_id"],
+                 o.get("customer_source"), o.get("sales_rep"), o.get("payment_method"),
+                 o["order_date"], o["total"], o["item_summary"],
                  order_status, payment, shipping, shipped_at, completed_at,
                  json.dumps(o["_raw_first"], ensure_ascii=False, default=str), order_number),
             )
@@ -470,12 +487,15 @@ async def import_report(file: UploadFile = File(...), source: str = Query("manua
             due_ship = _add_days(o["order_date"], sla)
             cur = conn.execute(
                 """INSERT INTO cs_orders
-                       (order_number, customer_name, phone, customer_id, order_date, total, item_summary,
+                       (order_number, customer_name, phone, customer_id,
+                        customer_source, sales_rep, payment_method,
+                        order_date, total, item_summary,
                         sl_order_status, sl_payment_status, sl_shipping_status,
                         product_type, sla_days, due_ship_date,
                         track_status, shipped_at, completed_at, archived, raw_json)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (order_number, o["customer_name"], o["phone"], o["customer_id"],
+                 o.get("customer_source"), o.get("sales_rep"), o.get("payment_method"),
                  o["order_date"], o["total"], o["item_summary"],
                  order_status, payment, shipping,
                  ptype, sla, due_ship,
@@ -554,7 +574,7 @@ def _days_left(due: str) -> Optional[int]:
 def _decorate(row: dict) -> dict:
     """加上前端要用的計算旗標：出貨期限急迫度 + 自訂預計日逾期。"""
     o = dict(row)
-    done = o.get("track_status") == "已完成"
+    done = o.get("track_status") == "已完成結案"
     dl = None if done else _days_left(o.get("due_ship_date"))
     o["days_left"] = dl                       # 距出貨期限天數（None=無法計算/已完成）
     o["ship_overdue"] = bool(dl is not None and dl < 0)   # 出貨期限已逾期
@@ -586,7 +606,7 @@ def list_orders(
     elif view == "overdue":
         # 出貨期限或自訂預計日已逾期，且尚未完成
         where.append(
-            "track_status != '已完成' AND ("
+            "track_status != '已完成結案' AND ("
             "(due_ship_date IS NOT NULL AND due_ship_date < ?) OR "
             "(due_date IS NOT NULL AND due_date < ?))"
         )
@@ -594,7 +614,7 @@ def list_orders(
     elif view == "duesoon":
         # 快到期（含逾期）且尚未完成
         cutoff = _add_days(_today(), DUE_SOON_DAYS)
-        where.append("due_ship_date IS NOT NULL AND due_ship_date <= ? AND track_status != '已完成'")
+        where.append("due_ship_date IS NOT NULL AND due_ship_date <= ? AND track_status != '已完成結案'")
         args.append(cutoff)
 
     if status:
@@ -613,7 +633,7 @@ def list_orders(
         sql += " WHERE " + " AND ".join(where)
     # 異常最前 → 再依出貨期限由近到遠（急的排上面），未完成優先
     sql += (" ORDER BY is_risk DESC,"
-            " (track_status='已完成') ASC,"
+            " (track_status='已完成結案') ASC,"
             " (due_ship_date IS NULL) ASC, due_ship_date ASC, updated_at DESC")
 
     rows = conn.execute(sql, args).fetchall()
@@ -635,11 +655,11 @@ def dashboard():
     risk = count("SELECT COUNT(*) FROM cs_orders WHERE archived=0 AND is_risk=1")
     overdue = count(
         "SELECT COUNT(*) FROM cs_orders WHERE archived=0 AND due_ship_date IS NOT NULL "
-        "AND due_ship_date < ? AND track_status != '已完成'", (today,)
+        "AND due_ship_date < ? AND track_status != '已完成結案'", (today,)
     )
     due_soon = count(
         "SELECT COUNT(*) FROM cs_orders WHERE archived=0 AND due_ship_date IS NOT NULL "
-        "AND due_ship_date >= ? AND due_ship_date <= ? AND track_status != '已完成'", (today, soon)
+        "AND due_ship_date >= ? AND due_ship_date <= ? AND track_status != '已完成結案'", (today, soon)
     )
     by_status = {
         r["track_status"]: r["n"]
@@ -725,7 +745,7 @@ def update_order(order_id: int, body: OrderUpdate):
 
     # 完成時補記完成日（退換貨期起算）
     completed_at = row["completed_at"]
-    if track_status == "已完成" and not completed_at:
+    if track_status == "已完成結案" and not completed_at:
         completed_at = _today()
 
     last_handler = handler or row["last_handler"]
@@ -877,10 +897,11 @@ def meta():
     """前端下拉選單與外部連結設定用。"""
     return {
         "track_statuses": TRACK_STATUSES,
-        "stages_by_type": {k: _stages_for(k) for k in PRODUCT_TYPES},
+        "stages": TRACK_STATUSES,
         "risk_types": RISK_TYPES,
         "return_statuses": RETURN_STATUSES,
         "product_types": {k: _sla_days(k) for k in PRODUCT_TYPES},
+        "customer_notify_days": CUSTOMER_NOTIFY_DAYS,
         "archive_after_complete_days": ARCHIVE_AFTER_COMPLETE_DAYS,
         "due_soon_days": DUE_SOON_DAYS,
         "shopline_order_url": SHOPLINE_ORDER_URL,

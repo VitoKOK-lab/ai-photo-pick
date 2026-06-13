@@ -301,9 +301,11 @@ class TestCSImport:
         _import(client)
         rows = client.get("/api/cs/orders?view=all").json()
         by_no = {o["order_number"]: o for o in rows}
-        assert by_no["20260601002"]["track_status"] == "待處理"          # 未付款
-        assert by_no["20260601001"]["track_status"] == "大陸-備貨/拍照"   # 已付款未出貨(規格)
-        # 只追未完成：一進來就已出貨的單直接封存、不佔看板
+        # 新單一律從流程第一關「下單待入帳」起（台灣會計確認入帳）
+        assert by_no["20260601002"]["track_status"] == "下單待入帳"
+        assert by_no["20260601001"]["track_status"] == "下單待入帳"
+        # 只追未完成：一進來就已出貨的單落到後段、且直接封存、不佔看板
+        assert by_no["20260601003"]["track_status"] == "出貨回台灣(在途)"
         assert by_no["20260601003"]["shipped_at"] is not None
         assert by_no["20260601003"]["archived"] == 1
         active_nos = [o["order_number"] for o in client.get("/api/cs/orders?view=active").json()]
@@ -371,7 +373,7 @@ class TestCSBoard:
         oid = client.get("/api/cs/orders?view=active").json()[0]["id"]
         r = client.put(f"/api/cs/orders/{oid}", json={
             "is_risk": True, "risk_type": "欠石", "owner": "深圳-阿明",
-            "next_action": "聯絡客人告知延期", "track_status": "台灣-品管出貨",
+            "next_action": "聯絡客人告知延期", "track_status": "台灣已收待出貨",
         })
         assert r.status_code == 200
         assert r.json()["is_risk"] == 1
@@ -432,10 +434,10 @@ class TestCSWorkflow:
         assert any(k == "system" and "下單" in c for k, c in kinds)
         # 推進進度 → 自動記錄誰、做了什麼
         client.put(f"/api/cs/orders/{oid}", json={
-            "track_status": "大陸-打包出貨", "handler": "深圳-阿明"})
+            "track_status": "已叫貨追單中", "handler": "深圳-阿明"})
         o = client.get(f"/api/cs/orders/{oid}").json()
         assert o["last_handler"] == "深圳-阿明"
-        assert any(e["kind"] == "stage" and "大陸-打包出貨" in e["content"]
+        assert any(e["kind"] == "stage" and "已叫貨追單中" in e["content"]
                    and e["actor"] == "深圳-阿明" for e in o["timeline"])
 
     def test_add_customer_message(self, client):
@@ -461,12 +463,17 @@ class TestCSWorkflow:
         nums = [o["order_number"] for o in active]
         assert nums.index("S2") < nums.index("S1")
 
-    def test_stages_differ_by_product_type(self, client):
+    def test_stages_single_flow_from_real_sheet(self, client):
         meta = client.get("/api/cs/meta").json()
-        sbt = meta["stages_by_type"]
-        # 訂製品才有「成品照待客人確認」這道寄客人確認的關卡
-        assert "成品照待客人確認" in sbt["訂製"]
-        assert "成品照待客人確認" not in sbt["規格"]
+        stages = meta["stages"]
+        # 規格與訂製共用同一套流程（依內部追蹤總表）
+        assert "stages_by_type" not in meta
+        assert stages[0] == "下單待入帳"
+        assert stages[-1] == "已完成結案"
+        for s in ("待叫貨", "已叫貨追單中", "出貨回台灣(在途)", "已出貨給客人"):
+            assert s in stages
+        # 客戶追蹤通知天數（從下單日起算）
+        assert meta["customer_notify_days"] == [7, 14, 21]
 
     def test_return_signoff_flow(self, client):
         _import(client, WORKFLOW_CSV)
