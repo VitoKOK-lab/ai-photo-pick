@@ -534,7 +534,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
           <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
         </div>
         <div className="det-scroll">
-          <img src={photo.full_url} alt="" style={{width:'100%',maxHeight:220,objectFit:'contain',background:'#f9f9f9'}} />
+          <img src={photo.thumb_url} alt="" style={{width:'100%',maxHeight:220,objectFit:'contain',background:'#f9f9f9'}} />
           <div className="edit-panel">
             <div className="edit-row">
               <div className="edit-label">品項</div>

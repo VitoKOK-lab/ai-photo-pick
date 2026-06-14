@@ -33,8 +33,8 @@ def _to_dict(row) -> dict:
     return {
         "id":         d["id"],
         "filename":   d["filename"],
-        "micro_url":  url,
-        "thumb_url":  url,
+        "micro_url":  f"/api/thumb/{d['id']}",
+        "thumb_url":  f"/api/thumb/{d['id']}",
         "full_url":   url,
         "category":   d.get("category"),
         "style":      d.get("style"),
