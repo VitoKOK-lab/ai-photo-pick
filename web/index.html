@@ -150,6 +150,7 @@ button { font-family: inherit; cursor: pointer; }
 .dd-item:last-child { border-bottom: none; }
 .dd-item:active, .dd-item:hover { background: var(--s3); }
 .dd-item.on { color: var(--accent); font-weight: 600; }
+.dd-item.dd-zero { color: var(--text3); cursor: default; pointer-events: none; }
 .dd-clr { color: var(--text3); font-size: 12px; }
 .dd-cnt { font-size: 12px; color: var(--text3); font-weight: 400; flex-shrink: 0; }
 
@@ -361,13 +362,17 @@ function FilterDropdown({ field, cur, counts, onPick }) {
   const panel = open && ReactDOM.createPortal(
     <div ref={panelRef} className="dd-panel" style={panelStyle}>
       {cur && <div className="dd-item dd-clr" onClick={() => { onPick(null); setOpen(false); }}>清除（全部）</div>}
-      {cfg.values.map(v => (
-        <div key={v} className={'dd-item' + (cur === v ? ' on' : '')}
-          onClick={() => { onPick(v === cur ? null : v); setOpen(false); }}>
-          <span>{v}{cur === v ? ' ✓' : ''}</span>
-          {counts?.[v] != null && <span className="dd-cnt">{counts[v]}</span>}
-        </div>
-      ))}
+      {cfg.values.map(v => {
+        const cnt = counts?.[v] ?? null;
+        const zero = cnt !== null && cnt === 0;
+        return (
+          <div key={v} className={'dd-item' + (cur === v ? ' on' : '') + (zero ? ' dd-zero' : '')}
+            onClick={() => { if (!zero) { onPick(v === cur ? null : v); setOpen(false); } }}>
+            <span>{v}{cur === v ? ' ✓' : ''}</span>
+            {cnt != null && <span className="dd-cnt">{cnt}</span>}
+          </div>
+        );
+      })}
     </div>,
     document.body
   );
