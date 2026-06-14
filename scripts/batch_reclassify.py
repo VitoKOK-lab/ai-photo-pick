@@ -47,17 +47,25 @@ def derive_metal_color(material):
 
 
 def open_rgb(img_path):
-    """開啟圖片並轉成 RGB，CMYK / 其他格式用 paste 繞過 numpy 依賴"""
+    """Load image as PIL RGB.
+    Uses torchvision.io as primary decoder (avoids PIL's numpy dependency for CMYK/YCbCr JPEGs).
+    Falls back to PIL paste if torchvision also fails.
+    """
+    import torchvision.io as tvio
+    from torchvision.transforms.functional import to_pil_image
+    try:
+        tensor = tvio.read_image(str(img_path), tvio.ImageReadMode.RGB)
+        return to_pil_image(tensor)
+    except Exception:
+        pass
+    # PIL fallback
     img = Image.open(img_path)
     if img.mode == "RGB":
+        img.load()
         return img
-    try:
-        return img.convert("RGB")
-    except Exception:
-        # CMYK 或其他格式：paste 到白底 RGB 畫布（顏色稍有偏差但夠用）
-        rgb = Image.new("RGB", img.size, (255, 255, 255))
-        rgb.paste(img)
-        return rgb
+    rgb = Image.new("RGB", img.size, (255, 255, 255))
+    rgb.paste(img)
+    return rgb
 
 
 def classify_batch_one(img_path, model, preprocess, tokenizer, logit_scale, prompts_map, device):
