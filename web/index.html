@@ -473,6 +473,7 @@ function PinchImage({ src, className }) {
     }
 
     function onStart(e) {
+      if (e.touches.length >= 2) e.preventDefault();
       const s = st.current;
       if (e.touches.length === 2) {
         s.d0  = dist(e.touches);
@@ -514,7 +515,7 @@ function PinchImage({ src, className }) {
       if (s.scale < 1.05) { s.scale=1; s.tx=0; s.ty=0; apply(true); }
     }
 
-    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchstart', onStart, { passive: false });
     el.addEventListener('touchmove',  onMove,  { passive: false });
     el.addEventListener('touchend',   onEnd,   { passive: true });
     return () => {
@@ -525,7 +526,7 @@ function PinchImage({ src, className }) {
   }, [src]);
 
   return (
-    <div ref={containerRef} className={className} style={{overflow:'hidden'}}>
+    <div ref={containerRef} className={className} style={{overflow:'hidden', touchAction:'none'}}>
       <img ref={imgRef} src={src} alt="" loading="lazy"
         style={{width:'100%',height:'100%',objectFit:'cover',display:'block',
                 transformOrigin:'center',userSelect:'none',WebkitUserSelect:'none',
