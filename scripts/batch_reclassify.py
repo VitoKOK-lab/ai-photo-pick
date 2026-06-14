@@ -46,9 +46,23 @@ def derive_metal_color(material):
     return None
 
 
+def open_rgb(img_path):
+    """開啟圖片並轉成 RGB，CMYK / 其他格式用 paste 繞過 numpy 依賴"""
+    img = Image.open(img_path)
+    if img.mode == "RGB":
+        return img
+    try:
+        return img.convert("RGB")
+    except Exception:
+        # CMYK 或其他格式：paste 到白底 RGB 畫布（顏色稍有偏差但夠用）
+        rgb = Image.new("RGB", img.size, (255, 255, 255))
+        rgb.paste(img)
+        return rgb
+
+
 def classify_batch_one(img_path, model, preprocess, tokenizer, logit_scale, prompts_map, device):
     """直接回傳 top-1 結果（不過濾未定），信心度低就標為未定"""
-    image = Image.open(img_path).convert("RGB")
+    image = open_rgb(img_path)
     image_input = preprocess(image).unsqueeze(0).to(device)
     with torch.no_grad():
         img_feat = model.encode_image(image_input)
