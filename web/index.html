@@ -622,7 +622,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
             <div className="edit-row">
               <div className="edit-label">品項</div>
               <div className="edit-chips">
-                {CFG.category.values.map(v => (
+                {CATS.map(v => (
                   <button key={v} className={'edit-chip' + (editCat === v ? ' on' : '')} onClick={() => setEditCat(v)}>{v}</button>
                 ))}
               </div>
