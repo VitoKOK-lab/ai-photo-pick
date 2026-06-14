@@ -1259,6 +1259,11 @@ function App() {
       <div className="content">
         {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} role={role} />}
         {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
+        {tab === 'quote'     && isAdmin && (
+          <div style={{position:'fixed',inset:0,paddingTop:'var(--nav-h)',paddingBottom:'var(--tab-h)',background:'#fafaf7',zIndex:10}}>
+            <iframe src="/estimator.html" style={{width:'100%',height:'100%',border:'none'}} title="估價系統" />
+          </div>
+        )}
       </div>
       {!splash && isAdmin && <UploadBtn />}
       <nav className="tab-bar">
@@ -1267,8 +1272,12 @@ function App() {
         </button>
         <button className={'tab-btn' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
           <IcoHeart fill={tab === 'favorites'} /><span>收藏</span>
-          {favs.length > 0 && <span className="tab-badge">{favs.length}</span>}
         </button>
+        {isAdmin && (
+          <button className={'tab-btn' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>
+            <span style={{fontSize:18}}>💎</span><span>估價</span>
+          </button>
+        )}
       </nav>
     </React.Fragment>
   );

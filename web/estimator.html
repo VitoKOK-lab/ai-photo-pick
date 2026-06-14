@@ -1,0 +1,3019 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>珠寶估價系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #FAFAF7;
+    --bg-strong: #FFFFFF;
+    --surface: #FFFFFF;
+    --ink: #1A1A1A;
+    --ink-soft: #525252;
+    --ink-mute: #8B8B85;
+    --border: #E5E5E2;
+    --gold: #C9A84C;
+    --gold-soft: #FAF4E1;
+    --gold-deep: #8E7833;
+    --coral: #E8547A;
+    --coral-soft: #FCE7EE;
+    --tiffany: #81D8D0;
+    --tiffany-soft: #E5F6F4;
+    --rose: #BE185D;
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+
+    --text-xs: 13px;
+    --text-sm: 14px;
+    --text-base: 15px;
+    --text-md: 17px;
+    --text-lg: 20px;
+    --text-xl: 24px;
+    --text-2xl: 30px;
+    --text-3xl: 38px;
+
+    --r-sm: 2px;
+    --r-md: 4px;
+
+    --t-fast: 150ms;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html {
+    font-size: 16px;
+    overflow-x: hidden;
+  }
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: var(--text-base);
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+  *, *::before, *::after {
+    box-sizing: border-box;
+    max-width: 100%;
+  }
+
+  .serif { font-family: 'Cormorant', 'Noto Sans TC', serif; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .eyebrow {
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  .section-title {
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-lg);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+
+  /* Top bar */
+  .top-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .top-bar-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 14px var(--space-5);
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+
+  .brand-mark {
+    font-family: 'Cormorant', 'Noto Serif TC', serif;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--ink);
+  }
+
+  .brand-sub {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--gold-deep);
+    text-transform: uppercase;
+  }
+
+  .tabs {
+    display: flex;
+    gap: var(--space-5);
+    margin-left: var(--space-4);
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    padding: 6px 0;
+    font-family: inherit;
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    cursor: pointer;
+    position: relative;
+    transition: color var(--t-fast);
+  }
+
+  .tab-btn.active { color: var(--coral); }
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -15px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--coral);
+    animation: growIn 0.3s ease-out;
+    transform-origin: center;
+  }
+  .tab-btn:hover { color: var(--ink); }
+
+  .top-bar-right {
+    margin-left: auto;
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-xs);
+    letter-spacing: 2px;
+    color: var(--ink-mute);
+    text-transform: uppercase;
+  }
+
+  /* Layout */
+  .estimate-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    gap: var(--space-5);
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--space-5);
+  }
+
+  .inputs-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+  }
+
+  .preview-col {
+    position: sticky;
+    top: 80px;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  /* Sections */
+  .section {
+    padding: var(--space-5);
+    border-bottom: 1px solid var(--border);
+    animation: sectionFadeUp 0.5s ease-out;
+    animation-fill-mode: both;
+  }
+  .section:last-child { border-bottom: none; }
+
+  /* Section staggered fade-up */
+  @keyframes sectionFadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .section:nth-child(1) { animation-delay: 0s; }
+  .section:nth-child(2) { animation-delay: 0.06s; }
+  .section:nth-child(3) { animation-delay: 0.12s; }
+  .section:nth-child(4) { animation-delay: 0.18s; }
+  .section:nth-child(5) { animation-delay: 0.24s; }
+
+  /* Section eyebrow underline grows on appear */
+  @keyframes growIn {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+
+  .section-eyebrow {
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .section-eyebrow::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-eyebrow.coral { color: var(--coral); }
+  .section-eyebrow.tiffany { color: #5BBDB3; }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+  .field-grid.cols-1 { grid-template-columns: 1fr; }
+  .field-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .field-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .field-label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    font-family: 'Cormorant', serif;
+  }
+  .field-label .req { color: var(--gold); font-weight: 700; }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    width: 100%;
+    font-family: inherit;
+    font-size: var(--text-base);
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 8px 11px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  }
+
+  textarea { resize: vertical; min-height: 60px; }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--coral);
+    box-shadow: 0 0 0 3px rgba(232,84,122,0.12);
+  }
+
+  /* Subtle "just filled" pulse */
+  @keyframes fieldFilled {
+    0% { background: var(--surface); }
+    50% { background: rgba(129,216,208,0.12); }
+    100% { background: var(--surface); }
+  }
+  .field-filled-flash {
+    animation: fieldFilled 0.5s ease-out;
+  }
+
+  input[readonly] { background: var(--bg); color: var(--ink-soft); }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='%23525252' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) 0;
+  }
+  .toggle-row label {
+    display: flex; align-items: center; gap: var(--space-2);
+    font-size: var(--text-sm); font-weight: 500; cursor: pointer;
+  }
+  .toggle-row input[type="checkbox"] {
+    width: 16px; height: 16px; accent-color: var(--coral); cursor: pointer;
+  }
+
+  .hidden { display: none !important; }
+
+  /* Slide-down reveal for conditional fields */
+  @keyframes slideDownReveal {
+    from { opacity: 0; transform: translateY(-6px); max-height: 0; }
+    to { opacity: 1; transform: translateY(0); max-height: 400px; }
+  }
+  .mounting-options:not(.hidden),
+  .invest-only:not(.hidden),
+  #size_custom_field {
+    animation: slideDownReveal 0.3s ease-out;
+  }
+
+  /* Results section subtle reveal */
+  @keyframes resultReveal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .result-section, #results_body > * {
+    animation: resultReveal 0.4s ease-out;
+  }
+
+  /* Quote card update flash */
+  @keyframes quoteCardUpdate {
+    0% { box-shadow: 0 8px 32px rgba(0,0,0,0.04); }
+    50% { box-shadow: 0 8px 32px rgba(232,84,122,0.18); }
+    100% { box-shadow: 0 8px 32px rgba(0,0,0,0.04); }
+  }
+  .quote-card-updated {
+    animation: quoteCardUpdate 0.6s ease-out;
+  }
+
+  /* Buttons (general) — subtle hover lift */
+  button {
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Result */
+  .result-section { background: linear-gradient(180deg, var(--coral-soft) 0%, rgba(252,231,238,0.3) 100%); }
+
+  .tier-prices {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  .tier-price {
+    background: var(--surface);
+    padding: var(--space-3);
+    border-radius: var(--r-sm);
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .tier-price.suggested {
+    border-color: var(--coral);
+    background: var(--coral-soft);
+    border-width: 1.5px;
+  }
+
+  .tier-price-label {
+    font-family: 'Cormorant', serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 4px;
+  }
+  .tier-price.suggested .tier-price-label { color: var(--coral); font-weight: 600; }
+
+  .tier-price-value {
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-md);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    letter-spacing: 0.3px;
+  }
+
+  .range-bar-wrap {
+    position: relative;
+    height: 1px;
+    background: var(--border);
+    margin: var(--space-4) 4px var(--space-4);
+  }
+  .range-bar {
+    position: absolute;
+    top: -1px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--coral), transparent);
+  }
+  .range-mark {
+    position: absolute;
+    top: -6px;
+    width: 2px;
+    height: 13px;
+    background: var(--ink);
+  }
+  .range-mark.suggested {
+    background: var(--coral);
+    height: 15px;
+    top: -7px;
+    width: 3px;
+  }
+
+  /* Final price row (compact) */
+  .final-input-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--border);
+  }
+
+  .final-display {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .final-display-left {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .final-display-value {
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    color: var(--coral);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+  }
+
+  /* Slider */
+  .final-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, var(--border) 0%, var(--coral) 50%, var(--border) 100%);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    margin: 4px 0;
+    padding: 0;
+    border: none;
+  }
+  .final-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    background: var(--coral);
+    border-radius: 50%;
+    cursor: grab;
+    border: 3px solid var(--surface);
+    box-shadow: 0 2px 8px rgba(232,84,122,0.4);
+    transition: transform 0.1s;
+  }
+  .final-slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.15);
+  }
+  .final-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    background: var(--coral);
+    border-radius: 50%;
+    cursor: grab;
+    border: 3px solid var(--surface);
+    box-shadow: 0 2px 8px rgba(232,84,122,0.4);
+  }
+
+  .slider-bounds {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--text-xs);
+    color: var(--ink-mute);
+    font-variant-numeric: tabular-nums;
+    padding: 0 2px;
+    letter-spacing: 0.5px;
+  }
+  .slider-bounds .mid {
+    color: var(--coral);
+    font-weight: 500;
+  }
+
+  .final-label {
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .final-prefix {
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-md);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .final-input {
+    width: 140px;
+    border: 1px solid var(--coral) !important;
+    background: var(--surface);
+    font-family: 'Cormorant', serif !important;
+    font-size: var(--text-xl) !important;
+    font-weight: 600;
+    color: var(--ink);
+    text-align: right;
+    padding: 5px 10px !important;
+    font-variant-numeric: tabular-nums;
+  }
+  .final-input:focus {
+    box-shadow: 0 0 0 2px var(--coral) !important;
+    border-color: var(--coral) !important;
+  }
+
+  .chip-row {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 5px 11px;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    font-family: inherit;
+    transition: all 0.2s ease;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip:hover {
+    border-color: var(--coral);
+    color: var(--coral);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(232,84,122,0.12);
+  }
+  .chip:active { transform: translateY(0); }
+
+  /* Quote card — clean modern */
+  .quote-card-shell {
+    text-align: center;
+  }
+
+  .quote-card-shell .preview-label {
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--ink-mute);
+    margin-bottom: var(--space-3);
+  }
+
+  .quote-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 36px 30px;
+    max-width: 380px;
+    margin: 0 auto;
+    width: 100%;
+    text-align: left;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.04);
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+
+  .qc-head {
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .qc-head::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 40px;
+    height: 2px;
+    background: var(--coral);
+  }
+
+  .qc-title {
+    font-family: 'Cormorant', 'Noto Serif TC', serif;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 6px;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+
+  .qc-meta {
+    font-size: 12px;
+    color: var(--ink-mute);
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .qc-section {
+    margin-bottom: 22px;
+  }
+
+  .qc-label {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .qc-name {
+    font-family: 'Cormorant', 'Noto Serif TC', serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: 0;
+    line-height: 1.3;
+  }
+
+  .qd-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .qd-row {
+    display: flex;
+    padding: 7px 0;
+    font-size: 14px;
+    border-bottom: 1px dotted #ECECE8;
+  }
+  .qd-row:last-child { border-bottom: none; }
+
+  .qd-k {
+    width: 56px;
+    color: var(--ink-mute);
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .qd-v {
+    flex: 1;
+    color: var(--ink);
+  }
+
+  .qc-notes {
+    background: var(--tiffany-soft);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    border-left: 2px solid var(--tiffany);
+    border-radius: 2px;
+  }
+
+  .qc-price {
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid var(--ink);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .qc-price-label {
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 500;
+    letter-spacing: 1px;
+  }
+
+  .qc-price-value {
+    font-family: 'Cormorant', serif;
+    font-size: 36px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .qc-currency {
+    font-family: 'Cormorant', serif;
+    font-size: 17px;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-right: 5px;
+  }
+
+  .qc-foot {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-top: 18px;
+    text-align: center;
+    letter-spacing: 0.3px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: var(--space-7) var(--space-5);
+    text-align: center;
+    color: var(--ink-mute);
+  }
+  .empty-state .icon {
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-3xl);
+    color: var(--gold);
+    margin-bottom: var(--space-3);
+  }
+
+  /* Tier badge */
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Cormorant', serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+  .tier-badge.commercial {
+    background: transparent;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+  }
+  .tier-badge.invest {
+    background: var(--gold);
+    color: white;
+  }
+
+  /* Warning */
+  .warning {
+    padding: var(--space-3);
+    background: var(--gold-soft);
+    border-left: 2px solid var(--gold);
+    font-size: var(--text-xs);
+    color: var(--gold-deep);
+    margin-bottom: var(--space-3);
+    line-height: 1.6;
+  }
+  .warning strong { font-weight: 600; }
+
+  /* Calc detail */
+  details.calc-detail {
+    margin-top: var(--space-3);
+    font-size: var(--text-xs);
+  }
+  details.calc-detail summary {
+    cursor: pointer;
+    color: var(--ink-mute);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-size: 12px;
+    padding: 4px 0;
+    font-family: 'Cormorant', serif;
+    list-style: none;
+  }
+  details.calc-detail summary::before {
+    content: '+ ';
+    color: var(--gold);
+  }
+  details.calc-detail[open] summary::before {
+    content: '− ';
+  }
+  details.calc-detail summary:hover { color: var(--ink); }
+  details.calc-detail .calc-detail-inner {
+    padding: var(--space-3);
+    background: var(--bg);
+    margin-top: var(--space-2);
+    border-radius: var(--r-sm);
+  }
+  .calc-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: var(--text-xs);
+    color: var(--ink-soft);
+  }
+  .calc-row .v {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  /* Footer */
+  footer {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: var(--space-5);
+    text-align: center;
+    font-size: var(--text-xs);
+    color: var(--ink-mute);
+    letter-spacing: 1px;
+    line-height: 1.8;
+  }
+
+  /* Settings */
+  .settings-layout {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--space-5);
+  }
+
+  .settings-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    margin-bottom: var(--space-4);
+  }
+
+  .settings-status {
+    flex: 1;
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-xs);
+    color: var(--ink-soft);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .settings-status.dirty { color: var(--coral); font-weight: 600; }
+
+  .btn {
+    background: var(--coral);
+    color: var(--surface);
+    border: 1px solid var(--coral);
+    padding: 7px 14px;
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: var(--r-sm);
+    transition: all var(--t-fast);
+  }
+  .btn:hover {
+    background: var(--surface);
+    color: var(--coral);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(232,84,122,0.2);
+  }
+  .btn:active { transform: translateY(0); }
+  .btn.btn-ghost {
+    background: var(--surface);
+    color: var(--ink);
+    border-color: var(--border);
+  }
+  .btn.btn-ghost:hover {
+    background: var(--ink);
+    color: var(--surface);
+    border-color: var(--ink);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .btn.btn-ghost:active { transform: translateY(0); }
+
+  .settings-group {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    margin-bottom: var(--space-3);
+  }
+  .settings-group > summary {
+    padding: var(--space-4);
+    cursor: pointer;
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-md);
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--ink);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .settings-group > summary::after {
+    content: '+';
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-xl);
+    color: var(--gold);
+  }
+  .settings-group[open] > summary::after { content: '−'; }
+
+  .group-meta {
+    display: block;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ink-mute);
+    margin-top: 4px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .settings-body { padding: 0 var(--space-4) var(--space-4); }
+
+  .settings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+  }
+  .settings-table th {
+    text-align: left;
+    padding: var(--space-2) 8px;
+    font-family: 'Cormorant', serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink-mute);
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-table td {
+    padding: 5px 8px;
+    vertical-align: middle;
+    border-bottom: 1px solid #F4F2EE;
+  }
+
+  .settings-table input.num {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    background: var(--surface);
+  }
+  .settings-table input.num:focus {
+    border-color: var(--ink);
+    box-shadow: 0 0 0 1px var(--ink);
+    outline: none;
+  }
+  .settings-table input.num.changed {
+    background: var(--gold-soft);
+    border-color: var(--gold);
+  }
+  .settings-table input.name {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    background: var(--surface);
+  }
+  .settings-table input.name:focus {
+    border-color: var(--ink);
+    box-shadow: 0 0 0 1px var(--ink);
+    outline: none;
+  }
+
+  .btn-delete {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--ink-mute);
+    width: 26px;
+    height: 26px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-size: var(--text-md);
+    line-height: 1;
+    padding: 0;
+    font-family: inherit;
+    transition: all var(--t-fast);
+  }
+  .btn-delete:hover {
+    color: var(--rose);
+    border-color: var(--rose);
+  }
+
+  .settings-sub-table {
+    margin-top: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+  }
+  .settings-sub-header {
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg);
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: 1.5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .label-cell {
+    font-weight: 500;
+    color: var(--ink-soft);
+    font-family: 'Cormorant', serif;
+  }
+
+  .file-input { display: none; }
+
+  /* Range bar — wider mode (with side labels) */
+  .range-meta {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Cormorant', serif;
+    font-size: 12px;
+    color: var(--ink-mute);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .range-meta .v {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+  }
+
+  /* ============================================
+     RWD — Tablet & Mobile breakpoints
+     ============================================ */
+
+  /* Tablet & smaller: stack to single column */
+  @media (max-width: 980px) {
+    .estimate-layout {
+      grid-template-columns: 1fr;
+    }
+    .preview-col {
+      position: static;
+    }
+  }
+
+  /* Mobile (≤768px) — touch-friendly */
+  @media (max-width: 768px) {
+    html { font-size: 15px; }
+
+    /* Top bar */
+    .top-bar-inner {
+      padding: 12px 16px;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .brand-mark {
+      font-size: 18px;
+      letter-spacing: 3px;
+    }
+    .tabs {
+      margin-left: auto;
+      gap: var(--space-4);
+    }
+    .tab-btn {
+      padding: 10px 0;
+      font-size: 13px;
+    }
+    .tab-btn.active::after {
+      bottom: -12px;
+    }
+    .top-bar-right { display: none; }
+
+    /* Layout */
+    .estimate-layout {
+      padding: var(--space-3);
+      gap: var(--space-3);
+    }
+    .section {
+      padding: 20px 16px;
+    }
+    .section-eyebrow {
+      font-size: 11px;
+      letter-spacing: 3px;
+    }
+
+    /* Forms — touch-friendly */
+    .field-grid {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .field-grid.cols-3 {
+      grid-template-columns: 1fr 1fr;
+    }
+    .field-label {
+      font-size: 11px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea {
+      font-size: 16px; /* prevents iOS auto-zoom */
+      padding: 11px 13px;
+      min-height: 44px;
+    }
+    textarea { min-height: 70px; }
+
+    /* Tier prices stay 3-col but compact */
+    .tier-prices { gap: 6px; }
+    .tier-price { padding: 10px 6px; }
+    .tier-price-label { font-size: 11px; letter-spacing: 1px; }
+    .tier-price-value { font-size: 14px; }
+
+    /* Final price input — stacked */
+    .final-input-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+    .final-input-wrap {
+      justify-content: space-between;
+    }
+    .final-input {
+      flex: 1;
+      width: auto !important;
+      min-height: 44px;
+      font-size: 22px !important;
+    }
+    .chip-row {
+      gap: 6px;
+    }
+    .chip {
+      flex: 1;
+      text-align: center;
+      min-height: 38px;
+      padding: 9px 8px;
+      font-size: 12px;
+    }
+
+    /* Toggle row — bigger tap area */
+    .toggle-row label {
+      min-height: 44px;
+      font-size: 15px;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Quote card */
+    .quote-card {
+      padding: 28px 22px;
+    }
+    .qc-title { font-size: 24px; letter-spacing: 5px; }
+    .qc-name { font-size: 20px; }
+    .qc-price-value { font-size: 32px; }
+    .qc-currency { font-size: 15px; }
+
+    /* Buttons — touch */
+    .btn, .btn-ghost {
+      min-height: 44px;
+      padding: 11px 18px;
+      font-size: 13px;
+    }
+    .quote-actions {
+      flex-direction: column;
+      gap: 10px;
+    }
+    .quote-actions .btn {
+      width: 100%;
+    }
+
+    /* Settings */
+    .settings-layout {
+      padding: var(--space-3);
+    }
+    .settings-bar {
+      flex-wrap: wrap;
+      padding: var(--space-3);
+    }
+    .settings-status {
+      width: 100%;
+      margin-bottom: var(--space-2);
+    }
+    .settings-body {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .settings-table {
+      min-width: 460px;
+    }
+    .btn-delete {
+      width: 36px;
+      height: 36px;
+    }
+
+    footer {
+      padding: var(--space-3);
+      font-size: 11px;
+    }
+  }
+
+  /* Very small phones (≤420px) */
+  @media (max-width: 420px) {
+    .brand-mark {
+      font-size: 16px;
+      letter-spacing: 2px;
+    }
+    .tabs { gap: var(--space-3); }
+    .section { padding: 16px 14px; }
+    .quote-card {
+      padding: 24px 18px;
+    }
+    .qc-title { font-size: 22px; letter-spacing: 4px; }
+    .field-grid.cols-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div class="brand">
+        <span class="brand-mark">珠寶估價系統</span>
+      </div>
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="quote">估價</button>
+        <button class="tab-btn" data-tab="settings">設定</button>
+      </nav>
+      <div class="top-bar-right">v0.8</div>
+    </div>
+  </header>
+
+  <section class="tab-section" id="tab-quote">
+    <div class="estimate-layout">
+
+      <!-- LEFT: Inputs -->
+      <div class="inputs-col">
+
+        <!-- Section 1: 詢價 -->
+        <div class="section">
+          <div class="section-eyebrow coral">CLIENT · 客戶詢價</div>
+          <div class="field-grid">
+            <div class="field">
+              <label class="field-label">進線日期</label>
+              <input type="date" id="inquiry_date">
+            </div>
+            <div class="field">
+              <label class="field-label">來源</label>
+              <select id="source">
+                <option value="LINE">LINE</option>
+                <option value="IG">IG</option>
+                <option value="FB">FB</option>
+                <option value="親友介紹">親友介紹</option>
+                <option value="其他">其他</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-grid cols-1" style="margin-top:12px;">
+            <div class="field">
+              <label class="field-label">客人名字</label>
+              <input type="text" id="customer_name" placeholder="例如 康子（禎潞）">
+            </div>
+          </div>
+          <div class="field-grid" style="margin-top:12px;">
+            <div class="field" style="grid-column:1/-1;">
+              <label class="field-label">預算 NT$</label>
+              <input type="number" id="budget" placeholder="選填">
+            </div>
+          </div>
+          <div class="field-grid cols-1" style="margin-top:12px;">
+            <div class="field">
+              <label class="field-label">備註 / 圖片款式</label>
+              <textarea id="notes" rows="2" placeholder="客戶喜好、設計參考、特殊要求..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: 寶石 -->
+        <div class="section">
+          <div class="section-eyebrow">STONE · 寶石屬性</div>
+          <div class="field-grid">
+            <div class="field" style="grid-column:1/-1;">
+              <label class="field-label">寶石類型 <span class="req">*</span></label>
+              <select id="stone"></select>
+            </div>
+          </div>
+          <div class="field-grid cols-3" style="margin-top:12px;">
+            <div class="field">
+              <label class="field-label">克拉 <span class="req">*</span></label>
+              <input type="number" id="carat" value="1.0" step="0.01" min="0.01">
+            </div>
+            <div class="field">
+              <label class="field-label">克拉段</label>
+              <input type="text" id="band_display" readonly>
+            </div>
+            <div class="field">
+              <label class="field-label">尺寸（報價單顯示）</label>
+              <input type="text" id="dimensions" placeholder="例如 6×8mm">
+            </div>
+          </div>
+
+          <div class="invest-only hidden" id="invest_only">
+            <div class="field-grid" style="margin-top:12px;">
+              <div class="field">
+                <label class="field-label">產地</label>
+                <select id="origin"></select>
+              </div>
+              <div class="field">
+                <label class="field-label">處理</label>
+                <select id="treatment"></select>
+              </div>
+              <div class="field">
+                <label class="field-label">顏色等級</label>
+                <select id="color"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-grid" style="margin-top:12px;">
+            <div class="field">
+              <label class="field-label">證書</label>
+              <select id="cert"></select>
+            </div>
+            <div class="field">
+              <label class="field-label">證書費用 NT$</label>
+              <input type="number" id="cert_fee" value="0" step="100" min="0">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: 鑲嵌 -->
+        <div class="section">
+          <div class="section-eyebrow tiffany">MOUNTING · 成品配置</div>
+          <div class="toggle-row">
+            <label>
+              <input type="checkbox" id="mounting_enabled" checked>
+              <span>鑲嵌成品（不勾選 = 裸石）</span>
+            </label>
+          </div>
+          <div class="mounting-options" id="mounting_options">
+            <div class="field-grid">
+              <div class="field">
+                <label class="field-label">材質</label>
+                <select id="material"></select>
+              </div>
+              <div class="field">
+                <label class="field-label">品項</label>
+                <select id="item"></select>
+              </div>
+            </div>
+            <div class="field-grid" style="margin-top:12px;">
+              <div class="field">
+                <label class="field-label">克重 (用料)</label>
+                <select id="weight"></select>
+              </div>
+              <div class="field">
+                <label class="field-label">複雜度 (工藝)</label>
+                <select id="complexity"></select>
+              </div>
+            </div>
+            <div class="field-grid cols-1" style="margin-top:12px;">
+              <div class="field">
+                <label class="field-label">配鑽 / 配石</label>
+                <select id="sidestone"></select>
+              </div>
+            </div>
+            <div class="field-grid" style="margin-top:12px;">
+              <div class="field">
+                <label class="field-label" id="size_label">戒圍</label>
+                <select id="size_select"></select>
+              </div>
+              <div class="field" id="size_custom_field" style="display:none;">
+                <label class="field-label">自訂尺寸</label>
+                <input type="text" id="size_custom" placeholder="輸入尺寸 / 規格">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: 估價結果 + 最終報價 (合併, 緊湊) -->
+        <div class="section result-section" id="results">
+          <div id="results_body">
+            <div class="empty-state">
+              <div class="icon">◇</div>
+              <div>請選擇寶石並輸入克拉</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Sticky Preview -->
+      <div class="preview-col">
+        <div class="quote-card-shell">
+          <div class="preview-label">↓ 客戶報價卡 ↓</div>
+          <div class="quote-card" id="quote_card"></div>
+          <div class="quote-actions" style="margin-top:16px;display:flex;gap:8px;justify-content:center;">
+            <button class="btn" type="button" id="btn_download_png">下載 PNG</button>
+            <button class="btn btn-ghost" type="button" id="btn_copy_text">複製報價文字</button>
+          </div>
+          <div id="download_status" style="margin-top:8px;text-align:center;font-size:12px;color:var(--ink-mute);letter-spacing:1px;min-height:16px;"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="tab-section hidden" id="tab-settings">
+    <div class="settings-layout">
+      <div class="settings-bar">
+        <span class="settings-status" id="settings_status">未變更</span>
+        <input type="file" id="btn_import" class="file-input" accept="application/json">
+        <button class="btn btn-ghost" id="btn_import_trigger">匯入</button>
+        <button class="btn btn-ghost" id="btn_export">匯出</button>
+        <button class="btn btn-ghost" id="btn_reset">回復預設</button>
+        <button class="btn" id="btn_save">儲存</button>
+      </div>
+      <div id="settings_render"></div>
+    </div>
+  </section>
+
+  <footer>
+    輕奢級 = 你的真實成交價（含利潤）｜投資級（輔助）= 外部國際行情 × 0.8｜成品 = 寶石建議售價 + 金工 + 配石<br>
+    v0.8 · 2026 · 珠寶估價系統
+  </footer>
+
+<script>
+// ============================================================
+// 投資級寶石 (NT/ct, 基準=該寶石中階屬性 + 無證)
+// ============================================================
+const DEFAULT_STONES = {
+  RUBY: {
+    name: '紅寶石', tier: 'INVEST',
+    base_purchase:   { B1:  20000, B2:  60000, B3: 180000, B4:  450000, B5: 1200000 },
+    base_intl_floor: { B1:  40000, B2: 120000, B3: 350000, B4: 1000000, B5: 3500000 },
+    base_intl_ceil:  { B1: 200000, B2: 600000, B3:2000000, B4: 8000000, B5:30000000 },
+    origins: { '緬甸 Mogok': 3.0, '莫桑比克': 1.0, '泰國': 0.4, '馬達加斯加': 0.6, '其他': 0.5 },
+    treatments: { '無燒': 1.0, '有燒': 0.3 },
+    colors: { '頂級 (鴿血/牛血)': 2.5, '中等 (深紅)': 1.0, '入門 (淡紅/粉)': 0.5 }
+  },
+  SAPPHIRE: {
+    name: '藍寶石', tier: 'INVEST',
+    base_purchase:   { B1:  20000, B2:  65000, B3: 150000, B4: 400000, B5: 1200000 },
+    base_intl_floor: { B1:  50000, B2: 150000, B3: 400000, B4:1000000, B5: 3000000 },
+    base_intl_ceil:  { B1: 250000, B2:1200000, B3:3500000, B4:12000000, B5:40000000 },
+    origins: { '喀什米爾': 4.0, '緬甸': 2.5, '錫蘭/斯里蘭卡': 1.0, '馬達加斯加': 0.5, '泰國': 0.3, '澳洲': 0.3 },
+    treatments: { '無燒': 1.0, '有燒': 0.3 },
+    colors: { '頂級 (矢車菊/皇家藍)': 2.5, '中等 (中藍)': 1.0, '入門 (淺藍)': 0.5 }
+  },
+  PADPARADSCHA: {
+    name: '帕帕拉恰', tier: 'INVEST',
+    base_purchase:   { B1:  35000, B2:  85000, B3: 200000, B4: 500000, B5: 1500000 },
+    base_intl_floor: { B1: 100000, B2: 250000, B3: 600000, B4:1500000, B5: 5000000 },
+    base_intl_ceil:  { B1: 300000, B2: 800000, B3:2500000, B4: 8000000, B5:25000000 },
+    origins: { '錫蘭/斯里蘭卡': 1.0, '馬達加斯加': 0.5, '越南': 0.6 },
+    treatments: { '無燒': 1.0, '有燒': 0.4 },
+    colors: { '頂級 (粉橙均衡)': 2.0, '中等 (偏粉或偏橙)': 1.0, '入門 (色淡)': 0.5 }
+  },
+  EMERALD: {
+    name: '祖母綠', tier: 'INVEST',
+    base_purchase:   { B1:  15000, B2:  30000, B3: 150000, B4: 350000, B5: 1000000 },
+    base_intl_floor: { B1:  30000, B2:  80000, B3: 300000, B4: 800000, B5: 2500000 },
+    base_intl_ceil:  { B1: 150000, B2: 400000, B3:1500000, B4: 5000000, B5:15000000 },
+    origins: { '哥倫比亞 Muzo': 2.5, '哥倫比亞 Chivor': 1.8, '尚比亞': 1.0, '巴西': 0.6, '衣索比亞': 0.5 },
+    treatments: { 'None (無油)': 1.4, 'Minor (輕油)': 1.0, 'Moderate (中油)': 0.6, 'Significant (重油)': 0.3 },
+    colors: { '頂級 (Vivid Green)': 2.0, '中等 (中綠)': 1.0, '入門 (淺綠)': 0.5 }
+  },
+  PARAIBA: {
+    name: '帕拉依巴', tier: 'INVEST',
+    base_purchase:   { B1:  25000, B2:  50000, B3: 180000, B4: 450000, B5: 1200000 },
+    base_intl_floor: { B1:  70000, B2: 150000, B3: 500000, B4:1500000, B5: 4000000 },
+    base_intl_ceil:  { B1: 300000, B2: 700000, B3:2500000, B4: 7000000, B5:20000000 },
+    origins: { '巴西 Paraiba 州': 3.5, '莫桑比克': 1.0, '奈及利亞': 0.5 },
+    treatments: { '無燒': 1.0, '有燒': 0.6 },
+    colors: { '頂級 (霓虹藍/電光)': 2.0, '中等 (藍綠)': 1.0, '入門 (淡綠)': 0.4 }
+  },
+  SPINEL: {
+    name: '尖晶石', tier: 'INVEST',
+    base_purchase:   { B1:  12000, B2:  30000, B3:  75000, B4: 180000, B5: 500000 },
+    base_intl_floor: { B1:  30000, B2:  80000, B3: 200000, B4: 500000, B5:1500000 },
+    base_intl_ceil:  { B1: 200000, B2: 800000, B3:2500000, B4:6000000, B5:18000000 },
+    origins: { '緬甸 Mogok': 2.5, '坦尚 Mahenge': 2.0, '越南 (鈷藍)': 3.0, '馬達加斯加': 1.0, '塔吉克': 1.2, '其他': 0.7 },
+    treatments: { '無燒': 1.0 },
+    colors: { '頂級 (鴿血/鈷藍/螢光粉)': 2.5, '中等 (紅/粉/紫)': 1.0, '入門 (淡色/灰色)': 0.4 }
+  },
+  TSAVORITE: {
+    name: '沙弗萊石', tier: 'INVEST',
+    base_purchase:   { B1:  15000, B2:  40000, B3: 100000, B4: 250000, B5: 600000 },
+    base_intl_floor: { B1:  40000, B2:  80000, B3: 200000, B4: 600000, B5:1500000 },
+    base_intl_ceil:  { B1: 150000, B2: 320000, B3: 800000, B4:2000000, B5: 5000000 },
+    origins: { '肯亞': 1.0, '坦尚尼亞': 1.0, '其他': 0.7 },
+    treatments: { '無處理': 1.0 },
+    colors: { '頂級 (Vivid Green)': 2.0, '中等 (中綠)': 1.0, '入門 (淡綠)': 0.5 }
+  },
+  TANZANITE: {
+    name: '坦桑石', tier: 'INVEST',
+    base_purchase:   { B1:   4000, B2:  12000, B3:  25000, B4:  55000, B5: 120000 },
+    base_intl_floor: { B1:  10000, B2:  25000, B3:  50000, B4: 120000, B5: 300000 },
+    base_intl_ceil:  { B1:  40000, B2:  80000, B3: 180000, B4: 400000, B5: 900000 },
+    origins: { '坦尚 Merelani': 1.0 },
+    treatments: { '熱處理 (標準)': 1.0, '無燒 (罕見)': 1.4 },
+    colors: { '頂級 (D Block 深藍紫)': 2.0, '中等 (藍紫)': 1.0, '入門 (淡藍/淡紫)': 0.4 }
+  },
+  ALEXANDRITE: {
+    name: '變色石', tier: 'INVEST',
+    base_purchase:   { B1:  20000, B2:  60000, B3: 150000, B4: 400000, B5: 1000000 },
+    base_intl_floor: { B1:  80000, B2: 200000, B3: 500000, B4:1200000, B5: 3500000 },
+    base_intl_ceil:  { B1: 400000, B2:1500000, B3:4000000, B4:10000000, B5:30000000 },
+    origins: { '俄羅斯 Ural': 2.5, '巴西': 1.0, '斯里蘭卡': 0.8 },
+    treatments: { '無處理': 1.0 },
+    colors: { '頂級 (變色明顯 80%+)': 2.5, '中等 (50-70%)': 1.0, '入門 (變色弱 <50%)': 0.4 }
+  },
+  CATEYE: {
+    name: '貓眼石', tier: 'INVEST',
+    base_purchase:   { B1:   8000, B2:  20000, B3:  50000, B4: 120000, B5: 300000 },
+    base_intl_floor: { B1:  20000, B2:  50000, B3: 130000, B4: 300000, B5: 700000 },
+    base_intl_ceil:  { B1: 100000, B2: 250000, B3: 700000, B4:1800000, B5: 5000000 },
+    origins: { '斯里蘭卡': 1.5, '巴西': 1.0, '印度': 0.8 },
+    treatments: { '無處理': 1.0 },
+    colors: { '頂級 (蜜糖色+清晰光帶)': 2.0, '中等': 1.0, '入門': 0.5 }
+  },
+  YELLOW_SAP: {
+    name: '黃剛玉', tier: 'INVEST',
+    base_purchase:   { B1:   8000, B2:  25000, B3:  60000, B4: 150000, B5: 400000 },
+    base_intl_floor: { B1:  20000, B2:  60000, B3: 150000, B4: 400000, B5:1000000 },
+    base_intl_ceil:  { B1: 100000, B2: 400000, B3:1000000, B4:2500000, B5: 8000000 },
+    origins: { '錫蘭': 1.5, '馬達加斯加': 1.0, '緬甸': 1.3, '泰國': 0.5 },
+    treatments: { '無燒': 1.0, '有燒': 0.4 },
+    colors: { '頂級 (金黃/帕帕色)': 2.0, '中等 (檸檬黃)': 1.0, '入門 (淡黃)': 0.5 }
+  },
+  TOURMALINE: {
+    name: '碧璽', tier: 'INVEST',
+    base_purchase:   { B1:   3000, B2:   8000, B3:  18000, B4:  40000, B5:  90000 },
+    base_intl_floor: { B1:   8000, B2:  20000, B3:  50000, B4: 130000, B5: 300000 },
+    base_intl_ceil:  { B1:  40000, B2: 100000, B3: 300000, B4: 700000, B5:1500000 },
+    origins: { '巴西': 1.0, '莫桑比克': 1.2, '奈及利亞': 0.8, '美國 (西瓜)': 1.5, '其他': 0.7 },
+    treatments: { '無處理': 1.0, '熱處理': 0.9 },
+    colors: { '紅碧璽 Rubellite': 1.5, '藍綠 Indicolite': 1.3, '帕拉依巴色 (含銅)': 4.0, '一般綠/粉': 1.0, '雙色/西瓜': 1.2 }
+  },
+  AQUAMARINE: {
+    name: '海藍寶', tier: 'INVEST',
+    base_purchase:   { B1:   5000, B2:  15000, B3:  35000, B4:  80000, B5: 180000 },
+    base_intl_floor: { B1:  10000, B2:  25000, B3:  60000, B4: 130000, B5: 300000 },
+    base_intl_ceil:  { B1:  60000, B2: 250000, B3: 600000, B4:1500000, B5: 4000000 },
+    origins: { '巴西 Santa Maria': 2.0, '巴西其他': 1.0, '莫桑比克': 0.7, '馬達加斯加': 0.6, '巴基斯坦': 1.2 },
+    treatments: { '熱處理 (標準)': 1.0, '無燒': 1.3 },
+    colors: { '頂級 (Santa Maria 深藍)': 2.5, '中等 (中藍)': 1.0, '入門 (淡藍)': 0.4 }
+  },
+  OPAL_INVEST: {
+    name: '歐泊', tier: 'INVEST',
+    base_purchase:   { B1:   3000, B2:   8000, B3:  20000, B4:  50000, B5: 120000 },
+    base_intl_floor: { B1:   8000, B2:  20000, B3:  40000, B4: 100000, B5: 250000 },
+    base_intl_ceil:  { B1:  40000, B2: 120000, B3: 300000, B4: 800000, B5:2000000 },
+    origins: { '澳洲 Lightning Ridge (黑歐泊)': 5.0, '澳洲 Queensland (Boulder)': 3.0, '澳洲其他 (White/Crystal)': 1.5, '衣索比亞': 1.0, '墨西哥 (Fire)': 0.6 },
+    treatments: { '無處理 (Solid)': 1.0, '糖煙處理 Sugar/Smoke': 0.6, '雙層複合 Doublet': 0.3, '三層複合 Triplet': 0.15 },
+    colors: { '頂級 (Red Fire/Harlequin)': 2.5, '中等 (Multi-color play)': 1.0, '入門 (Blue/Green flash)': 0.5 }
+  },
+  SPESSARTITE_INVEST: {
+    name: '芬達石榴石', tier: 'INVEST',
+    base_purchase:   { B1:   5000, B2:  12000, B3:  25000, B4:  55000, B5: 120000 },
+    base_intl_floor: { B1:  10000, B2:  25000, B3:  55000, B4: 120000, B5: 280000 },
+    base_intl_ceil:  { B1:  40000, B2: 100000, B3: 250000, B4: 600000, B5:1500000 },
+    origins: { '奈及利亞 (Mandarin)': 2.0, '馬達加斯加 (Loliondo)': 1.5, '納米比亞': 1.3, '巴西': 0.8, '其他': 0.7 },
+    treatments: { '無處理': 1.0 },
+    colors: { '頂級 (Vivid Mandarin Orange)': 2.0, '中等 (Orange)': 1.0, '入門 (Brownish Orange)': 0.5 }
+  },
+
+  // ============================================================
+  // 輕奢級 (NT$/ct, 已含利潤的成交零售區間 — TZG 真實成交價)
+  // ============================================================
+  MORGANITE_C:    { name: '摩根石', tier: 'COMMERCIAL', commercial_range: [1500, 8000] },
+  PERIDOT_C:      { name: '橄欖石', tier: 'COMMERCIAL', commercial_range: [1500, 6000] },
+  TANZANITE_C:    { name: '坦桑石', tier: 'COMMERCIAL', commercial_range: [5000, 18000] },
+  AMETHYST_CITRINE: { name: '紫黃晶', tier: 'COMMERCIAL', commercial_range: [1000, 5000] },
+  KUNZITE:        { name: '孔賽石', tier: 'COMMERCIAL', commercial_range: [1200, 4800] },
+  GARNET_C:       { name: '石榴石 (一般)', tier: 'COMMERCIAL', commercial_range: [2000, 10000] },
+  RHODOLITE:      { name: '鎂鋁石榴石', tier: 'COMMERCIAL', commercial_range: [1500, 5500] },
+  CHRYSOPRASE:    { name: '綠玉髓', tier: 'COMMERCIAL', commercial_range: [800, 3500] },
+  IMPERIAL_TOPAZ: { name: '帝王托帕', tier: 'COMMERCIAL', commercial_range: [5000, 20000] },
+  BLUE_TOPAZ_C:   { name: '藍托帕石', tier: 'COMMERCIAL', commercial_range: [300, 1500] },
+  SPESSARTITE:    { name: '芬達石榴石', tier: 'COMMERCIAL', commercial_range: [3000, 15000] },
+  TOURMALINE_C:   { name: '碧璽', tier: 'COMMERCIAL', commercial_range: [5000, 35000] },
+  OPAL_C:         { name: '歐泊', tier: 'COMMERCIAL', commercial_range: [2000, 10000] },
+  SAPPHIRE_C:     { name: '藍寶石', tier: 'COMMERCIAL', commercial_range: [8000, 30000] },
+  RUBY_C:         { name: '紅寶石', tier: 'COMMERCIAL', commercial_range: [10000, 40000] },
+  EMERALD_C:      { name: '祖母綠', tier: 'COMMERCIAL', commercial_range: [15000, 50000] },
+  TSAVORITE_C:    { name: '沙弗萊石', tier: 'COMMERCIAL', commercial_range: [5000, 25000] },
+  SPINEL_C:       { name: '尖晶石', tier: 'COMMERCIAL', commercial_range: [5000, 20000] },
+  AQUAMARINE_C:   { name: '海藍寶', tier: 'COMMERCIAL', commercial_range: [3000, 12000] },
+  MOONSTONE_C:    { name: '月光石', tier: 'COMMERCIAL', commercial_range: [3000, 15000] },
+  CHRYSOBERYL:    { name: '金綠寶石', tier: 'COMMERCIAL', commercial_range: [3000, 12000] },
+  CATEYE_C:       { name: '貓眼石', tier: 'COMMERCIAL', commercial_range: [8000, 25000] },
+  APATITE:        { name: '磷灰石', tier: 'COMMERCIAL', commercial_range: [3000, 10000] },
+  TURQUOISE:      { name: '綠松石', tier: 'COMMERCIAL', commercial_range: [4000, 18000] },
+  WATERMELON_T:   { name: '西瓜碧璽', tier: 'COMMERCIAL', commercial_range: [10000, 35000] },
+  SUGILITE:       { name: '舒俱萊石', tier: 'COMMERCIAL', commercial_range: [5000, 20000] },
+  RUTILE_QUARTZ:  { name: '鈦晶 / 金髮晶', tier: 'COMMERCIAL', commercial_range: [1000, 8000] },
+  SUNSTONE:       { name: '太陽石', tier: 'COMMERCIAL', commercial_range: [500, 3000] },
+  PREHNITE:       { name: '葡萄石', tier: 'COMMERCIAL', commercial_range: [300, 2000] },
+  SPODUMENE_V:    { name: '紫鋰輝石', tier: 'COMMERCIAL', commercial_range: [500, 3000] },
+  LEMON_QUARTZ:   { name: '檸檬晶', tier: 'COMMERCIAL', commercial_range: [200, 1500] },
+  ROSE_QUARTZ:    { name: '粉晶', tier: 'COMMERCIAL', commercial_range: [200, 1000] },
+  FLUORITE:       { name: '螢石', tier: 'COMMERCIAL', commercial_range: [200, 2000] },
+  AMBER:          { name: '琥珀', tier: 'COMMERCIAL', commercial_range: [500, 5000] },
+  OBSIDIAN:       { name: '黑曜石', tier: 'COMMERCIAL', commercial_range: [100, 800] },
+  PEARL:          { name: '珍珠 (一顆/換算 ct)', tier: 'COMMERCIAL', commercial_range: [1500, 10000] },
+  SMOKY_EMERALD:  { name: '祖母綠切茶晶', tier: 'COMMERCIAL', commercial_range: [6000, 28000], alias: 'smoky quartz, emerald cut (非真祖母綠)' },
+
+  // 月光石 INVEST 段 (保留供大克拉收藏級)
+  MOONSTONE: {
+    name: '月光石', tier: 'INVEST',
+    base_purchase:   { B1:   2000, B2:   5000, B3:  12000, B4:  25000, B5:  55000 },
+    base_intl_floor: { B1:   4000, B2:  10000, B3:  20000, B4:  45000, B5: 100000 },
+    base_intl_ceil:  { B1:  12000, B2:  30000, B3:  70000, B4: 150000, B5: 300000 },
+    origins: { '印度': 0.8, '斯里蘭卡': 1.0, '緬甸': 1.2 },
+    treatments: { '無處理': 1.0 },
+    colors: { '頂級 (藍光彩虹)': 1.8, '中等 (白光)': 1.0, '入門 (灰白)': 0.5 }
+  }
+};
+
+// ============================================================
+// 金工費用 (NT$, 已含利潤)
+// ============================================================
+// ============================================================
+// 金工費 (人工) — 與材質無關, 依品項 × 複雜度
+// ============================================================
+const DEFAULT_CRAFT_LABOR_FEES = {
+  '戒指-極簡': [1500, 2500],
+  '戒指-簡單': [2500, 4500],
+  '戒指-中等': [4500, 7000],
+  '戒指-複雜': [7000, 12000],
+  '戒指-精工': [12000, 25000],
+  '吊墜-極簡': [1000, 2000],
+  '吊墜-簡單': [2000, 3500],
+  '吊墜-中等': [3500, 6000],
+  '吊墜-複雜': [6000, 10000],
+  '吊墜-精工': [10000, 20000],
+  '耳釘-極簡': [1500, 2500],
+  '耳釘-簡單': [2500, 4500],
+  '耳釘-中等': [4500, 7000],
+  '耳釘-複雜': [7000, 12000],
+  '耳釘-精工': [12000, 22000],
+  '手鍊-極簡': [3000, 5000],
+  '手鍊-簡單': [5000, 8000],
+  '手鍊-中等': [8000, 13000],
+  '手鍊-複雜': [13000, 22000],
+  '手鍊-精工': [22000, 40000],
+  '項鍊-極簡': [4000, 7000],
+  '項鍊-簡單': [7000, 12000],
+  '項鍊-中等': [12000, 20000],
+  '項鍊-複雜': [20000, 35000],
+  '項鍊-精工': [35000, 60000]
+};
+
+// ============================================================
+// 貴金屬成品 retail / 公克 (NT$, 含工費利潤)
+// 2026/06 台灣零售換算: 18K回收 2,400 NT$/g × 1.5 含工費利潤
+// ============================================================
+const DEFAULT_METAL_PRICES_PER_G = {
+  '925銀': 100,
+  '9K金':  1800,
+  '14K金': 2800,
+  '18K金': 3800,
+  'Pt950': 5500
+};
+
+// ============================================================
+// 6 級克重區間 (適用各品項)
+// ============================================================
+const DEFAULT_WEIGHT_LEVELS = {
+  '極輕 (0.5–1.5g)': { min: 0.5, max: 1.5 },
+  '輕 (1.5–3g)':     { min: 1.5, max: 3 },
+  '中 (3–5g)':       { min: 3,   max: 5 },
+  '偏重 (5–8g)':     { min: 5,   max: 8 },
+  '重 (8–13g)':      { min: 8,   max: 13 },
+  '很重 (13–20g)':   { min: 13,  max: 20 }
+};
+
+const DEFAULT_SIDESTONE_FEES = {
+  'NONE':         [0, 0],
+  'ACCENT_5':     [400, 1200],
+  'ACCENT_20':    [1200, 2800],
+  'ACCENT_50':    [2800, 5500],
+  'DIAMOND_5':    [500, 1000],
+  'DIAMOND_20':   [2000, 5000],
+  'DIAMOND_50':   [8000, 20000],
+  'DIAMOND_PLUS': [20000, 60000]
+};
+const SIDESTONE_LABELS = {
+  'NONE': '無配石',
+  'ACCENT_5': '配石/鋯石 1–5 顆',
+  'ACCENT_20': '配石/鋯石 6–20 顆',
+  'ACCENT_50': '配石/鋯石 21–50 顆',
+  'DIAMOND_5': '碎鑽/莫桑 1–5 顆',
+  'DIAMOND_20': '碎鑽/莫桑 6–20 顆',
+  'DIAMOND_50': '碎鑽/莫桑 21–50 顆',
+  'DIAMOND_PLUS': '碎鑽/莫桑 50+ 顆'
+};
+
+const MATERIALS = ['925銀', '9K金', '14K金', '18K金', 'Pt950'];
+const ITEMS = ['戒指', '吊墜', '耳釘', '手鍊', '項鍊'];
+const COMPLEXITY = ['極簡', '簡單', '中等', '複雜', '精工'];
+
+// 各品項常見尺寸 preset (含「自行輸入」選項)
+const SIZE_PRESETS = {
+  '戒指': {
+    label: '戒圍',
+    options: ['活圍', '#5', '#6', '#7', '#8', '#9', '#10', '#11', '#12', '#13', '#14', '#15', '#16', '#17', '#18', '#19', '#20', '#21', '#22']
+  },
+  '手鍊': {
+    label: '鍊長',
+    options: ['活圍', '14cm', '15cm', '16cm', '17cm', '18cm', '19cm', '20cm', '21cm']
+  },
+  '項鍊': {
+    label: '鍊長',
+    options: ['40cm (頸鏈)', '42cm', '45cm (公主)', '50cm', '55cm (馬天尼)', '60cm', '70cm', '80cm (歌劇)']
+  },
+  '吊墜': {
+    label: '配鍊長度',
+    options: ['不附鍊', '40cm', '42cm', '45cm', '50cm', '55cm', '60cm']
+  },
+  '耳釘': {
+    label: '配件款式',
+    options: ['標準耳針', '螺絲耳針', '法式鉤', '夾式', '貼耳鉤']
+  }
+};
+
+function getBand(carat) {
+  if (carat < 1) return 'B1';
+  if (carat < 3) return 'B2';
+  if (carat < 5) return 'B3';
+  if (carat < 10) return 'B4';
+  return 'B5';
+}
+const BAND_LABELS = { B1: '<1ct', B2: '1–3ct', B3: '3–5ct', B4: '5–10ct', B5: '10ct+' };
+
+const DEFAULT_CERTS = {
+  'NONE':     { fee: 0,     name: '無' },
+  'GENERAL':  { fee: 1500,  name: '一般證書' },
+  'GIA':      { fee: 0,     name: 'GIA' },
+  'GRS':      { fee: 0,     name: 'GRS' },
+  'SSEF':     { fee: 0,     name: 'SSEF' },
+  'GUBELIN':  { fee: 0,     name: 'GUBELIN' }
+};
+
+// ============================================================
+// LOCALSTORAGE 載入 / 持久化
+// ============================================================
+const STORAGE_KEY = 'JEWELRY_PRICING_v0_9_1';
+
+function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+function loadData() {
+  const stones = deepClone(DEFAULT_STONES);
+  const labor  = deepClone(DEFAULT_CRAFT_LABOR_FEES);
+  const metals = deepClone(DEFAULT_METAL_PRICES_PER_G);
+  const weights = deepClone(DEFAULT_WEIGHT_LEVELS);
+  const side   = deepClone(DEFAULT_SIDESTONE_FEES);
+  const certs  = deepClone(DEFAULT_CERTS);
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      // 淺合併 (保留新增的 key，覆蓋同名的)
+      if (saved.STONES) Object.keys(saved.STONES).forEach(k => {
+        if (stones[k]) Object.assign(stones[k], saved.STONES[k]);
+      });
+      if (saved.CRAFT_LABOR_FEES) Object.assign(labor, saved.CRAFT_LABOR_FEES);
+      if (saved.METAL_PRICES_PER_G) Object.assign(metals, saved.METAL_PRICES_PER_G);
+      if (saved.WEIGHT_LEVELS) Object.assign(weights, saved.WEIGHT_LEVELS);
+      if (saved.SIDESTONE_FEES) Object.assign(side, saved.SIDESTONE_FEES);
+      if (saved.CERTS) Object.keys(saved.CERTS).forEach(k => {
+        if (certs[k]) Object.assign(certs[k], saved.CERTS[k]);
+      });
+    }
+  } catch(e) { console.warn('localStorage load failed', e); }
+  return { stones, labor, metals, weights, side, certs };
+}
+
+const _loaded = loadData();
+let STONES = _loaded.stones;
+let CRAFT_LABOR_FEES = _loaded.labor;
+let METAL_PRICES_PER_G = _loaded.metals;
+let WEIGHT_LEVELS = _loaded.weights;
+let SIDESTONE_FEES = _loaded.side;
+let CERTS = _loaded.certs;
+
+function saveData() {
+  const payload = {
+    STONES, CRAFT_LABOR_FEES, METAL_PRICES_PER_G, WEIGHT_LEVELS, SIDESTONE_FEES, CERTS,
+    _saved_at: new Date().toISOString()
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function resetData() {
+  localStorage.removeItem(STORAGE_KEY);
+  STONES = deepClone(DEFAULT_STONES);
+  CRAFT_LABOR_FEES = deepClone(DEFAULT_CRAFT_LABOR_FEES);
+  METAL_PRICES_PER_G = deepClone(DEFAULT_METAL_PRICES_PER_G);
+  WEIGHT_LEVELS = deepClone(DEFAULT_WEIGHT_LEVELS);
+  SIDESTONE_FEES = deepClone(DEFAULT_SIDESTONE_FEES);
+  CERTS = deepClone(DEFAULT_CERTS);
+}
+
+function exportData() {
+  const payload = { STONES, CRAFT_LABOR_FEES, METAL_PRICES_PER_G, WEIGHT_LEVELS, SIDESTONE_FEES, CERTS, _exported_at: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `TZG_pricing_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.STONES) Object.keys(data.STONES).forEach(k => {
+          if (STONES[k]) Object.assign(STONES[k], data.STONES[k]);
+        });
+        if (data.CRAFT_LABOR_FEES) Object.assign(CRAFT_LABOR_FEES, data.CRAFT_LABOR_FEES);
+        if (data.METAL_PRICES_PER_G) Object.assign(METAL_PRICES_PER_G, data.METAL_PRICES_PER_G);
+        if (data.WEIGHT_LEVELS) Object.assign(WEIGHT_LEVELS, data.WEIGHT_LEVELS);
+        if (data.SIDESTONE_FEES) Object.assign(SIDESTONE_FEES, data.SIDESTONE_FEES);
+        if (data.CERTS) Object.keys(data.CERTS).forEach(k => {
+          if (CERTS[k]) Object.assign(CERTS[k], data.CERTS[k]);
+        });
+        saveData();
+        resolve();
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+const CHANNELS = {}; // 通路加成已移除, 三檔改錨定國際零售區間
+
+const $ = id => document.getElementById(id);
+
+function populate() {
+  const stoneSel = $('stone');
+  stoneSel.innerHTML = '';
+  const luxuryGroup = document.createElement('optgroup');
+  luxuryGroup.label = '—— 輕奢級 ——';
+  const investGroup = document.createElement('optgroup');
+  investGroup.label = '—— 投資級（輔助）——';
+  Object.entries(STONES).forEach(([k, v]) => {
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = v.name;
+    if (v.tier === 'INVEST') investGroup.appendChild(opt);
+    else luxuryGroup.appendChild(opt);
+  });
+  stoneSel.appendChild(luxuryGroup);
+  stoneSel.appendChild(investGroup);
+
+  const certSel = $('cert');
+  certSel.innerHTML = '';
+  Object.entries(CERTS).forEach(([k, v]) => {
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = v.name;
+    if (k === 'NONE') opt.selected = true;
+    certSel.appendChild(opt);
+  });
+
+  // Mounting selects
+  const fillSimple = (id, arr) => {
+    const sel = $(id);
+    sel.innerHTML = '';
+    arr.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      sel.appendChild(opt);
+    });
+  };
+  fillSimple('material', MATERIALS);
+  fillSimple('item', ITEMS);
+  fillSimple('complexity', COMPLEXITY);
+  fillSimple('weight', Object.keys(WEIGHT_LEVELS));
+  $('material').value = '18K金';
+  $('item').value = '戒指';
+  $('complexity').value = '中等';
+  $('weight').value = '中 (3–5g)';
+
+  // 初始化 size dropdown
+  updateSizeOptions();
+
+  const sideSel = $('sidestone');
+  sideSel.innerHTML = '';
+  Object.entries(SIDESTONE_LABELS).forEach(([k, v]) => {
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = v;
+    sideSel.appendChild(opt);
+  });
+
+  updateStoneDependentOptions();
+}
+
+function updateStoneDependentOptions() {
+  const stoneKey = $('stone').value;
+  const stone = STONES[stoneKey];
+  if (!stone) return;
+
+  // Toggle invest-only fields
+  const isInvest = stone.tier === 'INVEST';
+  document.querySelectorAll('.invest-only').forEach(el => {
+    el.classList.toggle('hidden', !isInvest);
+  });
+
+  // Update tier badge if present (it's now rendered inside results)
+  const badge = $('tier_badge');
+  if (badge) {
+    if (isInvest) {
+      badge.textContent = '投資級 · 輔助';
+      badge.className = 'tier-badge invest';
+    } else {
+      badge.textContent = '輕奢級';
+      badge.className = 'tier-badge commercial';
+    }
+  }
+
+  if (isInvest) {
+    const fillSelect = (sel, obj) => {
+      sel.innerHTML = '';
+      Object.keys(obj).forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k;
+        opt.textContent = k;
+        sel.appendChild(opt);
+      });
+    };
+    fillSelect($('origin'), stone.origins);
+    fillSelect($('treatment'), stone.treatments);
+    fillSelect($('color'), stone.colors);
+    const setMid = (sel, obj) => {
+      const keys = Object.keys(obj);
+      const midIdx = Math.floor(keys.length / 2);
+      sel.value = keys[midIdx] || keys[0];
+    };
+    setMid($('origin'), stone.origins);
+    setMid($('treatment'), stone.treatments);
+    setMid($('color'), stone.colors);
+  }
+}
+
+function toggleMounting() {
+  const checked = $('mounting_enabled').checked;
+  $('mounting_options').classList.toggle('hidden', !checked);
+  calculate();
+}
+
+function fmt(n) {
+  if (n == null || !isFinite(n)) return '—';
+  return 'NT$ ' + Math.round(n).toLocaleString('en-US');
+}
+function fmtCt(n) {
+  if (n == null || !isFinite(n)) return '—';
+  return Math.round(n).toLocaleString('en-US');
+}
+
+function calculate() {
+  const stoneKey = $('stone').value;
+  const stone = STONES[stoneKey];
+  const carat = parseFloat($('carat').value);
+  if (!stone || !carat || carat <= 0) {
+    $('results_body').innerHTML = `<div class="empty-state"><div class="icon">◇</div>請填入完整屬性</div>`;
+    window.__lastCalcOK = false;
+    return;
+  }
+  window.__lastCalcOK = true;
+  const band = getBand(carat);
+  $('band_display').value = BAND_LABELS[band];
+
+  const mountingEnabled = $('mounting_enabled').checked;
+
+  // 寶石部分計算
+  let stoneResult = null;
+  if (stone.tier === 'INVEST') {
+    stoneResult = calcInvest(stone, stoneKey, carat, band);
+  } else {
+    stoneResult = calcCommercial(stone, carat);
+  }
+
+  // 鑲嵌部分
+  let mounting = null;
+  if (mountingEnabled) {
+    const material = $('material').value;
+    const item = $('item').value;
+    const complexity = $('complexity').value;
+    const weight = $('weight').value;
+    const sidestone = $('sidestone').value;
+
+    const laborKey = `${item}-${complexity}`;
+    const labor = CRAFT_LABOR_FEES[laborKey] || [0, 0];
+
+    const wt = WEIGHT_LEVELS[weight] || { min: 0, max: 0 };
+    const metalPrice = METAL_PRICES_PER_G[material] || 0;
+    const materialCost = [wt.min * metalPrice, wt.max * metalPrice];
+
+    const side = SIDESTONE_FEES[sidestone] || [0, 0];
+    mounting = { material, item, complexity, weight, sidestone, labor, materialCost, side, wt, metalPrice };
+  }
+
+  // 證書費用 (適用所有 tier)
+  const certKey = $('cert').value;
+  const certFee = parseFloat($('cert_fee').value) || 0;
+  const certInfo = { key: certKey, name: CERTS[certKey] ? CERTS[certKey].name : '無', fee: certFee };
+
+  renderResult(stone, stoneKey, carat, band, stoneResult, mounting, certInfo);
+}
+
+function calcInvest(stone, stoneKey, carat, band) {
+  const originKey = $('origin').value;
+  const treatmentKey = $('treatment').value;
+  const colorKey = $('color').value;
+  const certKey = $('cert').value;
+
+  const oCoef = stone.origins[originKey] || 1;
+  const tCoef = stone.treatments[treatmentKey] || 1;
+  const cCoef = stone.colors[colorKey] || 1;
+
+  const baseIntlFloor = stone.base_intl_floor[band];
+  const baseIntlCeil = stone.base_intl_ceil[band];
+
+  const k = oCoef * tCoef * cCoef;
+
+  const intlFloor_ct = baseIntlFloor * k;
+  const intlCeil_ct = baseIntlCeil * k;
+  const market_ref_ct = Math.sqrt(intlFloor_ct * intlCeil_ct);
+
+  // 投資級建議售價 = 國際行情 × 0.8
+  const DISCOUNT = 0.8;
+  const sMin_ct = intlFloor_ct * DISCOUNT;
+  const sTarget_ct = market_ref_ct * DISCOUNT;
+  const sMax_ct = intlCeil_ct * DISCOUNT;
+
+  return {
+    tier: 'INVEST',
+    originKey, treatmentKey, colorKey, certKey,
+    intlFloor_ct, intlCeil_ct, market_ref_ct,
+    sMin_ct, sTarget_ct, sMax_ct,
+    oCoef, tCoef, cCoef,
+    band, DISCOUNT
+  };
+}
+
+function calcCommercial(stone, carat) {
+  const [low_ct, high_ct] = stone.commercial_range;
+  const mid_ct = (low_ct + high_ct) / 2;
+
+  return {
+    tier: 'COMMERCIAL',
+    sMin_ct: low_ct,
+    sTarget_ct: mid_ct,
+    sMax_ct: high_ct,
+    low_ct, mid_ct, high_ct
+  };
+}
+
+
+// ============================================================
+// RENDER 結果輸出
+// ============================================================
+function renderResult(stone, stoneKey, carat, band, R, mounting, certInfo) {
+  // 寶石 × 克拉 之 total
+  const stone_sMin_total = R.sMin_ct * carat;
+  const stone_sTarget_total = R.sTarget_ct * carat;
+  const stone_sMax_total = R.sMax_ct * carat;
+
+  // 鑲嵌加成
+  let mount_min = 0, mount_target = 0, mount_max = 0;
+  let mountingDetail = '';
+  if (mounting) {
+    const [lL, lH] = mounting.labor;
+    const [mL, mH] = mounting.materialCost;
+    const [sL, sH] = mounting.side;
+    mount_min = lL + mL + sL;
+    mount_max = lH + mH + sH;
+    mount_target = (mount_min + mount_max) / 2;
+
+    mountingDetail = `
+      <div class="calc-row"><span class="k">金工 ${mounting.item}·${mounting.complexity}</span><span class="v">${fmt(lL)} – ${fmt(lH)}</span></div>
+      <div class="calc-row"><span class="k">材料 ${mounting.material}·${mounting.weight} × ${mounting.metalPrice}/g</span><span class="v">${fmt(mL)} – ${fmt(mH)}</span></div>
+      <div class="calc-row"><span class="k">配石 ${SIDESTONE_LABELS[mounting.sidestone] || mounting.sidestone}</span><span class="v">${sL === 0 && sH === 0 ? '—' : fmt(sL) + ' – ' + fmt(sH)}</span></div>
+    `;
+  }
+
+  // 證書費用 (固定加在每一檔)
+  const certFee = certInfo ? certInfo.fee : 0;
+  const certName = certInfo ? certInfo.name : '無';
+  let certDetail = '';
+  if (certFee > 0) {
+    certDetail = `<div class="calc-row"><span class="k">證書 ${certName}</span><span class="v">+ ${fmt(certFee)}</span></div>`;
+  }
+
+  const totalMin = stone_sMin_total + mount_min + certFee;
+  const totalTarget = stone_sTarget_total + mount_target + certFee;
+  const totalMax = stone_sMax_total + mount_max + certFee;
+
+  // Warnings (alias note only)
+  let warning = '';
+  if (R.tier === 'COMMERCIAL' && stone.alias) {
+    warning = `<div class="warning">命名說明：「${stone.name}」學名為 ${stone.alias}。</div>`;
+  }
+
+  // Calc detail
+  let calcDetail = '';
+  if (R.tier === 'INVEST') {
+    calcDetail = `
+      <div class="calc-row"><span class="k">基準國際下緣 (${BAND_LABELS[band]})</span><span class="v">${fmt(stone.base_intl_floor[band])} / ct</span></div>
+      <div class="calc-row"><span class="k">基準國際上緣 (${BAND_LABELS[band]})</span><span class="v">${fmt(stone.base_intl_ceil[band])} / ct</span></div>
+      <div class="calc-row"><span class="k">× 產地 (${R.originKey})</span><span class="v">${R.oCoef.toFixed(2)}</span></div>
+      <div class="calc-row"><span class="k">× 處理 (${R.treatmentKey})</span><span class="v">${R.tCoef.toFixed(2)}</span></div>
+      <div class="calc-row"><span class="k">× 色階 (${R.colorKey})</span><span class="v">${R.cCoef.toFixed(2)}</span></div>
+      <div class="calc-row"><span class="k">= 國際行情 / ct</span><span class="v">${fmt(R.intlFloor_ct)} – ${fmt(R.intlCeil_ct)}</span></div>
+      <div class="calc-row"><span class="k">× ${R.DISCOUNT} = 建議售價 / ct</span><span class="v">${fmt(R.sMin_ct)} – ${fmt(R.sMax_ct)}</span></div>
+      ${mountingDetail}
+      ${certDetail}
+    `;
+  } else {
+    calcDetail = `
+      <div class="calc-row"><span class="k">輕奢段 / ct</span><span class="v">${fmt(R.low_ct)} – ${fmt(R.high_ct)}</span></div>
+      <div class="calc-row"><span class="k">× ${carat} ct</span><span class="v">${fmt(stone_sMin_total)} – ${fmt(stone_sMax_total)}</span></div>
+      ${mountingDetail}
+      ${certDetail}
+    `;
+  }
+
+  // Range bar geometry
+  const rangeLo = totalMin;
+  const rangeHi = totalMax;
+  const span = Math.max(1, rangeHi - rangeLo);
+  const targetPct = ((totalTarget - rangeLo) / span) * 100;
+
+  // Slider step (adaptive based on range size)
+  const sliderStep = span < 50000 ? 100 : span < 500000 ? 500 : span < 5000000 ? 2000 : 10000;
+
+  const html = `
+    <div class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-title">${stone.name} <span style="color:var(--ink-mute);font-weight:400;">· ${carat} ct</span></div>
+          <div class="eyebrow" style="margin-top:4px;">${R.tier === 'INVEST' ? R.originKey + ' · ' + R.treatmentKey + ' · ' + R.colorKey : (R.tier === 'COMMERCIAL' && stone.alias ? '輕奢段' : '輕奢段')}</div>
+        </div>
+        <span class="tier-badge ${R.tier === 'INVEST' ? 'invest' : 'commercial'}">${R.tier === 'INVEST' ? '投資級' : '輕奢級'}</span>
+      </div>
+
+      ${warning}
+
+      <div class="tier-prices">
+        <div class="tier-price">
+          <div class="tier-price-label">下緣</div>
+          <div class="tier-price-value">NT$ ${fmtCt(totalMin)}</div>
+        </div>
+        <div class="tier-price suggested">
+          <div class="tier-price-label">建議</div>
+          <div class="tier-price-value">NT$ ${fmtCt(totalTarget)}</div>
+        </div>
+        <div class="tier-price">
+          <div class="tier-price-label">上緣</div>
+          <div class="tier-price-value">NT$ ${fmtCt(totalMax)}</div>
+        </div>
+      </div>
+
+      <div class="final-input-row">
+        <div class="final-display">
+          <div class="final-display-left">
+            <span class="final-label">最終報價</span>
+            <span class="final-prefix">NT$</span>
+          </div>
+          <span class="final-display-value" id="final_display">${fmt(totalTarget).replace('NT$ ','')}</span>
+        </div>
+        <input type="range" class="final-slider" id="final_slider" 
+               min="${Math.round(totalMin)}" max="${Math.round(totalMax)}" 
+               value="${Math.round(totalTarget)}" step="${sliderStep}">
+        <div class="slider-bounds">
+          <span>${fmt(totalMin)}</span>
+          <span class="mid">建議 ${fmt(totalTarget)}</span>
+          <span>${fmt(totalMax)}</span>
+        </div>
+        <div class="chip-row">
+          <button class="chip" type="button" id="chip_min">下緣</button>
+          <button class="chip" type="button" id="chip_target">建議</button>
+          <button class="chip" type="button" id="chip_max">上緣</button>
+        </div>
+        <input type="hidden" id="final_price" value="${Math.round(totalTarget)}">
+      </div>
+
+      <details class="calc-detail">
+        <summary>計算明細</summary>
+        <div class="calc-detail-inner">
+          ${calcDetail}
+        </div>
+      </details>
+    </div>
+  `;
+
+  $('results_body').innerHTML = html;
+
+  // Bind events — slider drives both display and hidden final_price
+  const slider = $('final_slider');
+  const display = $('final_display');
+  const hidden = $('final_price');
+  const syncFromSlider = () => {
+    const v = parseInt(slider.value);
+    hidden.value = v;
+    display.textContent = v.toLocaleString('en-US');
+    renderQuoteCard();
+  };
+  const setPrice = (v) => {
+    const clamped = Math.min(Math.max(v, totalMin), totalMax);
+    slider.value = Math.round(clamped);
+    syncFromSlider();
+  };
+  slider.addEventListener('input', syncFromSlider);
+  $('chip_min').addEventListener('click', () => setPrice(totalMin));
+  $('chip_target').addEventListener('click', () => setPrice(totalTarget));
+  $('chip_max').addEventListener('click', () => setPrice(totalMax));
+
+  renderQuoteCard();
+}
+
+// ============================================================
+// 客戶報價卡 — Clean modern, 手機尺寸
+// ============================================================
+function renderQuoteCard() {
+  const card = $('quote_card');
+  if (!card) return;
+
+  const finalPrice = parseInt($('final_price') ? $('final_price').value : 0) || 0;
+  const customer = ($('customer_name').value || '—').trim();
+  const inquiryDate = $('inquiry_date').value || new Date().toISOString().slice(0,10);
+  const source = $('source').value || '';
+  const sizeSpec = getCurrentSize();
+  const notes = $('notes').value || '';
+
+  const stoneKey = $('stone').value;
+  const stone = STONES[stoneKey];
+  const carat = parseFloat($('carat').value) || 0;
+  const dimensions = $('dimensions').value || '';
+
+  const mountingEnabled = $('mounting_enabled').checked;
+  const material = mountingEnabled ? $('material').value : '';
+  const item = mountingEnabled ? $('item').value : '';
+  const sidestoneKey = mountingEnabled ? $('sidestone').value : 'NONE';
+  const sidestone = sidestoneKey !== 'NONE' ? SIDESTONE_LABELS[sidestoneKey] : '';
+  const weight = mountingEnabled ? $('weight').value : '';
+
+  const certKey = $('cert').value;
+  const certName = (certKey !== 'NONE' && CERTS[certKey]) ? CERTS[certKey].name : '';
+
+  // Date 2026.06.12 風格
+  const dateFormatted = inquiryDate.replace(/-/g, '.');
+
+  let detailRows = '';
+  if (stone) detailRows += `<div class="qd-row"><span class="qd-k">寶石</span><span class="qd-v">${stone.name}</span></div>`;
+  if (carat) detailRows += `<div class="qd-row"><span class="qd-k">重量</span><span class="qd-v">${carat} ct</span></div>`;
+  if (dimensions) detailRows += `<div class="qd-row"><span class="qd-k">尺寸</span><span class="qd-v">${dimensions}</span></div>`;
+  if (material) detailRows += `<div class="qd-row"><span class="qd-k">材質</span><span class="qd-v">${material}${weight ? '・' + weight : ''}</span></div>`;
+  if (sidestone) detailRows += `<div class="qd-row"><span class="qd-k">配鑽</span><span class="qd-v">${sidestone}</span></div>`;
+  if (item) detailRows += `<div class="qd-row"><span class="qd-k">品項</span><span class="qd-v">${item}</span></div>`;
+  if (certName) detailRows += `<div class="qd-row"><span class="qd-k">證書</span><span class="qd-v">${certName}</span></div>`;
+  if (sizeSpec) {
+    const sizeLabel = mountingEnabled && SIZE_PRESETS[item] ? SIZE_PRESETS[item].label : '規格';
+    detailRows += `<div class="qd-row"><span class="qd-k">${sizeLabel}</span><span class="qd-v">${sizeSpec}</span></div>`;
+  }
+
+  const notesBlock = notes
+    ? `<div class="qc-section">
+         <div class="qc-label">備註</div>
+         <div class="qc-notes">${notes.replace(/</g, '&lt;')}</div>
+       </div>`
+    : '';
+
+  card.innerHTML = `
+    <div class="qc-head">
+      <div class="qc-title">珠寶估價</div>
+      <div class="qc-meta">${dateFormatted}${source ? '　・　' + source : ''}</div>
+    </div>
+
+    <div class="qc-section">
+      <div class="qc-label">客戶</div>
+      <div class="qc-name">${customer}</div>
+    </div>
+
+    <div class="qc-section">
+      <div class="qc-label">細節</div>
+      <div class="qd-list">
+        ${detailRows}
+      </div>
+    </div>
+
+    ${notesBlock}
+
+    <div class="qc-price">
+      <div class="qc-price-label">估價</div>
+      <div class="qc-price-value"><span class="qc-currency">NT$</span>${finalPrice.toLocaleString('en-US')}</div>
+    </div>
+
+    <div class="qc-foot">14 天內有效　・　含寶石與鑲嵌工費</div>
+  `;
+
+  // Trigger update flash
+  card.classList.remove('quote-card-updated');
+  void card.offsetWidth; // force reflow
+  card.classList.add('quote-card-updated');
+}
+
+// ============================================================
+// PNG 下載 + 文字複製
+// ============================================================
+async function downloadQuotePNG() {
+  const card = $('quote_card');
+  const status = $('download_status');
+  if (!card) return;
+  if (typeof html2canvas === 'undefined') {
+    status.textContent = '截圖工具尚未載入完成，請稍候再試';
+    return;
+  }
+
+  const customer = ($('customer_name').value || '客戶').replace(/[/\\:*?"<>|]/g, '_');
+  const date = $('inquiry_date').value || new Date().toISOString().slice(0,10);
+
+  status.textContent = '產生中...';
+
+  try {
+    const canvas = await html2canvas(card, {
+      backgroundColor: '#FFFFFF',
+      scale: 2.5,
+      logging: false,
+      useCORS: true
+    });
+
+    const link = document.createElement('a');
+    link.download = `珠寶估價單_${customer}_${date}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    status.textContent = '已下載 ✓';
+    setTimeout(() => { status.textContent = ''; }, 2500);
+  } catch (err) {
+    console.error(err);
+    status.textContent = '下載失敗：' + err.message;
+  }
+}
+
+function copyQuoteText() {
+  const status = $('download_status');
+  const customer = $('customer_name').value || '—';
+  const inquiryDate = $('inquiry_date').value || new Date().toISOString().slice(0,10);
+  const stoneKey = $('stone').value;
+  const stone = STONES[stoneKey];
+  const carat = parseFloat($('carat').value) || 0;
+  const dimensions = $('dimensions').value || '';
+  const mountingEnabled = $('mounting_enabled').checked;
+  const material = mountingEnabled ? $('material').value : '';
+  const item = mountingEnabled ? $('item').value : '';
+  const sidestoneKey = mountingEnabled ? $('sidestone').value : 'NONE';
+  const sidestone = sidestoneKey !== 'NONE' ? SIDESTONE_LABELS[sidestoneKey] : '';
+  const weight = mountingEnabled ? $('weight').value : '';
+  const sizeSpec = getCurrentSize();
+  const sizeLabel = mountingEnabled && SIZE_PRESETS[item] ? SIZE_PRESETS[item].label : '規格';
+  const finalPrice = parseInt($('final_price').value) || 0;
+  const notes = $('notes').value || '';
+
+  let lines = [];
+  lines.push(`【珠寶估價單】${inquiryDate}`);
+  lines.push(`客戶：${customer}`);
+  lines.push('');
+  if (stone) lines.push(`寶石：${stone.name}`);
+  if (carat) lines.push(`重量：${carat} ct`);
+  if (dimensions) lines.push(`尺寸：${dimensions}`);
+  if (material) lines.push(`材質：${material}${weight ? '·' + weight : ''}`);
+  if (sidestone) lines.push(`配鑽：${sidestone}`);
+  if (item) lines.push(`品項：${item}`);
+  if (sizeSpec) lines.push(`${sizeLabel}：${sizeSpec}`);
+  if (notes) lines.push(`備註：${notes}`);
+  lines.push('');
+  lines.push(`報價：NT$ ${finalPrice.toLocaleString('en-US')}`);
+  if (notes) lines.push(`備註：${notes}`);
+  lines.push('');
+  lines.push(`報價：NT$ ${finalPrice.toLocaleString('en-US')}`);
+  lines.push('（含寶石與鑲嵌工費，14 天內有效）');
+
+  const text = lines.join('\n');
+
+  navigator.clipboard.writeText(text).then(() => {
+    status.textContent = '已複製文字 ✓';
+    setTimeout(() => { status.textContent = ''; }, 2500);
+  }).catch(err => {
+    status.textContent = '複製失敗：' + err.message;
+  });
+}
+
+function bindEvents() {
+  $('stone').addEventListener('change', () => {
+    updateStoneDependentOptions();
+    calculate();
+  });
+  ['carat', 'origin', 'treatment', 'color',
+   'material', 'complexity', 'weight', 'sidestone', 'cert_fee'].forEach(id => {
+    $(id).addEventListener('input', calculate);
+    $(id).addEventListener('change', calculate);
+  });
+
+  // 品項改變時，刷新尺寸下拉
+  $('item').addEventListener('change', () => {
+    updateSizeOptions();
+    calculate();
+  });
+
+  // 尺寸下拉改變 → 切換自訂輸入框顯隱 + 重繪報價卡
+  $('size_select').addEventListener('change', () => {
+    const customField = $('size_custom_field');
+    if ($('size_select').value === '__CUSTOM__') {
+      customField.style.display = '';
+      $('size_custom').focus();
+    } else {
+      customField.style.display = 'none';
+      $('size_custom').value = '';
+    }
+    if (window.__lastCalcOK) renderQuoteCard();
+  });
+  $('size_custom').addEventListener('input', () => {
+    if (window.__lastCalcOK) renderQuoteCard();
+  });
+
+  // 證書下拉改變時, 自動帶入該證書的預設費用
+  $('cert').addEventListener('change', () => {
+    const certKey = $('cert').value;
+    if (CERTS[certKey]) {
+      $('cert_fee').value = CERTS[certKey].fee;
+    }
+    calculate();
+  });
+
+  $('mounting_enabled').addEventListener('change', toggleMounting);
+
+  // 客戶詢價欄位 — 只觸發報價卡重繪, 不重新估價
+  ['customer_name', 'inquiry_date', 'source', 'budget', 'notes', 'dimensions'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('input', () => { if (window.__lastCalcOK) renderQuoteCard(); });
+  });
+
+  // PNG 下載 + 文字複製
+  const dlBtn = $('btn_download_png');
+  if (dlBtn) dlBtn.addEventListener('click', downloadQuotePNG);
+  const cpBtn = $('btn_copy_text');
+  if (cpBtn) cpBtn.addEventListener('click', copyQuoteText);
+
+  // ===== 自動跳格 (Enter + select change) =====
+  bindAutoAdvance();
+}
+
+// 取得當前可 focus 的欄位順序 (依文件順序，跳過隱藏的)
+function getFocusableFields() {
+  const ids = [
+    'customer_name', 'inquiry_date', 'source', 'budget', 'notes',
+    'stone', 'carat', 'dimensions',
+    'origin', 'treatment', 'color',
+    'cert', 'cert_fee',
+    'material', 'item', 'weight', 'complexity', 'sidestone',
+    'size_select', 'size_custom'
+  ];
+  return ids
+    .map(id => $(id))
+    .filter(el => el && !el.disabled && el.offsetParent !== null);
+}
+
+function focusNext(currentEl) {
+  const fields = getFocusableFields();
+  const idx = fields.indexOf(currentEl);
+  if (idx >= 0 && idx < fields.length - 1) {
+    const next = fields[idx + 1];
+    // 視覺提示: 上一格 flash
+    currentEl.classList.add('field-filled-flash');
+    setTimeout(() => currentEl.classList.remove('field-filled-flash'), 500);
+    // 下一格 focus
+    next.focus();
+    if (next.select && next.type !== 'date' && next.type !== 'select-one') next.select();
+  }
+}
+
+function bindAutoAdvance() {
+  // 文字 / 數字 / 日期 input: Enter 跳下一格
+  ['customer_name', 'inquiry_date', 'source', 'budget',
+   'carat', 'dimensions', 'cert_fee', 'size_custom'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        focusNext(el);
+      }
+    });
+  });
+
+  // textarea (notes): Ctrl/Cmd + Enter 跳下一格 (一般 Enter 保留換行)
+  const notesEl = $('notes');
+  if (notesEl) {
+    notesEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        focusNext(notesEl);
+      }
+    });
+  }
+
+  // select: 改變後延遲跳到下一格 (使用者有時間確認選擇)
+  ['stone', 'origin', 'treatment', 'color', 'cert',
+   'material', 'item', 'weight', 'complexity', 'sidestone'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('change', () => {
+      setTimeout(() => focusNext(el), 250);
+    });
+  });
+
+  // size_select 特殊: 如果選自行輸入, 跳到 size_custom; 否則跳走
+  const sizeSel = $('size_select');
+  if (sizeSel) {
+    sizeSel.addEventListener('change', () => {
+      if (sizeSel.value === '__CUSTOM__') {
+        setTimeout(() => $('size_custom').focus(), 250);
+      }
+    });
+  }
+}
+
+// 依品項刷新尺寸下拉 (label + options)
+function updateSizeOptions() {
+  const item = $('item').value;
+  const preset = SIZE_PRESETS[item] || { label: '尺寸', options: [] };
+  $('size_label').textContent = preset.label;
+  const sel = $('size_select');
+  sel.innerHTML = '';
+  preset.options.forEach(opt => {
+    const o = document.createElement('option');
+    o.value = opt;
+    o.textContent = opt;
+    sel.appendChild(o);
+  });
+  // 永遠加上「自行輸入」
+  const customOpt = document.createElement('option');
+  customOpt.value = '__CUSTOM__';
+  customOpt.textContent = '自行輸入';
+  sel.appendChild(customOpt);
+  // 重置自訂欄位
+  $('size_custom_field').style.display = 'none';
+  $('size_custom').value = '';
+}
+
+// 取得當前尺寸 (combo / custom)
+function getCurrentSize() {
+  if (!$('mounting_enabled').checked) return '';
+  const v = $('size_select').value;
+  if (v === '__CUSTOM__') return $('size_custom').value.trim();
+  return v;
+}
+
+// ============================================================
+// SETTINGS UI
+// ============================================================
+let _dirty = false;
+function markDirty() {
+  _dirty = true;
+  const s = $('settings_status');
+  s.textContent = '有未儲存修改';
+  s.className = 'settings-status';
+}
+function markSaved() {
+  _dirty = false;
+  const s = $('settings_status');
+  s.textContent = '已儲存 ' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
+  s.className = 'settings-status saved';
+}
+
+function makeNumInput(value, onChange) {
+  const inp = document.createElement('input');
+  inp.type = 'number'; inp.className = 'num';
+  inp.value = value;
+  const original = value;
+  inp.addEventListener('input', () => {
+    const v = parseFloat(inp.value);
+    if (!isNaN(v)) {
+      onChange(v);
+      inp.classList.toggle('changed', v !== original);
+      markDirty();
+    }
+  });
+  return inp;
+}
+
+function makeNameInput(currentValue, onChange) {
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.className = 'name';
+  inp.value = currentValue;
+  inp.addEventListener('input', () => {
+    onChange(inp.value);
+    markDirty();
+  });
+  return inp;
+}
+
+function makeDeleteBtn(label, onDelete) {
+  const btn = document.createElement('button');
+  btn.textContent = '×';
+  btn.title = '刪除';
+  btn.className = 'btn-delete';
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (confirm(`確定刪除「${label}」？
+（可按右上「回復預設」找回）`)) {
+      onDelete();
+      markDirty();
+      renderSettings();
+      refreshEstimatorAfterSettingsChange();
+    }
+  });
+  return btn;
+}
+
+function refreshEstimatorAfterSettingsChange() {
+  // 名稱修改或刪除後, 刷新估價器的下拉選單
+  const currentStone = $('stone').value;
+  populate();
+  if (STONES[currentStone]) {
+    $('stone').value = currentStone;
+  } else {
+    const firstComm = Object.keys(STONES).find(k => STONES[k].tier === 'COMMERCIAL');
+    const firstAny = Object.keys(STONES)[0];
+    $('stone').value = firstComm || firstAny || '';
+  }
+  updateStoneDependentOptions();
+  calculate();
+}
+
+function renderSettings() {
+  const root = $('settings_render');
+  root.innerHTML = '';
+
+  // === Commercial stones ===
+  const commGroup = document.createElement('details');
+  commGroup.className = 'settings-group';
+  commGroup.open = true;
+  commGroup.innerHTML = `<summary><span>輕奢級寶石單價 <span class="group-meta">NT$/克拉，已含利潤之零售區間（你的真實成交價）</span></span></summary>`;
+  const commBody = document.createElement('div');
+  commBody.className = 'settings-body';
+  const commTable = document.createElement('table');
+  commTable.className = 'settings-table';
+  commTable.innerHTML = `<thead><tr><th style="width:34%">寶石名稱</th><th>下緣 NT$/ct</th><th>上緣 NT$/ct</th><th style="width:48px;text-align:center;">刪除</th></tr></thead>`;
+  const commTbody = document.createElement('tbody');
+  Object.entries(STONES).filter(([_, v]) => v.tier === 'COMMERCIAL').forEach(([k, v]) => {
+    const row = document.createElement('tr');
+    const tdLabel = document.createElement('td');
+    tdLabel.appendChild(makeNameInput(v.name, val => v.name = val));
+    if (v.alias) {
+      const aliasSpan = document.createElement('div');
+      aliasSpan.style.cssText = 'font-size:10px;color:var(--coral);margin-top:3px;';
+      aliasSpan.textContent = '⚠ ' + v.alias;
+      tdLabel.appendChild(aliasSpan);
+    }
+    row.appendChild(tdLabel);
+    const tdLo = document.createElement('td');
+    tdLo.appendChild(makeNumInput(v.commercial_range[0], val => v.commercial_range[0] = val));
+    row.appendChild(tdLo);
+    const tdHi = document.createElement('td');
+    tdHi.appendChild(makeNumInput(v.commercial_range[1], val => v.commercial_range[1] = val));
+    row.appendChild(tdHi);
+    const tdDel = document.createElement('td');
+    tdDel.style.textAlign = 'center';
+    tdDel.appendChild(makeDeleteBtn(v.name, () => { delete STONES[k]; }));
+    row.appendChild(tdDel);
+    commTbody.appendChild(row);
+  });
+  commTable.appendChild(commTbody);
+  commBody.appendChild(commTable);
+  commGroup.appendChild(commBody);
+  root.appendChild(commGroup);
+
+  // === Craft labor fees ===
+  const craftGroup = document.createElement('details');
+  craftGroup.className = 'settings-group';
+  craftGroup.innerHTML = `<summary><span>金工費 (人工) <span class="group-meta">品項 × 複雜度, 與材質無關, 已含利潤</span></span></summary>`;
+  const craftBody = document.createElement('div');
+  craftBody.className = 'settings-body';
+  const ct = document.createElement('table');
+  ct.className = 'settings-table';
+  ct.innerHTML = `<thead><tr><th style="width:18%">品項</th>${COMPLEXITY.map(c => `<th>${c} (下／上)</th>`).join('')}</tr></thead>`;
+  const ctb = document.createElement('tbody');
+  ITEMS.forEach(item => {
+    const r = document.createElement('tr');
+    const lbl = document.createElement('td');
+    lbl.className = 'label-cell'; lbl.textContent = item;
+    r.appendChild(lbl);
+    COMPLEXITY.forEach(comp => {
+      const key = `${item}-${comp}`;
+      const range = CRAFT_LABOR_FEES[key];
+      const td = document.createElement('td');
+      if (range) {
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display:flex;gap:4px;';
+        wrapper.appendChild(makeNumInput(range[0], v => range[0] = v));
+        wrapper.appendChild(makeNumInput(range[1], v => range[1] = v));
+        td.appendChild(wrapper);
+      } else td.textContent = '—';
+      r.appendChild(td);
+    });
+    ctb.appendChild(r);
+  });
+  ct.appendChild(ctb);
+  craftBody.appendChild(ct);
+  craftGroup.appendChild(craftBody);
+  root.appendChild(craftGroup);
+
+  // === Metal prices per gram ===
+  const metalGroup = document.createElement('details');
+  metalGroup.className = 'settings-group';
+  metalGroup.innerHTML = `<summary><span>貴金屬 retail / 克 <span class="group-meta">2026/06 台灣零售價, 含工費利潤</span></span></summary>`;
+  const metalBody = document.createElement('div');
+  metalBody.className = 'settings-body';
+  const mt = document.createElement('table');
+  mt.className = 'settings-table';
+  mt.innerHTML = `<thead><tr><th style="width:60%">材質</th><th>NT$ / 公克</th></tr></thead>`;
+  const mtb = document.createElement('tbody');
+  Object.entries(METAL_PRICES_PER_G).forEach(([k, v]) => {
+    const r = document.createElement('tr');
+    const lblTd = document.createElement('td');
+    lblTd.className = 'label-cell'; lblTd.textContent = k;
+    r.appendChild(lblTd);
+    const valTd = document.createElement('td');
+    valTd.appendChild(makeNumInput(v, val => METAL_PRICES_PER_G[k] = val));
+    r.appendChild(valTd);
+    mtb.appendChild(r);
+  });
+  mt.appendChild(mtb);
+  metalBody.appendChild(mt);
+  metalGroup.appendChild(metalBody);
+  root.appendChild(metalGroup);
+
+  // === Weight levels (grammage ranges) ===
+  const wtGroup = document.createElement('details');
+  wtGroup.className = 'settings-group';
+  wtGroup.innerHTML = `<summary><span>克重等級 <span class="group-meta">6 級用料區間 (公克), 各品項通用</span></span></summary>`;
+  const wtBody = document.createElement('div');
+  wtBody.className = 'settings-body';
+  const wtt = document.createElement('table');
+  wtt.className = 'settings-table';
+  wtt.innerHTML = `<thead><tr><th style="width:55%">等級</th><th>下緣 g</th><th>上緣 g</th></tr></thead>`;
+  const wttb = document.createElement('tbody');
+  Object.entries(WEIGHT_LEVELS).forEach(([k, v]) => {
+    const r = document.createElement('tr');
+    const lblTd = document.createElement('td');
+    lblTd.className = 'label-cell'; lblTd.textContent = k;
+    r.appendChild(lblTd);
+    const minTd = document.createElement('td');
+    const minInp = document.createElement('input');
+    minInp.type = 'number'; minInp.step = '0.1'; minInp.className = 'num';
+    minInp.value = v.min;
+    minInp.addEventListener('input', () => { const val = parseFloat(minInp.value); if (!isNaN(val)) { v.min = val; markDirty(); } });
+    minTd.appendChild(minInp);
+    r.appendChild(minTd);
+    const maxTd = document.createElement('td');
+    const maxInp = document.createElement('input');
+    maxInp.type = 'number'; maxInp.step = '0.1'; maxInp.className = 'num';
+    maxInp.value = v.max;
+    maxInp.addEventListener('input', () => { const val = parseFloat(maxInp.value); if (!isNaN(val)) { v.max = val; markDirty(); } });
+    maxTd.appendChild(maxInp);
+    r.appendChild(maxTd);
+    wttb.appendChild(r);
+  });
+  wtt.appendChild(wttb);
+  wtBody.appendChild(wtt);
+  wtGroup.appendChild(wtBody);
+  root.appendChild(wtGroup);
+
+  // === Side stones ===
+  const sideGroup = document.createElement('details');
+  sideGroup.className = 'settings-group';
+  sideGroup.innerHTML = `<summary><span>配鑽 / 配石費用 <span class="group-meta">按顆數分級</span></span></summary>`;
+  const sideBody = document.createElement('div');
+  sideBody.className = 'settings-body';
+  const sideTable = document.createElement('table');
+  sideTable.className = 'settings-table';
+  sideTable.innerHTML = `<thead><tr><th style="width:34%">規格名稱</th><th>下緣 NT$</th><th>上緣 NT$</th><th style="width:48px;text-align:center;">刪除</th></tr></thead>`;
+  const sideTbody = document.createElement('tbody');
+  Object.entries(SIDESTONE_FEES).forEach(([k, range]) => {
+    const r = document.createElement('tr');
+    const lbl = document.createElement('td');
+    lbl.appendChild(makeNameInput(SIDESTONE_LABELS[k] || k, val => SIDESTONE_LABELS[k] = val));
+    r.appendChild(lbl);
+    const tdLo = document.createElement('td');
+    tdLo.appendChild(makeNumInput(range[0], v => range[0] = v));
+    r.appendChild(tdLo);
+    const tdHi = document.createElement('td');
+    tdHi.appendChild(makeNumInput(range[1], v => range[1] = v));
+    r.appendChild(tdHi);
+    const tdDel = document.createElement('td');
+    tdDel.style.textAlign = 'center';
+    tdDel.appendChild(makeDeleteBtn(SIDESTONE_LABELS[k] || k, () => {
+      delete SIDESTONE_FEES[k];
+      delete SIDESTONE_LABELS[k];
+    }));
+    r.appendChild(tdDel);
+    sideTbody.appendChild(r);
+  });
+  sideTable.appendChild(sideTbody);
+  sideBody.appendChild(sideTable);
+  sideGroup.appendChild(sideBody);
+  root.appendChild(sideGroup);
+
+  // === Cert fees ===
+  const certGroup = document.createElement('details');
+  certGroup.className = 'settings-group';
+  certGroup.innerHTML = `<summary><span>證書費用 <span class="group-meta">直接加在最終估價之上, NT$</span></span></summary>`;
+  const certBody = document.createElement('div');
+  certBody.className = 'settings-body';
+  const certTable = document.createElement('table');
+  certTable.className = 'settings-table';
+  certTable.innerHTML = `<thead><tr><th style="width:55%">證書名稱</th><th>預設費用 NT$</th><th style="width:48px;text-align:center;">刪除</th></tr></thead>`;
+  const certTbody = document.createElement('tbody');
+  Object.entries(CERTS).forEach(([k, v]) => {
+    const r = document.createElement('tr');
+    const lbl = document.createElement('td');
+    lbl.appendChild(makeNameInput(v.name, val => v.name = val));
+    r.appendChild(lbl);
+    const tdFee = document.createElement('td');
+    tdFee.appendChild(makeNumInput(v.fee || 0, val => v.fee = val));
+    r.appendChild(tdFee);
+    const tdDel = document.createElement('td');
+    tdDel.style.textAlign = 'center';
+    tdDel.appendChild(makeDeleteBtn(v.name, () => { delete CERTS[k]; }));
+    r.appendChild(tdDel);
+    certTbody.appendChild(r);
+  });
+  certTable.appendChild(certTbody);
+  certBody.appendChild(certTable);
+  certGroup.appendChild(certBody);
+  root.appendChild(certGroup);
+
+  // === Investment stones (advanced, collapsed) ===
+  const invGroup = document.createElement('details');
+  invGroup.className = 'settings-group';
+  invGroup.innerHTML = `<summary><span>投資級寶石基準價（輔助）<span class="group-meta">外部國際行情估算 — 非 TZG 真實成交價，× 0.8 後為建議售價</span></span></summary>`;
+  const invBody = document.createElement('div');
+  invBody.className = 'settings-body';
+  const bandKeys = ['B1','B2','B3','B4','B5'];
+  Object.entries(STONES).filter(([_, v]) => v.tier === 'INVEST').forEach(([k, v]) => {
+    const sub = document.createElement('details');
+    sub.className = 'settings-sub-table';
+    sub.style.cssText = 'background:#FBFBF8;border:1px solid var(--line);border-radius:3px;margin-top:10px;';
+    const sum = document.createElement('summary');
+    sum.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:12px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px;';
+    // 名稱可編輯
+    const nameInp = makeNameInput(v.name, val => v.name = val);
+    nameInp.style.cssText += 'flex:1;max-width:280px;font-weight:600;';
+    nameInp.addEventListener('click', e => e.preventDefault()); // 防止點 input 收合 summary
+    sum.appendChild(nameInp);
+    // 刪除鈕
+    const delBtn = makeDeleteBtn(v.name, () => { delete STONES[k]; });
+    delBtn.addEventListener('click', e => e.stopPropagation());
+    sum.appendChild(delBtn);
+    sub.appendChild(sum);
+    const subBody = document.createElement('div');
+    subBody.style.padding = '4px 14px 14px';
+    const t = document.createElement('table');
+    t.className = 'settings-table';
+    t.innerHTML = `<thead><tr><th style="width:24%">項目</th>${bandKeys.map(b => `<th>${BAND_LABELS[b]}</th>`).join('')}</tr></thead>`;
+    const tb = document.createElement('tbody');
+    [['base_purchase', '拿貨基準'], ['base_intl_floor', '行情低'], ['base_intl_ceil', '行情高']].forEach(([fld, lbl]) => {
+      const r = document.createElement('tr');
+      const tdL = document.createElement('td');
+      tdL.className = 'label-cell'; tdL.textContent = lbl;
+      r.appendChild(tdL);
+      bandKeys.forEach(b => {
+        const td = document.createElement('td');
+        td.appendChild(makeNumInput(v[fld][b], val => v[fld][b] = val));
+        r.appendChild(td);
+      });
+      tb.appendChild(r);
+    });
+    t.appendChild(tb);
+    subBody.appendChild(t);
+    // Coefficients
+    [['origins','產地'],['treatments','處理'],['colors','色階']].forEach(([fld, lbl]) => {
+      const h = document.createElement('div');
+      h.className = 'settings-sub-header'; h.textContent = lbl + ' 係數';
+      subBody.appendChild(h);
+      const ct = document.createElement('table');
+      ct.className = 'settings-table';
+      ct.innerHTML = `<thead><tr><th style="width:60%">選項</th><th>係數</th></tr></thead>`;
+      const ctb = document.createElement('tbody');
+      Object.entries(v[fld]).forEach(([key, val]) => {
+        const r = document.createElement('tr');
+        const tdK = document.createElement('td');
+        tdK.className = 'label-cell'; tdK.textContent = key;
+        r.appendChild(tdK);
+        const tdV = document.createElement('td');
+        tdV.style.maxWidth = '120px';
+        const inp = document.createElement('input');
+        inp.type = 'number'; inp.step = '0.1'; inp.className = 'num';
+        inp.value = val;
+        inp.addEventListener('input', () => {
+          const x = parseFloat(inp.value);
+          if (!isNaN(x)) { v[fld][key] = x; markDirty(); }
+        });
+        tdV.appendChild(inp);
+        r.appendChild(tdV);
+        ctb.appendChild(r);
+      });
+      ct.appendChild(ctb);
+      subBody.appendChild(ct);
+    });
+    sub.appendChild(subBody);
+    invBody.appendChild(sub);
+  });
+  invGroup.appendChild(invBody);
+  root.appendChild(invGroup);
+}
+
+function bindSettingsEvents() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('tab-quote').classList.toggle('hidden', tab !== 'quote');
+      document.getElementById('tab-settings').classList.toggle('hidden', tab !== 'settings');
+      if (tab === 'settings') renderSettings();
+    });
+  });
+  $('btn_save').addEventListener('click', () => {
+    saveData();
+    markSaved();
+    refreshEstimatorAfterSettingsChange();
+  });
+  $('btn_reset').addEventListener('click', () => {
+    if (!confirm('確定回復所有預設值？目前的自訂修改會全部消失。')) return;
+    resetData();
+    renderSettings();
+    populate();
+    $('stone').value = 'MORGANITE_C';
+    updateStoneDependentOptions();
+    calculate();
+    markSaved();
+    $('settings_status').textContent = '已回復預設';
+  });
+  $('btn_export').addEventListener('click', exportData);
+  $('btn_import_trigger').addEventListener('click', () => $('btn_import').click());
+  $('btn_import').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      await importData(file);
+      renderSettings();
+      populate();
+      calculate();
+      markSaved();
+      $('settings_status').textContent = '匯入完成並已儲存';
+    } catch(err) {
+      alert('匯入失敗：' + err.message);
+    }
+    e.target.value = '';
+  });
+}
+
+populate();
+bindEvents();
+bindSettingsEvents();
+
+// 預設值
+$('inquiry_date').value = new Date().toISOString().slice(0, 10);
+$('stone').value = 'MORGANITE_C';
+updateStoneDependentOptions();
+calculate();
+</script>
+</body>
+</html>
