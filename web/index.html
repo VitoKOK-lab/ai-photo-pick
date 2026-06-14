@@ -200,6 +200,18 @@ button { font-family: inherit; cursor: pointer; }
 .darkbg-card.exclude::after { content: '✓'; position: absolute; inset: 0; background: rgba(0,200,100,.35); display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; }
 .darkbg-footer { padding: 12px 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-shrink: 0; }
 
+/* ── Admin PIN modal ────────────────────────────────────── */
+.pin-ovl { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 500; display: flex; align-items: center; justify-content: center; }
+.pin-box { background: var(--surface); border-radius: 16px; padding: 24px 20px; width: 280px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 8px 32px rgba(0,0,0,.18); }
+.pin-title { font-size: 15px; font-weight: 600; text-align: center; color: var(--text); }
+.pin-input { border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 22px; text-align: center; letter-spacing: 8px; outline: none; width: 100%; box-sizing: border-box; }
+.pin-input:focus { border-color: var(--gold); }
+.pin-err { font-size: 12px; color: #e74c3c; text-align: center; min-height: 16px; }
+.pin-btn { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pin-cancel { background: none; border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-size: 13px; color: var(--text2); cursor: pointer; }
+.admin-key { font-size: 14px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text3); cursor: pointer; }
+.admin-key.on { border-color: var(--gold); color: var(--gold); background: #fff8ee; }
+
 /* ── Upload FAB ─────────────────────────────────────────── */
 .upload-fab { position: fixed; bottom: calc(var(--tab-h) + 16px); right: 16px; z-index: 300; width: 50px; height: 50px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 28px; font-weight: 300; line-height: 1; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.24); display: flex; align-items: center; justify-content: center; transition: transform .15s, box-shadow .15s; }
 .upload-fab:active { transform: scale(.92); }
@@ -261,6 +273,7 @@ const { useState, useEffect, useRef } = React;
 const BANNERS = ['/banners/ｂ1.png','/banners/ｂ2.png','/banners/ｂ3.png','/banners/ｂ4.png','/banners/ｂ5.png','/banners/ｂ6.png','/banners/ｂ7.png','/banners/ｂ8.png','/banners/ｂ9.png','/banners/ｂ10.png'].sort(() => Math.random() - 0.5);
 
 /* ── Session & event tracking ───────────────────────── */
+const ADMIN_PIN  = '1234'; // ← 老闆在這裡修改密碼
 const SESSION_ID = (sessionStorage.getItem('sid') || (() => { const s = Math.random().toString(36).slice(2); sessionStorage.setItem('sid', s); return s; })());
 async function logEvent(photo_id, event_type, extra = {}) {
   try {
@@ -436,7 +449,7 @@ function SimilarInfiniteGrid({ items, onSelectPhoto, setView }) {
 }
 
 /* ── Photo detail ───────────────────────────────────── */
-function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDeleted, onUpdated }) {
+function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDeleted, onUpdated, isAdmin }) {
   const openedAt = useRef(Date.now());
   useEffect(() => {
     logEvent(photo.id, 'view');
@@ -614,11 +627,13 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
                 找相似 →
               </button>
             </div>
-            <div style={{padding:'0 16px 16px'}}>
-              <button className="db db-edit" style={{width:'100%'}} onClick={() => setView('edit')}>
-                ✏️ 修改分類 / 刪除
-              </button>
-            </div>
+            {isAdmin && (
+              <div style={{padding:'0 16px 16px'}}>
+                <button className="db db-edit" style={{width:'100%'}} onClick={() => setView('edit')}>
+                  ✏️ 修改分類 / 刪除
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -627,7 +642,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
 }
 
 /* ── Photo grid ─────────────────────────────────────── */
-function PhotoGrid({ isFav, toggleFav, filters }) {
+function PhotoGrid({ isFav, toggleFav, filters, isAdmin }) {
   const [photos,  setPhotos]  = useState([]);
   const [loading, setLoading] = useState(false);
   const [detail,  setDetail]  = useState(null);
@@ -758,7 +773,7 @@ function PhotoGrid({ isFav, toggleFav, filters }) {
 }
 
 /* ── Browse tab ─────────────────────────────────────── */
-function BrowseTab({ isFav, toggleFav }) {
+function BrowseTab({ isFav, toggleFav, isAdmin }) {
   const [catFilter, setCatFilter] = useState(null);
   const [filters, setFilters] = useState({});
   const [counts,  setCounts]  = useState({});
@@ -795,7 +810,7 @@ function BrowseTab({ isFav, toggleFav }) {
       </div>
       <div className="body-row">
         <div className="main">
-          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} />
+          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} isAdmin={isAdmin} />
         </div>
       </div>
     </>
@@ -835,9 +850,36 @@ function FavsTab({ favs, isFav, toggleFav, clearFavs }) {
       </div>
       {detail && (
         <PhotoDetail photo={detail} onClose={() => setDetail(null)}
-          isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p => setDetail(p)} />
+          isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p => setDetail(p)}
+          isAdmin={isAdmin}
+          onDeleted={id => { setPhotos(prev => prev.filter(p => p.id !== id)); setDetail(null); }}
+          onUpdated={updated => { setPhotos(prev => prev.map(p => p.id === updated.id ? {...p,...updated} : p)); setDetail(updated); }} />
       )}
     </>
+  );
+}
+
+/* ── Admin PIN modal ───────────────────────────────── */
+function PinModal({ onClose, onAuth }) {
+  const [pin, setPin] = useState('');
+  const [err, setErr] = useState(false);
+  function submit() {
+    if (pin === ADMIN_PIN) { localStorage.setItem('isAdmin','true'); onAuth(true); onClose(); }
+    else { setErr(true); setPin(''); }
+  }
+  return (
+    <div className="pin-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="pin-box">
+        <div className="pin-title">管理員登入</div>
+        <input className="pin-input" type="password" inputMode="numeric" maxLength={6}
+          placeholder="••••" value={pin} autoFocus
+          onChange={e => { setPin(e.target.value); setErr(false); }}
+          onKeyDown={e => e.key === 'Enter' && submit()} />
+        <div className="pin-err">{err ? '密碼錯誤' : ''}</div>
+        <button className="pin-btn" onClick={submit}>確認</button>
+        <button className="pin-cancel" onClick={onClose}>取消</button>
+      </div>
+    </div>
   );
 }
 
@@ -1011,10 +1053,17 @@ function DarkBgModal({ onClose, onDeleted }) {
 
 /* ── App ────────────────────────────────────────────── */
 function App() {
-  const [splash, setSplash] = useState(true);
-  const [tab,  setTab]  = useState('browse');
-  const [favs, setFavs] = useState(loadFavs);
-  const [showDarkBg, setShowDarkBg] = useState(false);
+  const [splash,    setSplash]    = useState(true);
+  const [tab,       setTab]       = useState('browse');
+  const [favs,      setFavs]      = useState(loadFavs);
+  const [showDarkBg,setShowDarkBg]= useState(false);
+  const [isAdmin,   setIsAdmin]   = useState(() => localStorage.getItem('isAdmin') === 'true');
+  const [showPin,   setShowPin]   = useState(false);
+
+  function handleAdminKey() {
+    if (isAdmin) { localStorage.removeItem('isAdmin'); setIsAdmin(false); }
+    else setShowPin(true);
+  }
 
   const toggleFav = photo => setFavs(prev => {
     const isCurrent = prev.some(p => p.id === photo.id);
@@ -1031,7 +1080,10 @@ function App() {
       {splash && <Splash onDone={() => setSplash(false)} />}
       <header className="nav">
         <span className="nav-logo">Tahir Zainab Selection</span>
-        <button className="darkbg-btn" onClick={() => setShowDarkBg(true)}>清黑底</button>
+        {isAdmin && <button className="darkbg-btn" onClick={() => setShowDarkBg(true)}>清黑底</button>}
+        <button className={'admin-key' + (isAdmin ? ' on' : '')} onClick={handleAdminKey} title={isAdmin ? '退出管理模式' : '管理員登入'}>
+          {isAdmin ? '🔑' : '🔒'}
+        </button>
         <div className="nav-tabs">
           <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>找款</button>
           <button className={'nav-tab' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
@@ -1045,11 +1097,12 @@ function App() {
           onDeleted={() => { setShowDarkBg(false); window.location.reload(); }}
         />
       )}
+      {showPin && <PinModal onClose={() => setShowPin(false)} onAuth={setIsAdmin} />}
       <div className="content">
-        {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} />}
+        {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} isAdmin={isAdmin} />}
         {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} />}
       </div>
-      {!splash && <UploadBtn />}
+      {!splash && isAdmin && <UploadBtn />}
       <nav className="tab-bar">
         <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>
           <IcoGrid /><span>找款</span>
