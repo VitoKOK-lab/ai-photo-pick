@@ -210,7 +210,10 @@ button { font-family: inherit; cursor: pointer; }
 .pin-btn { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
 .pin-cancel { background: none; border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-size: 13px; color: var(--text2); cursor: pointer; }
 .admin-key { font-size: 14px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text3); cursor: pointer; }
-.admin-key.on { border-color: var(--gold); color: var(--gold); background: #fff8ee; }
+.admin-key.staff { border-color: #5b9bd5; color: #5b9bd5; background: #eef5fc; }
+.admin-key.admin { border-color: var(--gold); color: var(--gold); background: #fff8ee; }
+.undo-toast { position: fixed; bottom: calc(var(--tab-h) + 16px); left: 50%; transform: translateX(-50%); z-index: 400; background: #1a1a1a; color: #fff; padding: 12px 16px; border-radius: 12px; font-size: 13px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.3); animation: fadeUp .3s ease both; }
+.undo-btn { background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 
 /* ── Upload FAB ─────────────────────────────────────────── */
 .upload-fab { position: fixed; bottom: calc(var(--tab-h) + 16px); right: 16px; z-index: 300; width: 50px; height: 50px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 28px; font-weight: 300; line-height: 1; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.24); display: flex; align-items: center; justify-content: center; transition: transform .15s, box-shadow .15s; }
@@ -274,6 +277,7 @@ const BANNERS = ['/banners/ｂ1.png','/banners/ｂ2.png','/banners/ｂ3.png','/b
 
 /* ── Session & event tracking ───────────────────────── */
 const ADMIN_PIN  = '1234'; // ← 老闆在這裡修改密碼
+const STAFF_PIN  = '5678'; // ← 員工密碼
 const SESSION_ID = (sessionStorage.getItem('sid') || (() => { const s = Math.random().toString(36).slice(2); sessionStorage.setItem('sid', s); return s; })());
 async function logEvent(photo_id, event_type, extra = {}) {
   try {
@@ -449,7 +453,9 @@ function SimilarInfiniteGrid({ items, onSelectPhoto, setView }) {
 }
 
 /* ── Photo detail ───────────────────────────────────── */
-function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDeleted, onUpdated, isAdmin }) {
+function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDeleted, onUpdated, role }) {
+  const isAdmin = role === 'admin';
+  const isStaff = role === 'staff' || role === 'admin';
   const openedAt = useRef(Date.now());
   useEffect(() => {
     logEvent(photo.id, 'view');
@@ -634,6 +640,14 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
                 </button>
               </div>
             )}
+            {!isAdmin && isStaff && (
+              <div style={{padding:'0 16px 16px'}}>
+                <button className="db db-del" style={{width:'100%'}}
+                  onClick={() => { onDeleted && onDeleted(photo.id); onClose(); }}>
+                  🗑 移除此照片
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -642,10 +656,13 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
 }
 
 /* ── Photo grid ─────────────────────────────────────── */
-function PhotoGrid({ isFav, toggleFav, filters, isAdmin }) {
-  const [photos,  setPhotos]  = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [detail,  setDetail]  = useState(null);
+function PhotoGrid({ isFav, toggleFav, filters, role }) {
+  const [photos,     setPhotos]     = useState([]);
+  const [loading,    setLoading]    = useState(false);
+  const [detail,     setDetail]     = useState(null);
+  const [pendingDel, setPendingDel] = useState(null); // {id, photo, timer}
+  const isAdmin = role === 'admin';
+  const isStaff = role === 'staff' || role === 'admin';
 
   const loadingRef  = useRef(false);
   const pageRef     = useRef(1);
@@ -764,16 +781,43 @@ function PhotoGrid({ isFav, toggleFav, filters, isAdmin }) {
           isFav={isFav}
           toggleFav={toggleFav}
           onSelectPhoto={p => setDetail(p)}
-          onDeleted={id => { setPhotos(prev => prev.filter(p => p.id !== id)); setDetail(null); }}
+          role={role}
+          onDeleted={id => {
+            if (isAdmin) {
+              // Admin: immediate delete
+              setPhotos(prev => prev.filter(p => p.id !== id));
+              setDetail(null);
+            } else {
+              // Staff: delayed delete with undo
+              const photo = photos.find(p => p.id === id);
+              setPhotos(prev => prev.filter(p => p.id !== id));
+              setDetail(null);
+              const timer = setTimeout(() => {
+                fetch('/api/photos/' + id, { method: 'DELETE' });
+                setPendingDel(null);
+              }, 5000);
+              setPendingDel({ id, photo, timer });
+            }
+          }}
           onUpdated={updated => { setPhotos(prev => prev.map(p => p.id === updated.id ? {...p, ...updated} : p)); setDetail(updated); }}
         />
+      )}
+      {pendingDel && (
+        <div className="undo-toast">
+          <span>已移除照片</span>
+          <button className="undo-btn" onClick={() => {
+            clearTimeout(pendingDel.timer);
+            setPhotos(prev => [pendingDel.photo, ...prev]);
+            setPendingDel(null);
+          }}>復原</button>
+        </div>
       )}
     </>
   );
 }
 
 /* ── Browse tab ─────────────────────────────────────── */
-function BrowseTab({ isFav, toggleFav, isAdmin }) {
+function BrowseTab({ isFav, toggleFav, role }) {
   const [catFilter, setCatFilter] = useState(null);
   const [filters, setFilters] = useState({});
   const [counts,  setCounts]  = useState({});
@@ -810,7 +854,7 @@ function BrowseTab({ isFav, toggleFav, isAdmin }) {
       </div>
       <div className="body-row">
         <div className="main">
-          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} isAdmin={isAdmin} />
+          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role} />
         </div>
       </div>
     </>
@@ -818,8 +862,9 @@ function BrowseTab({ isFav, toggleFav, isAdmin }) {
 }
 
 /* ── Favorites tab ──────────────────────────────────── */
-function FavsTab({ favs, isFav, toggleFav, clearFavs }) {
+function FavsTab({ favs, isFav, toggleFav, clearFavs, role }) {
   const [detail, setDetail] = useState(null);
+  const [pendingDel, setPendingDel] = useState(null);
 
   if (favs.length === 0) return (
     <div className="body-row" style={{paddingTop:'var(--nav-h)'}}><div style={{flex:1}}>
@@ -851,26 +896,51 @@ function FavsTab({ favs, isFav, toggleFav, clearFavs }) {
       {detail && (
         <PhotoDetail photo={detail} onClose={() => setDetail(null)}
           isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p => setDetail(p)}
-          isAdmin={isAdmin}
-          onDeleted={id => { setPhotos(prev => prev.filter(p => p.id !== id)); setDetail(null); }}
-          onUpdated={updated => { setPhotos(prev => prev.map(p => p.id === updated.id ? {...p,...updated} : p)); setDetail(updated); }} />
+          role={role}
+          onDeleted={id => {
+            const isAdmin = role === 'admin';
+            toggleFav(favs.find(p => p.id === id) || {id});
+            setDetail(null);
+            if (!isAdmin) {
+              const photo = favs.find(p => p.id === id);
+              const timer = setTimeout(() => {
+                fetch('/api/photos/' + id, { method: 'DELETE' });
+                setPendingDel(null);
+              }, 5000);
+              setPendingDel({ id, photo, timer });
+            } else {
+              fetch('/api/photos/' + id, { method: 'DELETE' });
+            }
+          }}
+          onUpdated={updated => { setDetail(updated); }} />
+      )}
+      {pendingDel && (
+        <div className="undo-toast">
+          <span>已移除照片</span>
+          <button className="undo-btn" onClick={() => {
+            clearTimeout(pendingDel.timer);
+            if (pendingDel.photo) toggleFav(pendingDel.photo);
+            setPendingDel(null);
+          }}>復原</button>
+        </div>
       )}
     </>
   );
 }
 
-/* ── Admin PIN modal ───────────────────────────────── */
+/* ── Login PIN modal ───────────────────────────────── */
 function PinModal({ onClose, onAuth }) {
   const [pin, setPin] = useState('');
   const [err, setErr] = useState(false);
   function submit() {
-    if (pin === ADMIN_PIN) { localStorage.setItem('isAdmin','true'); onAuth(true); onClose(); }
+    if (pin === ADMIN_PIN)      { localStorage.setItem('userRole','admin'); onAuth('admin'); onClose(); }
+    else if (pin === STAFF_PIN) { localStorage.setItem('userRole','staff'); onAuth('staff'); onClose(); }
     else { setErr(true); setPin(''); }
   }
   return (
     <div className="pin-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="pin-box">
-        <div className="pin-title">管理員登入</div>
+        <div className="pin-title">登入</div>
         <input className="pin-input" type="password" inputMode="numeric" maxLength={6}
           placeholder="••••" value={pin} autoFocus
           onChange={e => { setPin(e.target.value); setErr(false); }}
@@ -1057,11 +1127,14 @@ function App() {
   const [tab,       setTab]       = useState('browse');
   const [favs,      setFavs]      = useState(loadFavs);
   const [showDarkBg,setShowDarkBg]= useState(false);
-  const [isAdmin,   setIsAdmin]   = useState(() => localStorage.getItem('isAdmin') === 'true');
+  const [role,      setRole]      = useState(() => localStorage.getItem('userRole') || 'guest');
   const [showPin,   setShowPin]   = useState(false);
 
-  function handleAdminKey() {
-    if (isAdmin) { localStorage.removeItem('isAdmin'); setIsAdmin(false); }
+  const isAdmin = role === 'admin';
+  const isStaff = role === 'staff' || role === 'admin';
+
+  function handleRoleKey() {
+    if (role !== 'guest') { localStorage.removeItem('userRole'); setRole('guest'); }
     else setShowPin(true);
   }
 
@@ -1081,8 +1154,10 @@ function App() {
       <header className="nav">
         <span className="nav-logo">Tahir Zainab Selection</span>
         {isAdmin && <button className="darkbg-btn" onClick={() => setShowDarkBg(true)}>清黑底</button>}
-        <button className={'admin-key' + (isAdmin ? ' on' : '')} onClick={handleAdminKey} title={isAdmin ? '退出管理模式' : '管理員登入'}>
-          {isAdmin ? '🔑' : '🔒'}
+        <button className={'admin-key' + (role === 'admin' ? ' admin' : role === 'staff' ? ' staff' : '')}
+          onClick={handleRoleKey}
+          title={role === 'admin' ? '退出管理員' : role === 'staff' ? '退出員工模式' : '登入'}>
+          {role === 'admin' ? '🔑' : role === 'staff' ? '👔' : '🔒'}
         </button>
         <div className="nav-tabs">
           <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>找款</button>
@@ -1097,10 +1172,10 @@ function App() {
           onDeleted={() => { setShowDarkBg(false); window.location.reload(); }}
         />
       )}
-      {showPin && <PinModal onClose={() => setShowPin(false)} onAuth={setIsAdmin} />}
+      {showPin && <PinModal onClose={() => setShowPin(false)} onAuth={setRole} />}
       <div className="content">
-        {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} isAdmin={isAdmin} />}
-        {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} />}
+        {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} role={role} />}
+        {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
       </div>
       {!splash && isAdmin && <UploadBtn />}
       <nav className="tab-bar">
