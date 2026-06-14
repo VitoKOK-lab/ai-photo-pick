@@ -452,86 +452,85 @@ function SimilarInfiniteGrid({ items, onSelectPhoto, setView }) {
   );
 }
 
-/* ── Pinch-zoom image ───────────────────────────────── */
+/* ── Zoom image (button +/−) ────────────────────────── */
 function PinchImage({ src, className }) {
   const containerRef = useRef(null);
   const imgRef       = useRef(null);
-  const st           = useRef({ scale:1, tx:0, ty:0, d0:0, s0:1, tx0:0, ty0:0, mx0:0, my0:0 });
-  const lastTap      = useRef(0);
+  const [scale, setScale] = useState(1);
+  const scaleRef = useRef(1);
+  const offset   = useRef({ tx:0, ty:0 });
+  const drag     = useRef({ on:false, x0:0, y0:0, tx0:0, ty0:0 });
+
+  function applyTransform(s, animate) {
+    const img = imgRef.current; if (!img) return;
+    const o = offset.current;
+    img.style.transition = animate ? 'transform .2s ease' : 'none';
+    img.style.transform  = `scale(${s}) translate(${o.tx}px,${o.ty}px)`;
+  }
+
+  function zoom(delta) {
+    const s = Math.min(4, Math.max(1, scaleRef.current + delta));
+    if (s <= 1) offset.current = { tx:0, ty:0 };
+    scaleRef.current = s;
+    setScale(s);
+    applyTransform(s, true);
+  }
 
   useEffect(() => {
-    const el  = containerRef.current;
-    const img = imgRef.current;
-    if (!el || !img) return;
-
-    function dist(ts) { return Math.hypot(ts[1].clientX-ts[0].clientX, ts[1].clientY-ts[0].clientY); }
-
-    function apply(animate) {
-      const s = st.current;
-      img.style.transition = animate ? 'transform .2s ease' : 'none';
-      img.style.transform  = `scale(${s.scale}) translate(${s.tx}px,${s.ty}px)`;
+    const el = containerRef.current; if (!el) return;
+    function client(e) { return e.touches ? { x:e.touches[0].clientX, y:e.touches[0].clientY } : { x:e.clientX, y:e.clientY }; }
+    function startDrag(e) {
+      if (scaleRef.current <= 1) return;
+      if (e.touches && e.touches.length !== 1) return;
+      const c = client(e);
+      drag.current = { on:true, x0:c.x, y0:c.y, tx0:offset.current.tx, ty0:offset.current.ty };
     }
-
-    function onStart(e) {
-      if (e.touches.length >= 2) e.preventDefault();
-      const s = st.current;
-      if (e.touches.length === 2) {
-        s.d0  = dist(e.touches);
-        s.s0  = s.scale;  s.tx0 = s.tx;  s.ty0 = s.ty;
-        s.mx0 = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        s.my0 = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      } else if (e.touches.length === 1) {
-        s.tx0 = s.tx; s.ty0 = s.ty;
-        s.mx0 = e.touches[0].clientX;
-        s.my0 = e.touches[0].clientY;
-        // double-tap to reset
-        const now = Date.now();
-        if (now - lastTap.current < 280) { s.scale=1; s.tx=0; s.ty=0; apply(true); }
-        lastTap.current = now;
-      }
+    function moveDrag(e) {
+      if (!drag.current.on) return;
+      if (e.touches && e.touches.length !== 1) return;
+      e.preventDefault();
+      const c = client(e); const s = scaleRef.current;
+      offset.current.tx = drag.current.tx0 + (c.x - drag.current.x0) / s;
+      offset.current.ty = drag.current.ty0 + (c.y - drag.current.y0) / s;
+      applyTransform(s, false);
     }
+    function endDrag() { drag.current.on = false; }
 
-    function onMove(e) {
-      const s = st.current;
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        const d  = dist(e.touches);
-        s.scale  = Math.min(4, Math.max(1, s.s0 * d / s.d0));
-        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        s.tx = s.tx0 + (mx - s.mx0) / s.scale;
-        s.ty = s.ty0 + (my - s.my0) / s.scale;
-        apply(false);
-      } else if (e.touches.length === 1 && s.scale > 1.05) {
-        e.preventDefault();
-        s.tx = s.tx0 + (e.touches[0].clientX - s.mx0) / s.scale;
-        s.ty = s.ty0 + (e.touches[0].clientY - s.my0) / s.scale;
-        apply(false);
-      }
-    }
-
-    function onEnd() {
-      const s = st.current;
-      if (s.scale < 1.05) { s.scale=1; s.tx=0; s.ty=0; apply(true); }
-    }
-
-    el.addEventListener('touchstart', onStart, { passive: false });
-    el.addEventListener('touchmove',  onMove,  { passive: false });
-    el.addEventListener('touchend',   onEnd,   { passive: true });
+    el.addEventListener('touchstart', startDrag, { passive: true });
+    el.addEventListener('touchmove',  moveDrag,  { passive: false });
+    el.addEventListener('touchend',   endDrag,   { passive: true });
+    el.addEventListener('mousedown',  startDrag);
+    window.addEventListener('mousemove', moveDrag);
+    window.addEventListener('mouseup',   endDrag);
     return () => {
-      el.removeEventListener('touchstart', onStart);
-      el.removeEventListener('touchmove',  onMove);
-      el.removeEventListener('touchend',   onEnd);
+      el.removeEventListener('touchstart', startDrag);
+      el.removeEventListener('touchmove',  moveDrag);
+      el.removeEventListener('touchend',   endDrag);
+      el.removeEventListener('mousedown',  startDrag);
+      window.removeEventListener('mousemove', moveDrag);
+      window.removeEventListener('mouseup',   endDrag);
     };
   }, [src]);
 
+  const btnStyle = (disabled) => ({
+    width:32, height:32, borderRadius:8, border:'none',
+    background:'rgba(0,0,0,.5)', color:'#fff', fontSize:20, lineHeight:1,
+    cursor: disabled ? 'default' : 'pointer', display:'flex', alignItems:'center',
+    justifyContent:'center', opacity: disabled ? 0.35 : 1, flexShrink:0,
+  });
+
   return (
-    <div ref={containerRef} className={className} style={{overflow:'hidden', touchAction:'none'}}>
+    <div ref={containerRef} className={className}
+      style={{overflow:'hidden', position:'relative', touchAction: scale > 1 ? 'none' : 'auto'}}>
       <img ref={imgRef} src={src} alt="" loading="lazy"
         style={{width:'100%',height:'100%',objectFit:'cover',display:'block',
                 transformOrigin:'center',userSelect:'none',WebkitUserSelect:'none',
-                touchAction:'none'}}
+                cursor: scale > 1 ? 'grab' : 'default'}}
         draggable={false} />
+      <div style={{position:'absolute',bottom:8,right:8,display:'flex',gap:4,zIndex:5}}>
+        <button style={btnStyle(scale<=1)} onClick={() => zoom(-0.5)} disabled={scale<=1}>－</button>
+        <button style={btnStyle(scale>=4)} onClick={() => zoom( 0.5)} disabled={scale>=4}>＋</button>
+      </div>
     </div>
   );
 }
