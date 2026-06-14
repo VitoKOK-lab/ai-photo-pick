@@ -452,6 +452,89 @@ function SimilarInfiniteGrid({ items, onSelectPhoto, setView }) {
   );
 }
 
+/* ── Pinch-zoom image ───────────────────────────────── */
+function PinchImage({ src, className }) {
+  const containerRef = useRef(null);
+  const imgRef       = useRef(null);
+  const st           = useRef({ scale:1, tx:0, ty:0, d0:0, s0:1, tx0:0, ty0:0, mx0:0, my0:0 });
+  const lastTap      = useRef(0);
+
+  useEffect(() => {
+    const el  = containerRef.current;
+    const img = imgRef.current;
+    if (!el || !img) return;
+
+    function dist(ts) { return Math.hypot(ts[1].clientX-ts[0].clientX, ts[1].clientY-ts[0].clientY); }
+
+    function apply(animate) {
+      const s = st.current;
+      img.style.transition = animate ? 'transform .2s ease' : 'none';
+      img.style.transform  = `scale(${s.scale}) translate(${s.tx}px,${s.ty}px)`;
+    }
+
+    function onStart(e) {
+      const s = st.current;
+      if (e.touches.length === 2) {
+        s.d0  = dist(e.touches);
+        s.s0  = s.scale;  s.tx0 = s.tx;  s.ty0 = s.ty;
+        s.mx0 = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        s.my0 = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      } else if (e.touches.length === 1) {
+        s.tx0 = s.tx; s.ty0 = s.ty;
+        s.mx0 = e.touches[0].clientX;
+        s.my0 = e.touches[0].clientY;
+        // double-tap to reset
+        const now = Date.now();
+        if (now - lastTap.current < 280) { s.scale=1; s.tx=0; s.ty=0; apply(true); }
+        lastTap.current = now;
+      }
+    }
+
+    function onMove(e) {
+      const s = st.current;
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const d  = dist(e.touches);
+        s.scale  = Math.min(4, Math.max(1, s.s0 * d / s.d0));
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        s.tx = s.tx0 + (mx - s.mx0) / s.scale;
+        s.ty = s.ty0 + (my - s.my0) / s.scale;
+        apply(false);
+      } else if (e.touches.length === 1 && s.scale > 1.05) {
+        e.preventDefault();
+        s.tx = s.tx0 + (e.touches[0].clientX - s.mx0) / s.scale;
+        s.ty = s.ty0 + (e.touches[0].clientY - s.my0) / s.scale;
+        apply(false);
+      }
+    }
+
+    function onEnd() {
+      const s = st.current;
+      if (s.scale < 1.05) { s.scale=1; s.tx=0; s.ty=0; apply(true); }
+    }
+
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove',  onMove,  { passive: false });
+    el.addEventListener('touchend',   onEnd,   { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove',  onMove);
+      el.removeEventListener('touchend',   onEnd);
+    };
+  }, [src]);
+
+  return (
+    <div ref={containerRef} className={className} style={{overflow:'hidden'}}>
+      <img ref={imgRef} src={src} alt="" loading="lazy"
+        style={{width:'100%',height:'100%',objectFit:'cover',display:'block',
+                transformOrigin:'center',userSelect:'none',WebkitUserSelect:'none',
+                touchAction:'none'}}
+        draggable={false} />
+    </div>
+  );
+}
+
 /* ── Photo detail ───────────────────────────────────── */
 function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDeleted, onUpdated, role }) {
   const isAdmin = role === 'admin';
@@ -617,7 +700,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
         <button className="det-x" onClick={onClose}>×</button>
         <div className="det-left">
           <div className="det-handle" />
-          <img className="det-img" src={photo.full_url} alt="" loading="lazy" />
+          <PinchImage className="det-img" src={photo.full_url} />
         </div>
         <div className="det-right">
           <div className="det-scroll">
