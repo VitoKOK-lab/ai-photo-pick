@@ -142,6 +142,7 @@ from api.backup       import router as backup_router
 from api.staff        import router as staff_router
 from api.customers    import router as customers_router
 from api.transactions import router as transactions_router
+from api.upload       import router as upload_router
 
 app.include_router(photos_router)
 app.include_router(similar_router)
@@ -154,5 +155,6 @@ app.include_router(backup_router)
 app.include_router(staff_router)
 app.include_router(customers_router)
 app.include_router(transactions_router)
+app.include_router(upload_router)
 
 app.mount("/", StaticFiles(directory=str(BASE_DIR / "web"), html=True), name="web")

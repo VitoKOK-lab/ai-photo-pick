@@ -200,6 +200,13 @@ button { font-family: inherit; cursor: pointer; }
 .darkbg-card.exclude::after { content: '✓'; position: absolute; inset: 0; background: rgba(0,200,100,.35); display: flex; align-items: center; justify-content: center; font-size: 28px; color: #fff; }
 .darkbg-footer { padding: 12px 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-shrink: 0; }
 
+/* ── Upload FAB ─────────────────────────────────────────── */
+.upload-fab { position: fixed; bottom: calc(var(--tab-h) + 16px); right: 16px; z-index: 300; width: 50px; height: 50px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 28px; font-weight: 300; line-height: 1; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.24); display: flex; align-items: center; justify-content: center; transition: transform .15s, box-shadow .15s; }
+.upload-fab:active { transform: scale(.92); }
+.upload-fab:disabled { opacity: .6; cursor: default; }
+.upload-toast { position: fixed; bottom: calc(var(--tab-h) + 78px); right: 14px; z-index: 301; background: #1a1a1a; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px; line-height: 1.6; animation: fadeUp .3s ease both; pointer-events: none; white-space: pre-line; max-width: 220px; }
+.upload-prog { position: fixed; bottom: calc(var(--tab-h) + 78px); right: 14px; z-index: 301; background: #1a1a1a; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px; animation: fadeUp .3s ease both; pointer-events: none; }
+
 /* ── Splash ──────────────────────────────────────────────── */
 .splash { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: splashOut .7s ease 4.2s forwards; pointer-events: none; overflow: hidden; }
 @keyframes splashOut { to { opacity: 0; } }
@@ -252,6 +259,15 @@ const { useState, useEffect, useRef } = React;
 
 /* ── Config ─────────────────────────────────────────── */
 const BANNERS = ['/banners/ｂ1.png','/banners/ｂ2.png','/banners/ｂ3.png','/banners/ｂ4.png','/banners/ｂ5.png','/banners/ｂ6.png','/banners/ｂ7.png','/banners/ｂ8.png','/banners/ｂ9.png','/banners/ｂ10.png'].sort(() => Math.random() - 0.5);
+
+/* ── Session & event tracking ───────────────────────── */
+const SESSION_ID = (sessionStorage.getItem('sid') || (() => { const s = Math.random().toString(36).slice(2); sessionStorage.setItem('sid', s); return s; })());
+async function logEvent(photo_id, event_type, extra = {}) {
+  try {
+    await fetch('/api/events', { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ photo_id, event_type, session_id: SESSION_ID, ...extra }) });
+  } catch {}
+}
 const CATS = ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'];
 const CFG = {
   style:       { label: '鑽石數量', values: ['無鑽','簡約','輕奢','奢華'] },
@@ -421,6 +437,12 @@ function SimilarInfiniteGrid({ items, onSelectPhoto, setView }) {
 
 /* ── Photo detail ───────────────────────────────────── */
 function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDeleted, onUpdated }) {
+  const openedAt = useRef(Date.now());
+  useEffect(() => {
+    logEvent(photo.id, 'view');
+    return () => logEvent(photo.id, 'dwell', { dwell_ms: Date.now() - openedAt.current });
+  }, [photo.id]);
+
   const [view,    setView]    = useState('detail'); // 'detail' | 'similar' | 'edit'
   const [similar, setSimilar] = useState(null);
   const [simErr,  setSimErr]  = useState(false);
@@ -819,6 +841,49 @@ function FavsTab({ favs, isFav, toggleFav, clearFavs }) {
   );
 }
 
+/* ── Upload button ─────────────────────────────────── */
+function UploadBtn({ onUploaded }) {
+  const inputRef  = useRef(null);
+  const [busy,    setBusy]    = useState(false);
+  const [toast,   setToast]   = useState(null);
+
+  async function handleFiles(e) {
+    const files = [...e.target.files];
+    if (!files.length) return;
+    setBusy(true); setToast(null);
+    const fd = new FormData();
+    files.forEach(f => fd.append('files', f));
+    try {
+      const res  = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      const ok   = data.uploaded?.length || 0;
+      const fail = data.errors?.length   || 0;
+      const dups = data.errors?.filter(e => e.error === '重複照片').length || 0;
+      let msg = ok > 0 ? `✓ 已新增 ${ok} 張` : '';
+      if (dups)  msg += (msg ? '\n' : '') + `⚠ ${dups} 張重複`;
+      if (fail - dups > 0) msg += (msg ? '\n' : '') + `✗ ${fail - dups} 張失敗`;
+      setToast(msg || '無新照片');
+      if (ok > 0 && onUploaded) onUploaded(data.uploaded);
+    } catch {
+      setToast('✗ 上傳失敗，請重試');
+    } finally {
+      setBusy(false);
+      e.target.value = '';
+      setTimeout(() => setToast(null), 4000);
+    }
+  }
+
+  return (
+    <>
+      <input ref={inputRef} type="file" accept="image/*,.heic,.heif" multiple style={{display:'none'}} onChange={handleFiles} />
+      <button className="upload-fab" onClick={() => inputRef.current.click()} disabled={busy} title="上傳照片">
+        {busy ? '…' : '+'}
+      </button>
+      {toast && <div className="upload-toast">{toast}</div>}
+    </>
+  );
+}
+
 /* ── Splash screen ─────────────────────────────────── */
 const SPARKS = Array.from({ length: 22 }, (_, i) => ({
   x: 2 + i * 4.45,
@@ -952,7 +1017,9 @@ function App() {
   const [showDarkBg, setShowDarkBg] = useState(false);
 
   const toggleFav = photo => setFavs(prev => {
-    const next = prev.find(p => p.id === photo.id) ? prev.filter(p => p.id !== photo.id) : [...prev, photo];
+    const isCurrent = prev.some(p => p.id === photo.id);
+    logEvent(photo.id, isCurrent ? 'unfavorite' : 'favorite');
+    const next = isCurrent ? prev.filter(p => p.id !== photo.id) : [...prev, photo];
     saveFavs(next);
     return next;
   });
@@ -982,6 +1049,7 @@ function App() {
         {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} />}
         {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} />}
       </div>
+      {!splash && <UploadBtn />}
       <nav className="tab-bar">
         <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>
           <IcoGrid /><span>找款</span>
