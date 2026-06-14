@@ -47,25 +47,42 @@ def derive_metal_color(material):
 
 
 def open_rgb(img_path):
-    """Load image as PIL RGB.
-    Uses torchvision.io as primary decoder (avoids PIL's numpy dependency for CMYK/YCbCr JPEGs).
-    Falls back to PIL paste if torchvision also fails.
-    """
-    import torchvision.io as tvio
-    from torchvision.transforms.functional import to_pil_image
+    """Open image as PIL RGB. Try multiple decoders to handle CMYK/ICC-profile JPEGs."""
+    # 1) torchvision.io (bypasses PIL JPEG decoder)
     try:
+        import torchvision.io as tvio
+        from torchvision.transforms.functional import to_pil_image
         tensor = tvio.read_image(str(img_path), tvio.ImageReadMode.RGB)
         return to_pil_image(tensor)
     except Exception:
         pass
-    # PIL fallback
-    img = Image.open(img_path)
-    if img.mode == "RGB":
+
+    # 2) PIL with forced load
+    try:
+        img = Image.open(img_path)
         img.load()
-        return img
-    rgb = Image.new("RGB", img.size, (255, 255, 255))
-    rgb.paste(img)
-    return rgb
+        return img.convert("RGB") if img.mode != "RGB" else img
+    except Exception:
+        pass
+
+    # 3) macOS sips — converts any format to a clean PNG then loads
+    import subprocess, tempfile
+    tmp = Path(tempfile.mktemp(suffix=".png"))
+    try:
+        r = subprocess.run(
+            ["sips", "-s", "format", "png", str(img_path), "--out", str(tmp)],
+            capture_output=True, timeout=15,
+        )
+        if r.returncode == 0 and tmp.exists():
+            img = Image.open(tmp)
+            img.load()
+            return img.convert("RGB") if img.mode != "RGB" else img
+    except Exception:
+        pass
+    finally:
+        tmp.unlink(missing_ok=True)
+
+    raise OSError(f"Cannot decode: {img_path.name}")
 
 
 def classify_batch_one(img_path, model, preprocess, tokenizer, logit_scale, prompts_map, device):
