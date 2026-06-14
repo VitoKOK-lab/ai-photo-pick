@@ -11,6 +11,7 @@ env/
 .pytest_cache/
 
 # Database & data (本機產生，不進 repo)
+data/*.db
 db/*.sqlite
 db/chroma/
 db/backups/*.sqlite
