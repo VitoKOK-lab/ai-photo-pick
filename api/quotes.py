@@ -11,6 +11,26 @@ from config.settings import SQLITE_PATH
 
 router = APIRouter(prefix="/api/quotes", tags=["quotes"])
 
+
+def _migrate():
+    conn = sqlite3.connect(SQLITE_PATH)
+    for col, typ in [
+        ('customer_name',  'TEXT'),
+        ('original_data',  'TEXT'),
+        ('adjusted_data',  'TEXT'),
+        ('estimated_min',  'INTEGER'),
+        ('estimated_max',  'INTEGER'),
+        ('budget',         'INTEGER'),
+    ]:
+        try:
+            conn.execute(f"ALTER TABLE quotes ADD COLUMN {col} {typ}")
+        except Exception:
+            pass
+    conn.commit()
+    conn.close()
+
+_migrate()
+
 PRICE_BAND_RANGES = [
     (0,      10000,  "< 1萬"),
     (10000,  30000,  "1-3萬"),
@@ -42,14 +62,20 @@ def _percentile(values: list[int], p: float) -> int:
 
 # ─── Models ────────────────────────────────────────────────
 class QuoteCreate(BaseModel):
-    description: str
-    final_price: int
+    description: Optional[str] = None
+    final_price: int = 0
     material: Optional[str] = None
     gemstone: Optional[str] = None
     gemstone_origin: Optional[str] = None
     quote_date: Optional[str] = None
     notes: Optional[str] = None
     photo_id: Optional[int] = None
+    customer_name: Optional[str] = None
+    original_data: Optional[str] = None
+    adjusted_data: Optional[str] = None
+    estimated_min: Optional[int] = None
+    estimated_max: Optional[int] = None
+    budget: Optional[int] = None
 
 class QuoteUpdate(BaseModel):
     description: Optional[str] = None
@@ -102,16 +128,20 @@ def list_quotes(
 
 @router.post("")
 def create_quote(body: QuoteCreate):
-    if body.final_price <= 0:
-        raise HTTPException(status_code=400, detail="final_price 需為正整數")
+    if body.final_price < 0:
+        raise HTTPException(status_code=400, detail="final_price 不可為負數")
     conn = _conn()
     cur = conn.cursor()
     cur.execute(
         """INSERT INTO quotes (description, final_price, material, gemstone,
-                               gemstone_origin, quote_date, notes, photo_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                               gemstone_origin, quote_date, notes, photo_id,
+                               customer_name, original_data, adjusted_data,
+                               estimated_min, estimated_max, budget)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (body.description, body.final_price, body.material, body.gemstone,
-         body.gemstone_origin, body.quote_date, body.notes, body.photo_id)
+         body.gemstone_origin, body.quote_date, body.notes, body.photo_id,
+         body.customer_name, body.original_data, body.adjusted_data,
+         body.estimated_min, body.estimated_max, body.budget)
     )
     qid = cur.lastrowid
     conn.commit()
