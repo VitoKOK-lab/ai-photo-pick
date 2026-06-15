@@ -1149,17 +1149,18 @@ function usePricing() {
   };
 }
 
-/* ── Gem color preference mapping ── */
+/* ── Gem color preference mapping (multi-color stones appear in multiple categories) ── */
+const GEM_COLOR_HEX = {'紅':'#e53935','粉':'#f48fb1','橙':'#fb8c00','黃':'#fdd835','綠':'#43a047','藍':'#1e88e5','紫':'#8e24aa','白':'#bdbdbd','彩':'linear-gradient(135deg,#e53935,#fdd835,#43a047,#1e88e5)'};
 const GEM_COLORS = {
-  '紅': new Set(['RUBY','SPINEL','GARNET','PYROPE','RHODOLITE','SPESSARTITE','STAR_RUBY']),
-  '粉': new Set(['MORGANITE','KUNZITE','RHODOLITE','SPINEL']),
-  '橙': new Set(['SPESSARTITE','PADPARADSCHA','IMPERIAL_TOPAZ','SUNSTONE']),
-  '黃': new Set(['YELLOW_SAP','IMPERIAL_TOPAZ','CITRINE']),
-  '綠': new Set(['EMERALD','TSAVORITE','TOURMALINE','CHRYSOPRASE','PERIDOT','PREHNITE','ALEXANDRITE']),
-  '藍': new Set(['SAPPHIRE','TANZANITE','AQUAMARINE','IOLITE','BLUE_TOPAZ','PARAIBA','TANZANITE_C','STAR_SAP']),
-  '紫': new Set(['AMETHYST','TANZANITE','KUNZITE','TANZANITE_C']),
+  '紅': new Set(['RUBY','SPINEL','TOURMALINE','GARNET','PYROPE','RHODOLITE','SPESSARTITE','STAR_RUBY','ALEXANDRITE']),
+  '粉': new Set(['MORGANITE','KUNZITE','RHODOLITE','SPINEL','TOURMALINE','SAPPHIRE','STAR_SAP']),
+  '橙': new Set(['SPESSARTITE','PADPARADSCHA','IMPERIAL_TOPAZ','SUNSTONE','TOURMALINE','SAPPHIRE','CATEYE']),
+  '黃': new Set(['YELLOW_SAP','IMPERIAL_TOPAZ','CITRINE','CATEYE','TOURMALINE','SAPPHIRE']),
+  '綠': new Set(['EMERALD','TSAVORITE','TOURMALINE','CHRYSOPRASE','PERIDOT','PREHNITE','ALEXANDRITE','AQUAMARINE']),
+  '藍': new Set(['SAPPHIRE','TANZANITE','AQUAMARINE','IOLITE','BLUE_TOPAZ','PARAIBA','TANZANITE_C','STAR_SAP','SPINEL','TOURMALINE']),
+  '紫': new Set(['AMETHYST','TANZANITE','KUNZITE','TANZANITE_C','SPINEL','SAPPHIRE','TOURMALINE']),
   '白': new Set(['DIAMOND','MOONSTONE','CHALCEDONY','ZIRCON']),
-  '彩': new Set(['OPAL','LABRADORITE','ALEXANDRITE','TOURMALINE']),
+  '彩': new Set(['OPAL','LABRADORITE','ALEXANDRITE','TOURMALINE','STAR_SAP']),
 };
 
 /* ── Shareable quote card (screenshot for customer) ─── */
@@ -1226,7 +1227,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [treatment,   setTreatment]   = useState('');
   const [colorQ,      setColorQ]      = useState('');
   const [sidestone,   setSidestone]   = useState('無配石');
-  const [slider,      setSlider]      = useState(0.5);
+  const [manualQuote, setManualQuote] = useState('');
   const [customer,       setCustomer]       = useState('');
   const [inquiryDate,    setInquiryDate]    = useState(`${new Date().getMonth()+1}/${new Date().getDate()}`);
   const [sourceChannel,  setSourceChannel]  = useState('');
@@ -1249,7 +1250,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
       setTreatment(Object.keys(s.treatments)[0]);
       setColorQ(Object.keys(s.colors)[0]);
     }
-    setSlider(0.5);
+    setManualQuote('');
   }, [stoneKey, stoneMode]);
 
   useEffect(() => {
@@ -1289,9 +1290,10 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const mountMax   = laborRange[1] + metalCostMax + sideRange[1] + plateRange[1];
   const totalMin   = stoneMin + mountMin;
   const totalMax   = stoneMax + mountMax;
-  const hasPrice   = totalMin > 0 || totalMax > 0;
-  const finalPrice = totalMin + (totalMax - totalMin) * slider;
-  const budgetNum  = parseInt(String(budget).replace(/[^0-9]/g,'')) || 0;
+  const hasPrice     = totalMin > 0 || totalMax > 0;
+  const manualNum    = parseInt(String(manualQuote).replace(/[^0-9]/g,'')) || 0;
+  const displayPrice = manualNum || Math.round((totalMin + totalMax) / 2);
+  const budgetNum    = parseInt(String(budget).replace(/[^0-9]/g,'')) || 0;
 
   // Original values from CLIP
   const orig = {
@@ -1310,8 +1312,9 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
       const adj = {category:cat, style, setting_amount:chain, craft_complexity:craft, metal_color:metalColor, material:materialType, gemstone:stoneName, stoneKey, stoneMode, carat:ct, origin, treatment, colorQ, sidestone, size:itemSize, plating, stone_order_no:stoneOrderNo, notes:qNotes, inquiry_time:inquiryDate, source_channel:sourceChannel};
       const notesText = [
         inquiryDate && `詢價時間：${inquiryDate}${sourceChannel?' ('+sourceChannel+')':''}`,
+        manualNum > 0 && `初步報價：NT$${manualNum.toLocaleString('zh-TW')}`,
         itemSize && `尺寸：${itemSize}`,
-        plating && `鍍金：${plating}`,
+        plating && plating !== '無' && `鍍金：${plating}`,
         stoneOrderNo && `裸石單號：${stoneOrderNo}`,
         qNotes && `備註：${qNotes}`,
       ].filter(Boolean).join('\n');
@@ -1320,7 +1323,6 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           description:    `${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`,
-          final_price:    0,
           material:       materialType,
           gemstone:       stoneName,
           photo_id:       photo.id,
@@ -1369,7 +1371,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
           estimatedMin={Math.round(totalMin)}
           estimatedMax={Math.round(totalMax)}
-          finalPrice={Math.round(finalPrice)}
+          finalPrice={manualNum || Math.round(totalMin)}
           customer={customer}
           itemSize={itemSize}
           plating={plating}
@@ -1598,13 +1600,15 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               const on = stoneKey===k && stoneMode==='commercial';
               const isOrig = orig.gemstone === s.name;
               const suggested = colorPref && GEM_COLORS[colorPref]?.has(k);
+              const dotColor = suggested ? GEM_COLOR_HEX[colorPref] : null;
               return (
                 <button key={k} onClick={() => { setStoneMode('commercial'); setStoneKey(k); }}
                   style={{padding:'6px 10px',borderRadius:8,margin:'3px 3px 3px 0',
-                    border:on?'1.5px solid var(--gold)':suggested?'1.5px solid rgba(184,147,90,.5)':'1px solid var(--border)',
-                    background:on?'rgba(184,147,90,.14)':suggested?'rgba(184,147,90,.08)':isOrig?'rgba(184,147,90,.06)':'var(--surface)',
-                    color:on?'var(--gold)':suggested?'rgba(184,147,90,.9)':'var(--text)',
-                    fontSize:12,fontWeight:(on||suggested)?700:400,cursor:'pointer',position:'relative',flexShrink:0}}>
+                    border:on?'1.5px solid var(--gold)':suggested?'1.5px solid rgba(184,147,90,.6)':'1px solid var(--border)',
+                    background:on?'rgba(184,147,90,.14)':suggested?'rgba(184,147,90,.07)':isOrig?'rgba(184,147,90,.06)':'var(--surface)',
+                    color:on?'var(--gold)':'var(--text)',
+                    fontSize:12,fontWeight:(on||suggested)?700:400,cursor:'pointer',position:'relative',flexShrink:0,display:'flex',alignItems:'center',gap:4}}>
+                  {suggested && <span style={{width:8,height:8,borderRadius:'50%',background:dotColor,flexShrink:0,display:'inline-block',border:'1px solid rgba(0,0,0,.15)'}} />}
                   {s.name}
                   {isOrig && !on && <span style={{position:'absolute',top:-6,right:-4,background:'var(--gold)',color:'#fff',fontSize:8,fontWeight:700,padding:'1px 4px',borderRadius:4,lineHeight:1.3}}>原</span>}
                 </button>
@@ -1617,13 +1621,15 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               const on = stoneKey===k && stoneMode==='invest';
               const isOrig = orig.gemstone === s.name;
               const suggested = colorPref && GEM_COLORS[colorPref]?.has(k);
+              const dotColor = suggested ? GEM_COLOR_HEX[colorPref] : null;
               return (
                 <button key={k} onClick={() => { setStoneMode('invest'); setStoneKey(k); }}
                   style={{padding:'6px 10px',borderRadius:8,margin:'3px 3px 3px 0',
-                    border:on?'1.5px solid var(--gold)':suggested?'1.5px solid rgba(184,147,90,.5)':'1px solid var(--border)',
-                    background:on?'rgba(184,147,90,.14)':suggested?'rgba(184,147,90,.08)':isOrig?'rgba(184,147,90,.06)':'var(--surface)',
-                    color:on?'var(--gold)':suggested?'rgba(184,147,90,.9)':'var(--text)',
-                    fontSize:12,fontWeight:(on||suggested)?700:400,cursor:'pointer',position:'relative',flexShrink:0}}>
+                    border:on?'1.5px solid var(--gold)':suggested?'1.5px solid rgba(184,147,90,.6)':'1px solid var(--border)',
+                    background:on?'rgba(184,147,90,.14)':suggested?'rgba(184,147,90,.07)':isOrig?'rgba(184,147,90,.06)':'var(--surface)',
+                    color:on?'var(--gold)':'var(--text)',
+                    fontSize:12,fontWeight:(on||suggested)?700:400,cursor:'pointer',position:'relative',flexShrink:0,display:'flex',alignItems:'center',gap:4}}>
+                  {suggested && <span style={{width:8,height:8,borderRadius:'50%',background:dotColor,flexShrink:0,display:'inline-block',border:'1px solid rgba(0,0,0,.15)'}} />}
                   {s.name}
                   {isOrig && !on && <span style={{position:'absolute',top:-6,right:-4,background:'var(--gold)',color:'#fff',fontSize:8,fontWeight:700,padding:'1px 4px',borderRadius:4,lineHeight:1.3}}>原</span>}
                 </button>
@@ -1769,57 +1775,35 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
                   <span style={{fontWeight:600}}>{fmtNT(plateRange[0])} – {fmtNT(plateRange[1])}</span>
                 </div>
               )}
-              <div style={{borderTop:'1px solid var(--border)',marginTop:6,paddingTop:6,display:'flex',justifyContent:'space-between',fontSize:13,fontWeight:700,color:'var(--text)'}}>
-                <span>合計</span>
-                <span>{fmtNT(totalMin)} – {fmtNT(totalMax)}</span>
+              <div style={{borderTop:'2px solid var(--gold)',marginTop:8,paddingTop:8,background:'rgba(184,147,90,.08)',borderRadius:8,padding:'10px 12px',marginTop:8}}>
+                <div style={{fontSize:10,color:'var(--text3)',marginBottom:3,letterSpacing:0.5}}>建議報價區間</div>
+                <div style={{fontSize:16,fontWeight:800,color:'var(--gold)'}}>{fmtNT(totalMin)} – {fmtNT(totalMax)}</div>
               </div>
             </div>
           )}
-
-          {/* Delta summary */}
-          {anyChanged && (
-            <div style={{background:'#fffbf0',borderRadius:10,border:'1px solid rgba(184,147,90,.35)',padding:'10px 14px',margin:'0 0 12px'}}>
-              <div style={{fontSize:11,fontWeight:700,color:'var(--gold)',marginBottom:6,letterSpacing:0.5}}>標籤調整（原始 → 調整後）</div>
-              {isChanged('category',cat) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>品項&emsp;{orig.category} → <strong>{cat}</strong></div>}
-              {isChanged('style',style) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>鑽石數量&emsp;{orig.style} → <strong>{style}</strong></div>}
-              {isChanged('setting_amount',chain) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>用料多寡&emsp;{orig.setting_amount} → <strong>{chain}</strong></div>}
-              {isChanged('craft_complexity',craft) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>做工複雜度&emsp;{orig.craft_complexity} → <strong>{craft}</strong></div>}
-              {orig.gemstone && orig.gemstone!=='未定' && stoneName && stoneName!==orig.gemstone && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>寶石&emsp;{orig.gemstone} → <strong>{stoneName}</strong></div>}
-            </div>
-          )}
-
 
         </div>{/* end det-scroll */}
 
         {/* Fixed bottom price bar */}
         <div style={{position:'absolute',bottom:0,left:0,right:0,background:'var(--accent)',padding:'12px 16px 20px',boxShadow:'0 -4px 20px rgba(0,0,0,.2)'}}>
-          {hasPrice ? (
-            <>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-                <div>
-                  <div style={{fontSize:22,fontWeight:700,color:'#fff'}}>{fmtNT(finalPrice)}</div>
-                  <div style={{fontSize:11,color:'rgba(255,255,255,.5)',marginTop:1}}>{fmtNT(totalMin)} – {fmtNT(totalMax)}</div>
-                  {budgetNum > 0 && (
-                    <div style={{fontSize:11,marginTop:2,color: finalPrice <= budgetNum * 1.05 ? '#4caf77' : '#ff8a80'}}>
-                      {finalPrice <= budgetNum * 1.05 ? '✓ 預算範圍內' : `超出預算 ${fmtNT(finalPrice - budgetNum)}`}
-                    </div>
-                  )}
-                </div>
-                <button onClick={doSave} disabled={saving}
-                  style={{background:saving?'rgba(255,255,255,.3)':'var(--gold)',color:'#fff',border:'none',borderRadius:8,padding:'10px 16px',fontSize:14,fontWeight:700,cursor:saving?'default':'pointer',flexShrink:0,marginLeft:12}}>
-                  {saving ? '儲存中…' : '儲存報價'}
-                </button>
-              </div>
-              {totalMax > totalMin && (
-                <input type="range" min={0} max={1000} value={Math.round(slider*1000)}
-                  onChange={e=>setSlider(parseInt(e.target.value)/1000)}
-                  style={{width:'100%',accentColor:'var(--gold)',cursor:'pointer',height:4,marginTop:4}}
-                />
-              )}
-            </>
-          ) : (
-            <div style={{color:'rgba(255,255,255,.4)',fontSize:13,textAlign:'center',padding:'4px 0'}}>
-              請選擇主石以計算報價
+          <div style={{fontSize:11,color:'rgba(255,255,255,.65)',marginBottom:6}}>初步報價（給客人）</div>
+          <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:6}}>
+            <div style={{position:'relative',flex:1}}>
+              <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.7)',fontWeight:600,pointerEvents:'none'}}>NT$</span>
+              <input type="text" inputMode="numeric" placeholder="手動輸入報價" value={manualQuote}
+                onChange={e=>setManualQuote(e.target.value.replace(/[^0-9]/g,''))}
+                style={{width:'100%',background:'rgba(255,255,255,.12)',border:'1.5px solid rgba(255,255,255,.3)',borderRadius:8,padding:'10px 10px 10px 40px',fontSize:18,fontWeight:700,color:'#fff',outline:'none',fontFamily:'inherit',boxSizing:'border-box'}}
+              />
+            </div>
+            <button onClick={doSave} disabled={saving}
+              style={{background:saving?'rgba(255,255,255,.3)':'var(--gold)',color:'#fff',border:'none',borderRadius:8,padding:'10px 16px',fontSize:14,fontWeight:700,cursor:saving?'default':'pointer',flexShrink:0}}>
+              {saving ? '儲存中…' : '儲存報價'}
+            </button>
+          </div>
+          {hasPrice && <div style={{fontSize:11,color:'rgba(255,255,255,.5)'}}>系統估算：{fmtNT(totalMin)} – {fmtNT(totalMax)}</div>}
+          {budgetNum > 0 && manualNum > 0 && (
+            <div style={{fontSize:11,marginTop:2,color:manualNum<=budgetNum*1.05?'#4caf77':'#ff8a80'}}>
+              {manualNum<=budgetNum*1.05?'✓ 預算範圍內':`超出預算 ${fmtNT(manualNum-budgetNum)}`}
             </div>
           )}
         </div>

@@ -82,7 +82,7 @@ def _percentile(values: list[int], p: float) -> int:
 # ─── Models ────────────────────────────────────────────────
 class QuoteCreate(BaseModel):
     description: Optional[str] = None
-    final_price: int = 0
+    final_price: Optional[int] = None
     material: Optional[str] = None
     gemstone: Optional[str] = None
     gemstone_origin: Optional[str] = None
@@ -151,7 +151,8 @@ def list_quotes(
 
 @router.post("")
 def create_quote(body: QuoteCreate):
-    if body.final_price < 0:
+    fp = body.final_price if body.final_price is not None else 0
+    if fp < 0:
         raise HTTPException(status_code=400, detail="final_price 不可為負數")
     conn = _conn()
     cur = conn.cursor()
@@ -162,7 +163,7 @@ def create_quote(body: QuoteCreate):
                                estimated_min, estimated_max, budget,
                                stone_order_no, inquiry_time, source_channel)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (body.description, body.final_price, body.material, body.gemstone,
+        (body.description, fp, body.material, body.gemstone,
          body.gemstone_origin, body.quote_date, body.notes, body.photo_id,
          body.customer_name, body.original_data, body.adjusted_data,
          body.estimated_min, body.estimated_max, body.budget,
