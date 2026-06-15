@@ -1,72 +1,147 @@
-"""auth.py - 簡易 Bearer / query-param token 驗證"""
+"""auth.py - JWT authentication"""
+from datetime import datetime, timedelta
+from typing import Optional
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import sqlite3
 import sys
 from pathlib import Path
-from fastapi import Request
-from fastapi.responses import JSONResponse, HTMLResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config.settings import AUTH_TOKEN
+from config.settings import SQLITE_PATH
 
-# 無需驗證的路徑前綴
-_PUBLIC_PREFIXES = (
-    "/api/health",
-    "/static/",       # 圖片靜態資源本身不擋（CDN 可快取）
-)
+SECRET_KEY = "jewelry-app-secret-key-change-in-production"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_DAYS = 30
 
-# 無需驗證的完整路徑
-_PUBLIC_EXACT = {"/"}
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer(auto_error=False)
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+def get_db():
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-class TokenAuthMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        # 未設定 token → 本機開發模式，全部放行
-        if not AUTH_TOKEN:
-            return await call_next(request)
+def verify_password(plain, hashed):
+    return pwd_context.verify(plain, hashed)
 
-        path = request.url.path
+def hash_password(password):
+    return pwd_context.hash(password)
 
-        # 公開路徑放行
-        if path in _PUBLIC_EXACT:
-            return await call_next(request)
-        if any(path.startswith(p) for p in _PUBLIC_PREFIXES):
-            return await call_next(request)
+def create_token(user_id: int, role: str) -> str:
+    expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    return jwt.encode({"sub": str(user_id), "role": role, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
 
-        # 取 token：先看 Authorization header，再看 query param
-        token = None
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-        if not token:
-            token = request.query_params.get("token", "")
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Dependency: returns current user dict or None if not authenticated"""
+    if not credentials:
+        return None
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = int(payload.get("sub"))
+        role = payload.get("role")
+        conn = get_db()
+        row = conn.execute("SELECT * FROM users WHERE id=? AND is_active=1", (user_id,)).fetchone()
+        conn.close()
+        if not row:
+            return None
+        return dict(row)
+    except (JWTError, Exception):
+        return None
 
-        if token != AUTH_TOKEN:
-            if request.headers.get("accept", "").startswith("text/html"):
-                # 瀏覽器 → 回可顯示的 HTML 登入提示頁
-                return HTMLResponse(
-                    status_code=401,
-                    content=(
-                        "<!doctype html><html><head>"
-                        "<meta charset='utf-8'>"
-                        "<title>需要驗證</title>"
-                        "<style>body{font-family:sans-serif;display:flex;"
-                        "justify-content:center;align-items:center;height:100vh;margin:0}"
-                        ".box{text-align:center;padding:2rem;border:1px solid #ddd;border-radius:8px}"
-                        "input{padding:.5rem;width:260px;margin:.5rem 0}"
-                        "button{padding:.5rem 1.5rem;cursor:pointer}"
-                        "</style></head><body><div class='box'>"
-                        "<h2>🔒 需要驗證</h2>"
-                        "<p>請輸入存取 Token</p>"
-                        "<input id='t' type='password' placeholder='Token'/><br>"
-                        "<button onclick=\"location.href=location.pathname+'?token='+document.getElementById('t').value\">"
-                        "進入</button></div></body></html>"
-                    ),
-                )
-            # API 客戶端 → 標準 401 + WWW-Authenticate
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Unauthorized"},
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+def require_auth(user=Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="請先登入")
+    return user
 
-        return await call_next(request)
+def require_editor(user=Depends(require_auth)):
+    if user["role"] not in ("admin", "editor"):
+        raise HTTPException(status_code=403, detail="需要編輯者權限")
+    return user
+
+def require_admin(user=Depends(require_auth)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="需要管理員權限")
+    return user
+
+@router.post("/login")
+def login(body: dict):
+    username = body.get("username", "").strip()
+    password = body.get("password", "")
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE username=? AND is_active=1", (username,)).fetchone()
+    conn.close()
+    if not row or not verify_password(password, row["password_hash"]):
+        raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
+    token = create_token(row["id"], row["role"])
+    return {"token": token, "user": {"id": row["id"], "name": row["name"], "username": row["username"], "role": row["role"]}}
+
+@router.get("/me")
+def me(user=Depends(get_current_user)):
+    if not user:
+        return {"authenticated": False}
+    return {"authenticated": True, "user": {"id": user["id"], "name": user["name"], "username": user["username"], "role": user["role"]}}
+
+# ── User management (admin only) ────────────────────────
+@router.get("/users")
+def list_users(user=Depends(require_admin)):
+    conn = get_db()
+    rows = conn.execute("SELECT id, name, username, role, is_active, created_at FROM users ORDER BY id").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@router.post("/users")
+def create_user(body: dict, user=Depends(require_admin)):
+    name = body.get("name", "").strip()
+    username = body.get("username", "").strip()
+    password = body.get("password", "").strip()
+    role = body.get("role", "viewer")
+    if not name or not username or not password:
+        raise HTTPException(status_code=400, detail="姓名、帳號、密碼必填")
+    if role not in ("admin", "editor", "viewer"):
+        raise HTTPException(status_code=400, detail="角色無效")
+    conn = get_db()
+    try:
+        conn.execute("INSERT INTO users (name, username, password_hash, role) VALUES (?,?,?,?)",
+                     (name, username, hash_password(password), role))
+        conn.commit()
+        new_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        conn.close()
+        return {"id": new_id, "name": name, "username": username, "role": role}
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=400, detail="帳號已存在")
+
+@router.patch("/users/{user_id}")
+def update_user(user_id: int, body: dict, user=Depends(require_admin)):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="找不到使用者")
+    updates = {}
+    if "name" in body:     updates["name"] = body["name"]
+    if "role" in body and body["role"] in ("admin","editor","viewer"): updates["role"] = body["role"]
+    if "is_active" in body: updates["is_active"] = int(body["is_active"])
+    if "password" in body and body["password"]:
+        updates["password_hash"] = hash_password(body["password"])
+    if updates:
+        set_clause = ", ".join(f"{k}=?" for k in updates)
+        conn.execute(f"UPDATE users SET {set_clause}, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                     list(updates.values()) + [user_id])
+        conn.commit()
+    conn.close()
+    return {"ok": True}
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: int, user=Depends(require_admin)):
+    if user["id"] == user_id:
+        raise HTTPException(status_code=400, detail="不能刪除自己")
+    conn = get_db()
+    conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
