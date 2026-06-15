@@ -19,6 +19,10 @@ def migrate():
         ("stone_shape_confidence", "REAL"),
         ("stone_size",             "TEXT"),
         ("stone_size_confidence",  "REAL"),
+        ("setting_amount",         "TEXT"),
+        ("craft_complexity",       "TEXT"),
+        ("metal_color",            "TEXT"),
+        ("diamond_status",         "TEXT"),
     ]
     for col, typ in missing_cols:
         try:
