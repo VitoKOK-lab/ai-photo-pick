@@ -2948,6 +2948,11 @@ function App() {
           <button className={'nav-tab' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
             收藏 {favs.length > 0 && <span className="badge">{favs.length}</span>}
           </button>
+          {isStaff && (
+            <button className={'nav-tab' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>
+              💎 估價紀錄 <QuotePendingBadge />
+            </button>
+          )}
         </div>
       </header>
       {showDarkBg && (
