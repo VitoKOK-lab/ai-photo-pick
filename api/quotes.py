@@ -195,6 +195,27 @@ def delete_quote(quote_id: int):
     return {"deleted": True}
 
 
+# ─── 待確認報價（final_price = 0 或 NULL）─────────────────
+@router.get("/pending")
+def pending_quotes():
+    """回傳所有尚未填入成交價的報價，含經過小時數。"""
+    conn = _conn()
+    try:
+        rows = conn.execute(
+            """SELECT id, description, gemstone, material, customer_name,
+                      estimated_min, estimated_max, budget, photo_id,
+                      created_at,
+                      CAST((julianday('now') - julianday(COALESCE(created_at,'now'))) * 24 AS INTEGER) AS hours_elapsed
+               FROM quotes
+               WHERE final_price IS NULL OR final_price = 0
+               ORDER BY created_at ASC"""
+        ).fetchall()
+    except Exception:
+        rows = []
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 # ─── 統計 ──────────────────────────────────────────────────
 @router.get("/stats")
 def quote_stats():
