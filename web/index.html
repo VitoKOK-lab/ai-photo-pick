@@ -1178,7 +1178,7 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
   ) : null;
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.65)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'12px 16px'}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:'#fff',borderRadius:16,width:'100%',maxWidth:357,padding:'14px 16px',boxShadow:'0 12px 48px rgba(0,0,0,.45)',position:'relative',maxHeight:'calc(100dvh - 100px)',overflowY:'auto'}}>
+      <div style={{background:'#fff',borderRadius:16,width:'100%',maxWidth:357,padding:'16px 18px',boxShadow:'0 12px 48px rgba(0,0,0,.45)',position:'relative',maxHeight:'calc(100dvh - 80px)',overflowY:'auto'}}>
         <button onClick={onClose} style={{position:'absolute',top:8,right:10,background:'none',border:'none',fontSize:20,color:'#bbb',cursor:'pointer',lineHeight:1}}>×</button>
 
         {/* Header */}
@@ -1187,14 +1187,23 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
           <div style={{fontSize:11,color:'#999',letterSpacing:1}}>初步報價單</div>
         </div>
 
-        {/* Photo */}
-        {photo?.thumb_url && (
-          <div style={{borderTop:'1px solid #f0f0f0',padding:'8px 0 6px'}}>
-            <div style={{width:'100%',height:112,overflow:'hidden',borderRadius:10,background:'#f8f8f8',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        {/* Photo (left) + Price estimate (right) — 2 columns */}
+        <div style={{display:'flex',gap:10,borderTop:'1px solid #f0f0f0',padding:'10px 0 8px',alignItems:'stretch'}}>
+          {photo?.thumb_url && (
+            <div style={{flex:'0 0 54%',height:134,background:'#f8f8f8',borderRadius:10,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
               <img src={photo.thumb_url} alt="" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',display:'block'}} />
             </div>
+          )}
+          <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',paddingLeft:2}}>
+            <div style={{fontSize:8,color:'#b8935a',letterSpacing:1,textTransform:'uppercase',marginBottom:6}}>AI 估價區間</div>
+            <div style={{fontSize:16,fontWeight:800,color:'#1a1a1a',lineHeight:1.2,marginBottom:2}}>{fmtNT(manualPrice)}</div>
+            <div style={{fontSize:12,color:'#888',marginBottom:8}}>–&nbsp;{fmtNT(estimatedMax)}</div>
+            <div style={{fontSize:9,color:'#d32f2f',fontWeight:700,background:'#fff5f5',borderRadius:5,padding:'4px 6px',textAlign:'center',lineHeight:1.5}}>
+              AI預估<br/>以最終報價為主
+            </div>
           </div>
-        )}
+        </div>
+
         <div style={{paddingBottom:6,borderBottom:'1px solid #f0f0f0',marginBottom:4}}>
           <div style={{fontSize:11,fontWeight:700,color:'#1a1a1a',lineHeight:1.5,marginBottom:1}}>{description||'—'}</div>
           <div style={{fontSize:9,color:'#bbb'}}>{today}{customer&&' · '+customer}{sourceChannel&&' ('+sourceChannel+')'}</div>
@@ -1215,15 +1224,6 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
           <R label="鍍金" value={plating&&plating!=='無'?plating:null} />
           <R label="尺寸" value={itemSize} />
           {inquiryDate && <R label="詢價日期" value={inquiryDate} />}
-        </div>
-
-        {/* Price range */}
-        <div style={{background:'#fafaf7',border:'1px solid #ebe8e0',borderRadius:8,padding:'6px 10px',margin:'6px 0',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
-          <div style={{fontSize:8,color:'#b8935a',letterSpacing:1,textTransform:'uppercase',flexShrink:0}}>報價區間</div>
-          <div style={{fontSize:13,fontWeight:800,color:'#1a1a1a'}}>
-            {fmtNT(manualPrice)} <span style={{fontSize:10,fontWeight:400,color:'#999'}}>–</span> {fmtNT(estimatedMax)}
-          </div>
-          <div style={{fontSize:8,color:'#d32f2f',fontWeight:700,flexShrink:0}}>AI預估</div>
         </div>
 
         {/* Legal disclaimer */}
