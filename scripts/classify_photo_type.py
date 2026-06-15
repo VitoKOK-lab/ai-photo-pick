@@ -25,8 +25,7 @@ log = logging.getLogger(__name__)
 
 # ── PIL 參數 ───────────────────────────────────────────────
 WHITE_THRESHOLD = 235   # channel 值 > 這個才算白（純白底）
-BORDER_WIDTH    = 8     # 採樣邊緣厚度（px）
-PIL_WHITE_RATIO = 0.60  # 邊緣 60%+ 是白 → PIL 認定去背
+PIL_WHITE_RATIO = 0.85  # 珠寶框外背景 85%+ 是白 → PIL 認定去背
 
 # ── CLIP 文字描述 ──────────────────────────────────────────
 CLIP_PROMPTS = {
@@ -58,20 +57,40 @@ def _load_clip():
     log.info("[CLIP] 模型載入完成")
 
 
-def pil_check(thumb_path: Path) -> bool:
-    """邊緣像素 60%+ 是白色 → True（去背）"""
-    img = Image.open(thumb_path).convert('RGB')
+def pil_check(img_path: Path) -> bool:
+    """
+    偵測珠寶邊界框，再檢查框外背景是否為純白。
+    不被放大圖的人工白邊或四角騙到。
+    """
+    img = Image.open(img_path).convert('RGB')
     w, h = img.size
-    b = min(BORDER_WIDTH, w // 6, h // 6)
-    top    = img.crop((0,   0,   w,   b  ))
-    bottom = img.crop((0,   h-b, w,   h  ))
-    left   = img.crop((0,   b,   b,   h-b))
-    right  = img.crop((w-b, b,   w,   h-b))
-    pixels = list(top.getdata()) + list(bottom.getdata()) + list(left.getdata()) + list(right.getdata())
-    if not pixels:
+
+    gray = img.convert('L')
+    mask = gray.point(lambda x: 255 if x < WHITE_THRESHOLD else 0)
+    bbox = mask.getbbox()   # 非白色（珠寶）的邊界框
+
+    if bbox is None:
+        return True   # 整張都白
+
+    left, top, right, bottom = bbox
+    pad = max(4, min(w, h) // 30)
+    t = max(0, top - pad)
+    b_edge = min(h, bottom + pad)
+    l = max(0, left - pad)
+    r = min(w, right + pad)
+
+    bg = []
+    if t > 0:       bg += list(img.crop((0, 0, w, t       )).getdata())
+    if b_edge < h:  bg += list(img.crop((0, b_edge, w, h  )).getdata())
+    if l > 0:       bg += list(img.crop((0, t, l, b_edge  )).getdata())
+    if r < w:       bg += list(img.crop((r, t, w, b_edge  )).getdata())
+
+    if not bg:
         return False
-    white = sum(1 for r, g, bv in pixels if r > WHITE_THRESHOLD and g > WHITE_THRESHOLD and bv > WHITE_THRESHOLD)
-    return (white / len(pixels)) >= PIL_WHITE_RATIO
+
+    white = sum(1 for rv, gv, bv in bg
+                if rv > WHITE_THRESHOLD and gv > WHITE_THRESHOLD and bv > WHITE_THRESHOLD)
+    return (white / len(bg)) >= PIL_WHITE_RATIO
 
 
 # 預先算好文字 embedding（只算一次）
