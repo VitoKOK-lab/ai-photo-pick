@@ -224,7 +224,7 @@ button { font-family: inherit; cursor: pointer; }
 .upload-prog { position: fixed; bottom: calc(var(--tab-h) + 78px); right: 14px; z-index: 301; background: #1a1a1a; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px; animation: fadeUp .3s ease both; pointer-events: none; }
 
 /* ── Splash ──────────────────────────────────────────────── */
-.splash { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: splashOut .7s ease 4.2s forwards; pointer-events: none; overflow: hidden; }
+.splash { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: splashOut .7s ease 3.2s forwards; pointer-events: none; overflow: hidden; }
 @keyframes splashOut { to { opacity: 0; } }
 .spark { position: absolute; color: #B8935A; opacity: 0; font-size: var(--sz,12px); animation: sparkPop var(--dur,.85s) ease-out var(--d,0s) forwards; text-shadow: 0 0 10px rgba(184,147,90,.9), 0 0 20px rgba(255,220,120,.5); }
 @keyframes sparkPop { 0% { opacity:0; transform:scale(0) translateY(0); } 30% { opacity:1; transform:scale(1.4) translateY(-5px); } 100% { opacity:0; transform:scale(.5) translateY(-26px); } }
@@ -2433,7 +2433,7 @@ const SPARKS = Array.from({ length: 22 }, (_, i) => ({
 }));
 function Splash({ onDone }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 4900);
+    const t = setTimeout(onDone, 3900);
     return () => clearTimeout(t);
   }, []);
   return (
