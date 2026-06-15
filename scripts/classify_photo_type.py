@@ -1,7 +1,7 @@
-"""classify_photo_type.py - 白底去背 vs 情境照片 偵測
+"""classify_photo_type.py - 去背 vs 情境 雙重偵測
 
-方法：採樣縮圖四邊整圈像素，若 65%+ 像素的三個 channel 都 > 235 → 去背。
-這比只看角落更可靠，不受珠寶佔角落影響。
+PIL 看像素（邊緣是否白色）+ CLIP 看語意（是否商品棚拍風格）
+兩個都同意是去背 → '去背'，否則 → '情境'
 
 使用方式：
   python3 -m scripts.classify_photo_type          # 全部重新分類
@@ -13,81 +13,130 @@ import time
 import logging
 from pathlib import Path
 from PIL import Image
+import torch
+import open_clip
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config.settings import SQLITE_PATH, THUMB_DIR
+from config.settings import SQLITE_PATH, THUMB_DIR, FULL_DIR, CLIP_MODEL, CLIP_PRETRAINED
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s",
                     handlers=[logging.StreamHandler()])
 log = logging.getLogger(__name__)
 
-WHITE_THRESHOLD = 235   # 每個 channel 都要大於這個值才算白
-BORDER_WIDTH    = 8     # 採樣邊緣幾個 pixel 厚
-WHITE_RATIO_MIN = 0.60  # 邊緣像素 60%+ 是白 → 去背
+# ── PIL 參數 ───────────────────────────────────────────────
+WHITE_THRESHOLD = 235   # channel 值 > 這個才算白
+BORDER_WIDTH    = 8     # 採樣邊緣厚度（px）
+PIL_WHITE_RATIO = 0.60  # 邊緣 60%+ 是白 → PIL 認定去背
+
+# ── CLIP 文字描述 ──────────────────────────────────────────
+CLIP_PROMPTS = {
+    '去背': (
+        "a jewelry product photo shot on a pure white background, "
+        "no hands no body no scenery no table no fabric, "
+        "just the jewelry piece isolated on white, e-commerce catalog style"
+    ),
+    '情境': (
+        "a jewelry lifestyle photo with a real background — "
+        "worn on a hand wrist neck or ear, placed on marble wood or fabric surface, "
+        "or photographed outdoors in a room or studio setting with visible environment"
+    ),
+}
+
+_model = _preprocess = _tokenizer = _device = None
+
+def _load_clip():
+    global _model, _preprocess, _tokenizer, _device
+    if _model is not None:
+        return
+    _device = "mps" if torch.backends.mps.is_available() else "cpu"
+    log.info(f"[CLIP] 載入模型 {CLIP_MODEL} on {_device}…")
+    _model, _, _preprocess = open_clip.create_model_and_transforms(
+        CLIP_MODEL, pretrained=CLIP_PRETRAINED
+    )
+    _model = _model.to(_device).eval()
+    _tokenizer = open_clip.get_tokenizer(CLIP_MODEL)
+    log.info("[CLIP] 模型載入完成")
 
 
-def detect_type(thumb_path: Path) -> str:
+def pil_check(thumb_path: Path) -> bool:
+    """邊緣像素 60%+ 是白色 → True（去背）"""
     img = Image.open(thumb_path).convert('RGB')
     w, h = img.size
     b = min(BORDER_WIDTH, w // 6, h // 6)
-
-    # 取四條邊框（上、下、左、右），合成一個像素陣列
     top    = img.crop((0,   0,   w,   b  ))
     bottom = img.crop((0,   h-b, w,   h  ))
     left   = img.crop((0,   b,   b,   h-b))
     right  = img.crop((w-b, b,   w,   h-b))
+    pixels = list(top.getdata()) + list(bottom.getdata()) + list(left.getdata()) + list(right.getdata())
+    if not pixels:
+        return False
+    white = sum(1 for r, g, bv in pixels if r > WHITE_THRESHOLD and g > WHITE_THRESHOLD and bv > WHITE_THRESHOLD)
+    return (white / len(pixels)) >= PIL_WHITE_RATIO
 
-    all_pixels = (
-        list(top.getdata()) +
-        list(bottom.getdata()) +
-        list(left.getdata()) +
-        list(right.getdata())
-    )
 
-    if not all_pixels:
-        return '情境'
+# 預先算好文字 embedding（只算一次）
+_text_feats = None
 
-    white_count = sum(
-        1 for r, g, b_ch in all_pixels
-        if r > WHITE_THRESHOLD and g > WHITE_THRESHOLD and b_ch > WHITE_THRESHOLD
-    )
-    ratio = white_count / len(all_pixels)
-    return '去背' if ratio >= WHITE_RATIO_MIN else '情境'
+def clip_check(full_path: Path) -> bool:
+    """CLIP 語意判斷：去背 → True"""
+    global _text_feats
+    _load_clip()
+    if _text_feats is None:
+        labels  = list(CLIP_PROMPTS.keys())
+        prompts = list(CLIP_PROMPTS.values())
+        tokens  = _tokenizer(prompts).to(_device)
+        with torch.no_grad():
+            tf = _model.encode_text(tokens)
+            tf /= tf.norm(dim=-1, keepdim=True)
+        _text_feats = (labels, tf)
+
+    image = Image.open(full_path).convert('RGB')
+    inp   = _preprocess(image).unsqueeze(0).to(_device)
+    with torch.no_grad():
+        imf = _model.encode_image(inp)
+        imf /= imf.norm(dim=-1, keepdim=True)
+        logit_scale = _model.logit_scale.exp().item()
+        scores = (imf @ _text_feats[1].T * logit_scale).softmax(dim=-1)[0].cpu().tolist()
+    best_label = _text_feats[0][scores.index(max(scores))]
+    return best_label == '去背'
+
+
+def detect_type(thumb_path: Path, full_path: Path) -> str:
+    """PIL + CLIP 雙重確認，兩者都說去背才算去背"""
+    pil_result  = pil_check(thumb_path)
+    clip_result = clip_check(full_path)
+    return '去背' if (pil_result and clip_result) else '情境'
 
 
 def main(missing_only: bool = False):
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
 
-    if missing_only:
-        rows = conn.execute(
-            "SELECT id, filename FROM photos WHERE photo_type IS NULL ORDER BY id"
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT id, filename FROM photos ORDER BY id"
-        ).fetchall()
-
+    query = ("SELECT id, filename FROM photos WHERE photo_type IS NULL ORDER BY id"
+             if missing_only else
+             "SELECT id, filename FROM photos ORDER BY id")
+    rows  = conn.execute(query).fetchall()
     total = len(rows)
-    log.info(f"共 {total} 張，用邊緣亮度偵測去背/情境")
+    log.info(f"共 {total} 張，PIL + CLIP 雙重偵測")
     if total == 0:
         conn.close()
         return
 
     counts = {'去背': 0, '情境': 0, 'miss': 0}
-    start = time.time()
+    start  = time.time()
     for i, row in enumerate(rows, 1):
         thumb_path = THUMB_DIR / row['filename']
-        if not thumb_path.exists():
+        full_path  = FULL_DIR  / row['filename']
+        if not thumb_path.exists() or not full_path.exists():
             counts['miss'] += 1
             continue
         try:
-            ptype = detect_type(thumb_path)
+            ptype = detect_type(thumb_path, full_path)
             conn.execute("UPDATE photos SET photo_type = ? WHERE id = ?", (ptype, row['id']))
-            if i % 500 == 0:
+            if i % 200 == 0:
                 conn.commit()
             counts[ptype] += 1
-            if i % 2000 == 0:
+            if i % 500 == 0:
                 elapsed = time.time() - start
                 eta = (total - i) / (i / elapsed) if elapsed > 0 else 0
                 log.info(f"[{i}/{total}] ETA {eta:.0f}s 去背={counts['去背']} 情境={counts['情境']}")
