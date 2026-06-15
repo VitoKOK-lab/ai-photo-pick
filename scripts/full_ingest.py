@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config.settings import SQLITE_PATH, UNSORTED_DIR, FULL_DIR
+from config.settings import SQLITE_PATH, UNSORTED_DIR, FULL_DIR, THUMB_DIR
 
 VALID_EXT = (".jpg", ".jpeg", ".png", ".webp", ".heic")
 
