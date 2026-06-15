@@ -1190,7 +1190,7 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
         {/* Photo */}
         {photo?.thumb_url && (
           <div style={{borderTop:'1px solid #f0f0f0',padding:'8px 0 6px'}}>
-            <div style={{width:'100%',height:72,overflow:'hidden',borderRadius:8,border:'1px solid #f0f0f0',position:'relative'}}>
+            <div style={{width:'100%',height:160,overflow:'hidden',borderRadius:10,position:'relative'}}>
               <img src={photo.thumb_url} alt="" style={{position:'absolute',width:'100%',height:'100%',objectFit:'cover',transform:'scale(1.5)',transformOrigin:'center'}} />
             </div>
           </div>
@@ -1218,12 +1218,12 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
         </div>
 
         {/* Price range */}
-        <div style={{background:'#fafaf7',border:'1px solid #ebe8e0',borderRadius:10,padding:'12px 14px',textAlign:'center',margin:'10px 0'}}>
-          <div style={{fontSize:10,color:'#b8935a',letterSpacing:1.5,textTransform:'uppercase',marginBottom:6}}>報價區間</div>
-          <div style={{fontSize:26,fontWeight:800,color:'#1a1a1a',letterSpacing:-0.5}}>
-            {fmtNT(manualPrice)} <span style={{fontSize:16,fontWeight:400,color:'#999'}}>–</span> {fmtNT(estimatedMax)}
+        <div style={{background:'#fafaf7',border:'1px solid #ebe8e0',borderRadius:8,padding:'6px 10px',margin:'6px 0',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+          <div style={{fontSize:8,color:'#b8935a',letterSpacing:1,textTransform:'uppercase',flexShrink:0}}>報價區間</div>
+          <div style={{fontSize:13,fontWeight:800,color:'#1a1a1a'}}>
+            {fmtNT(manualPrice)} <span style={{fontSize:10,fontWeight:400,color:'#999'}}>–</span> {fmtNT(estimatedMax)}
           </div>
-          <div style={{fontSize:11,color:'#d32f2f',fontWeight:700,marginTop:6,letterSpacing:0.3}}>AI預估報價，以最終報價為主</div>
+          <div style={{fontSize:8,color:'#d32f2f',fontWeight:700,flexShrink:0}}>AI預估</div>
         </div>
 
         {/* Legal disclaimer */}
