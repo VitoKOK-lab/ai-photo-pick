@@ -1186,12 +1186,14 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
         </div>
 
         {/* Photo + date */}
-        <div style={{display:'flex',gap:12,alignItems:'center',borderTop:'1px solid #f0f0f0',padding:'12px 0 10px'}}>
-          {photo?.thumb_url && <img src={photo.thumb_url} alt="" style={{width:56,height:56,objectFit:'cover',borderRadius:8,flexShrink:0,border:'1px solid #f0f0f0'}} />}
-          <div>
-            <div style={{fontSize:12,fontWeight:700,color:'#1a1a1a',lineHeight:1.5,marginBottom:2}}>{description||'—'}</div>
-            <div style={{fontSize:10,color:'#bbb'}}>{today}{customer&&' · '+customer}{sourceChannel&&' ('+sourceChannel+')'}</div>
+        {photo?.thumb_url && (
+          <div style={{borderTop:'1px solid #f0f0f0',padding:'12px 0 10px'}}>
+            <img src={photo.thumb_url} alt="" style={{width:'100%',aspectRatio:'1/1',objectFit:'cover',borderRadius:10,border:'1px solid #f0f0f0',display:'block'}} />
           </div>
+        )}
+        <div style={{paddingBottom:8,borderBottom:'1px solid #f0f0f0',marginBottom:4}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#1a1a1a',lineHeight:1.5,marginBottom:2}}>{description||'—'}</div>
+          <div style={{fontSize:10,color:'#bbb'}}>{today}{customer&&' · '+customer}{sourceChannel&&' ('+sourceChannel+')'}</div>
         </div>
 
         {/* Details table */}
@@ -1218,6 +1220,11 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
             {fmtNT(manualPrice)} <span style={{fontSize:16,fontWeight:400,color:'#999'}}>–</span> {fmtNT(estimatedMax)}
           </div>
           <div style={{fontSize:11,color:'#d32f2f',fontWeight:700,marginTop:6,letterSpacing:0.3}}>AI預估報價，以最終報價為主</div>
+        </div>
+
+        {/* Legal disclaimer */}
+        <div style={{fontSize:9,color:'#bbb',lineHeight:1.8,marginTop:10,paddingTop:8,borderTop:'1px solid #f0f0f0'}}>
+          本公司為彩色裸礦石供應商，珠寶訂製為滿足客戶提供樣式、需求之金工服務，最終樣式以溝通內容詳載於訂單付款頁面為主，付款後視同確認無誤。
         </div>
       </div>
     </div>
