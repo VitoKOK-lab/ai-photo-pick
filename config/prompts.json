@@ -38,10 +38,10 @@
     "無主石":  "a jewelry photo with no center gemstone, only plain polished metal or very small scattered accent stones"
   },
   "style": {
-    "無鑽": "a photo of jewelry with absolutely no diamonds, featuring only colored gemstone or plain metal",
-    "簡約": "a photo of jewelry with minimal diamond accents, fewer than 5 small side diamonds, mostly gemstone focused",
-    "輕奢": "a photo of jewelry with moderate diamond accents, around 10 to 20 small pave or halo diamonds surrounding a center stone",
-    "奢華": "a photo of jewelry completely covered and encrusted with diamonds, full pave setting or eternity band with wall to wall diamonds"
+    "無鑽": "a photo of jewelry with ZERO diamonds anywhere — no sparkle on the band, no pave, no halo, no side stones, no diamond accents at all — only a single colored gemstone on a completely plain smooth metal band with no stone setting other than the center stone prongs",
+    "簡約": "a photo of jewelry where you can see 1 to 5 small round white diamonds as accent stones, either set on the band shoulders or as simple side stones, very minimal diamond presence alongside the main colored gemstone",
+    "輕奢": "a photo of jewelry with clearly visible small round white diamonds pave-set on the band, shoulder diamonds, a diamond halo ring around the center stone, or multiple rows of accent diamonds — noticeably sparkly diamond accents surrounding the main gemstone",
+    "奢華": "a photo of jewelry completely covered in diamonds — full pave setting with diamonds covering the entire band and setting, eternity style with diamonds all the way around, wall-to-wall diamond coverage leaving almost no visible plain metal"
   },
   "stone_size": {
     "1克拉以內": "a photo of jewelry featuring a small delicate gemstone under 1 carat, subtle and understated",
