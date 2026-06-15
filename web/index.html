@@ -1318,30 +1318,35 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
         stoneOrderNo && `裸石單號：${stoneOrderNo}`,
         qNotes && `備註：${qNotes}`,
       ].filter(Boolean).join('\n');
+      const payload = {
+        description:    `${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`,
+        final_price:    0,
+        material:       materialType,
+        gemstone:       stoneName || null,
+        photo_id:       photo.id || null,
+        customer_name:  customer || null,
+        original_data:  JSON.stringify(orig),
+        adjusted_data:  JSON.stringify(adj),
+        estimated_min:  totalMin > 0 ? Math.round(totalMin) : null,
+        estimated_max:  totalMax > 0 ? Math.round(totalMax) : null,
+        budget:         budgetNum > 0 ? budgetNum : null,
+        stone_order_no: stoneOrderNo || null,
+        inquiry_time:   inquiryDate || null,
+        source_channel: sourceChannel || null,
+        notes:          notesText || null,
+      };
       const res = await fetch('/api/quotes', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          description:    `${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`,
-          material:       materialType,
-          gemstone:       stoneName,
-          photo_id:       photo.id,
-          customer_name:  customer || null,
-          original_data:  JSON.stringify(orig),
-          adjusted_data:  JSON.stringify(adj),
-          estimated_min:  totalMin > 0 ? Math.round(totalMin) : null,
-          estimated_max:  totalMax > 0 ? Math.round(totalMax) : null,
-          budget:         budgetNum || null,
-          stone_order_no: stoneOrderNo || null,
-          inquiry_time:   inquiryDate || null,
-          source_channel: sourceChannel || null,
-          notes:          notesText || null,
-        }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) { const d = await res.json(); setSavedId(d.id); }
       else {
-        const err = await res.json().catch(() => null);
-        alert('儲存失敗 ' + res.status + (err?.detail ? '\n' + JSON.stringify(err.detail) : ''));
+        const rawText = await res.text().catch(() => '');
+        console.error('儲存失敗', res.status, rawText, payload);
+        let detail = rawText;
+        try { const j = JSON.parse(rawText); detail = JSON.stringify(j.detail || j, null, 2); } catch {}
+        alert('儲存失敗 ' + res.status + '\n' + detail);
       }
     } catch(e) { alert('網路錯誤：' + e.message); }
     setSaving(false);
