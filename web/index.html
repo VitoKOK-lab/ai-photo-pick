@@ -1394,7 +1394,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             <div style={{fontSize:11,color:'var(--text3)',letterSpacing:1.5,textTransform:'uppercase',marginBottom:8}}>預估報價</div>
             {hasPrice ? (
               <>
-                <div style={{fontSize:32,fontWeight:700,color:'var(--text)',marginBottom:4}}>{fmtNT(finalPrice)}</div>
+                <div style={{fontSize:32,fontWeight:700,color:'var(--text)',marginBottom:4}}>{fmtNT(manualNum || Math.round(totalMin))}</div>
                 <div style={{fontSize:13,color:'var(--text2)'}}>{fmtNT(totalMin)} – {fmtNT(totalMax)}</div>
               </>
             ) : (
