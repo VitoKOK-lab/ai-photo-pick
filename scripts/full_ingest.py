@@ -151,12 +151,60 @@ def step3_backfill():
     log.info(f"STEP 3 完成: OK={ok} 跳過={skip} 錯誤={err}")
 
 
+# ── Step 4: 補 photo_type (PIL+CLIP 雙重偵測) ─────────────
+def step4_photo_type():
+    from scripts.classify_photo_type import detect_type
+
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.row_factory = sqlite3.Row
+
+    rows = conn.execute(
+        "SELECT id, filename FROM photos WHERE photo_type IS NULL ORDER BY id"
+    ).fetchall()
+    total = len(rows)
+
+    log.info(f"\n{'='*60}")
+    log.info(f"STEP 4: 補 photo_type — 找到 {total} 張需要分類")
+    log.info(f"{'='*60}")
+    if total == 0:
+        log.info("  所有照片 photo_type 都完整，跳過")
+        conn.close()
+        return
+
+    ok = err = skip = 0
+    start = time.time()
+    for i, row in enumerate(rows, 1):
+        thumb_path = THUMB_DIR / row["filename"]
+        full_path  = FULL_DIR  / row["filename"]
+        if not thumb_path.exists() or not full_path.exists():
+            skip += 1
+            continue
+        try:
+            ptype = detect_type(thumb_path, full_path)
+            conn.execute("UPDATE photos SET photo_type = ? WHERE id = ?", (ptype, row["id"]))
+            if i % 200 == 0:
+                conn.commit()
+            ok += 1
+            if i % 500 == 0:
+                elapsed = time.time() - start
+                eta = (total - i) / (i / elapsed) if elapsed > 0 else 0
+                log.info(f"[{i}/{total}] ETA {eta:.0f}s -> {ptype}")
+        except Exception as e:
+            log.error(f"[{i}/{total}] ERROR {row['filename']}: {e}")
+            err += 1
+
+    conn.commit()
+    conn.close()
+    log.info(f"STEP 4 完成: OK={ok} 跳過={skip} 錯誤={err}")
+
+
 # ── Main ──────────────────────────────────────────────────
 if __name__ == "__main__":
     log.info(f"開始完整匯入流程 {ts}")
     step1_batch()
     step2_remove_empty_dirs()
     step3_backfill()
+    step4_photo_type()
     log.info(f"\n{'='*60}")
     log.info("全部完成！")
     log.info(f"{'='*60}")
