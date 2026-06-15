@@ -38,12 +38,15 @@ CLIP 分類的 11 個維度，全部存進 SQLite `photos` 表：
 | setting_amount | 配石量 | 少/正常/多 |
 | craft_complexity | 複雜度 | 極簡/普通/複雜/極複雜 |
 | price_band | 價格區間 | 入門/中階/高階/奢華/頂級 |
+| photo_type | 照片類型 | 去背/情境 |
 
 ## 已知注意事項
 
 - `diamond_status`：schema 有此欄，但 CLIP 不自動填，需手動標記
 - `price_estimate_low/high`：保留欄位，目前不自動填
-- `metal_color / setting_amount / craft_complexity / price_band` 只存 label，不存 confidence
+- `metal_color / setting_amount / craft_complexity / price_band / photo_type` 只存 label，不存 confidence
+- `photo_type` 用 CLIP 語意判斷（prompts.json 有定義），新圖匯入自動分類，舊圖補跑 `python3 -m scripts.classify_photo_type`
+- UI 預設只顯示「去背」照片，篩選列點「照片類型」可切換為「情境」或全部
 
 ## 驗證 DB 是否完整
 
