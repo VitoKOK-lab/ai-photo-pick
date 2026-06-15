@@ -102,10 +102,10 @@ def clip_check(full_path: Path) -> bool:
 
 
 def detect_type(thumb_path: Path, full_path: Path) -> str:
-    """PIL + CLIP 雙重確認，兩者都說去背才算去背"""
+    """PIL 或 CLIP 任一認定是去背即算去背"""
     pil_result  = pil_check(thumb_path)
     clip_result = clip_check(full_path)
-    return '去背' if (pil_result and clip_result) else '情境'
+    return '去背' if (pil_result or clip_result) else '情境'
 
 
 def main(missing_only: bool = False):
