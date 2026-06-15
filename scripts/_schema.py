@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS photos (
     craft_complexity TEXT,
     metal_color TEXT,
     diamond_status TEXT,
+    photo_type TEXT,
     price_estimate_low INTEGER, price_estimate_high INTEGER,
     price_source TEXT, price_band TEXT,
     view_count INTEGER DEFAULT 0,

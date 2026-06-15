@@ -141,6 +141,10 @@ button { font-family: inherit; cursor: pointer; }
 .grid-banner:active img { transform: scale(1.04); }
 .grid-banner-lbl { position: absolute; bottom: 0; left: 0; right: 0; padding: 40px 20px 16px; background: linear-gradient(transparent, rgba(0,0,0,.42)); color: #fff; font-size: 13px; letter-spacing: 3px; font-weight: 300; text-transform: uppercase; }
 .loading-msg { text-align: center; padding: 28px; color: var(--text3); font-size: 13px; }
+/* ── Section divider between 去背 / 情境 ─────────────── */
+.grid-section-div { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 18px 14px 10px; }
+.grid-section-div-line { flex: 1; height: 1px; background: var(--border); }
+.grid-section-div-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: var(--text3); white-space: nowrap; }
 .empty-msg { text-align: center; padding: 64px 24px; color: var(--text2); font-size: 14px; line-height: 1.9; }
 
 /* ── Filter dropdown ────────────────────────────────────── */
@@ -871,7 +875,19 @@ function PhotoGrid({ isFav, toggleFav, filters, role }) {
       <div className="grid-wrap" ref={gridWrapRef}>
         <div className="grid">
           {photos.flatMap((p, i) => {
-            const card = (
+            const items = [];
+            // Insert section divider at the first 情境 photo (after at least one 去背)
+            const hasCutout = photos.some(x => x.photo_type === '去背');
+            if (hasCutout && p.photo_type !== '去背' && (i === 0 || photos[i-1].photo_type === '去背')) {
+              items.push(
+                <div key="section-div" className="grid-section-div">
+                  <div className="grid-section-div-line" />
+                  <div className="grid-section-div-label">情境照片</div>
+                  <div className="grid-section-div-line" />
+                </div>
+              );
+            }
+            items.push(
               <div key={p.id} className="card" style={{animationDelay:`${(i % 9) * 0.19}s`}}>
                 <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
                 <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
@@ -883,15 +899,7 @@ function PhotoGrid({ isFav, toggleFav, filters, role }) {
                 </div>
               </div>
             );
-            if ((i + 1) % 40 === 0) {
-              const bannerSrc = BANNERS[Math.floor(i / 40) % BANNERS.length];
-              return [card, (
-                <div key={`bn-${i}`} className="grid-banner" style={{animationDelay:`${(i % 9) * 0.19 + 0.15}s`}}>
-                  <img src={bannerSrc} alt="" loading="lazy" />
-                </div>
-              )];
-            }
-            return [card];
+            return items;
           })}
         </div>
         {loading && <div className="loading-msg">載入中…</div>}

@@ -84,6 +84,7 @@ def _row_to_dict(row) -> dict:
         "setting_amount":         _safe(row, "setting_amount"),
         "craft_complexity":       _safe(row, "craft_complexity"),
         "metal_color":            _safe(row, "metal_color"),
+        "photo_type":          _safe(row, "photo_type"),
         "price_band":          row["price_band"],
         "price_estimate_low":  row["price_estimate_low"],
         "price_estimate_high": row["price_estimate_high"],
@@ -104,6 +105,7 @@ def list_photos(
     stone_shape:  Optional[str] = None,
     stone_size:   Optional[str] = None,
     metal_color:  Optional[str] = None,
+    photo_type:   Optional[str] = None,
     page:         int = Query(1, ge=1),
     sort:         str = Query("random", pattern="^(random|newest|popular)$"),
     exclude_seen: bool = False,
@@ -130,6 +132,7 @@ def list_photos(
     add_in("stone_shape",    stone_shape)
     add_in("stone_size",     stone_size)
     add_in("metal_color",    metal_color)
+    add_in("photo_type",     photo_type)
 
     if exclude_seen and session_id:
         wheres.append(
@@ -140,7 +143,8 @@ def list_photos(
     where_clause = ("WHERE " + " AND ".join(wheres)) if wheres else ""
 
     if sort == "random":
-        order_clause = "ORDER BY RANDOM()"
+        # 去背照片排前，情境照片排後，各組內隨機
+        order_clause = "ORDER BY CASE WHEN photo_type = '去背' THEN 0 ELSE 1 END, RANDOM()"
     elif sort == "newest":
         order_clause = "ORDER BY created_at DESC"
     elif sort == "popular":

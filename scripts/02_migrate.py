@@ -23,6 +23,7 @@ def migrate():
         ("craft_complexity",       "TEXT"),
         ("metal_color",            "TEXT"),
         ("diamond_status",         "TEXT"),
+        ("photo_type",             "TEXT"),
     ]
     for col, typ in missing_cols:
         try:
