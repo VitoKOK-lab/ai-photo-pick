@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s",
 log = logging.getLogger(__name__)
 
 # ── PIL 參數 ───────────────────────────────────────────────
-WHITE_THRESHOLD = 235   # channel 值 > 這個才算白
+WHITE_THRESHOLD = 235   # channel 值 > 這個才算白（純白底）
 BORDER_WIDTH    = 8     # 採樣邊緣厚度（px）
 PIL_WHITE_RATIO = 0.60  # 邊緣 60%+ 是白 → PIL 認定去背
 
@@ -102,10 +102,12 @@ def clip_check(full_path: Path) -> bool:
 
 
 def detect_type(thumb_path: Path, full_path: Path) -> str:
-    """PIL 或 CLIP 任一認定是去背即算去背"""
-    pil_result  = pil_check(thumb_path)
+    """PIL 白底確認（用 full 圖，更準確）AND CLIP 語意確認"""
+    pil_result = pil_check(full_path)   # full 圖 1200px，邊緣更乾淨
+    if not pil_result:
+        return '情境'
     clip_result = clip_check(full_path)
-    return '去背' if (pil_result or clip_result) else '情境'
+    return '去背' if clip_result else '情境'
 
 
 def main(missing_only: bool = False):

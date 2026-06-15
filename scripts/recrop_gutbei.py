@@ -58,7 +58,7 @@ def recrop_one(row: dict, dry_run: bool = False) -> str:
 
         # 智能裁切（已確認是去背，但再做一次 is_white_background 確保安全）
         if is_white_background(img):
-            img_square = crop_jewelry_centered(img)
+            img_square = crop_jewelry_centered(img, target_fill=0.30)
         else:
             img_square = crop_square(img)
 

@@ -65,7 +65,7 @@ def is_white_background(img: Image.Image, white_threshold: int = 235, border_wid
     return (white / len(pixels)) >= min_ratio
 
 
-def crop_jewelry_centered(img: Image.Image, target_fill: float = 0.50) -> Image.Image:
+def crop_jewelry_centered(img: Image.Image, target_fill: float = 0.30) -> Image.Image:
     """
     去背照片智能裁切：偵測珠寶邊界框，置中並填白底，
     使珠寶面積約佔畫布的 target_fill（預設 50%）。
