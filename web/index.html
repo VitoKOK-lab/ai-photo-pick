@@ -2746,10 +2746,30 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
 
   const adj = (() => { try { return JSON.parse(q.adjusted_data||'{}'); } catch { return {}; } })();
   const CHAIN_TO_WEIGHT_MAP = {'少':'輕 (1.5–3g)','正常':'中 (3–5g)','多':'偏重 (5–8g)'};
-  const weightKey = adj.setting_amount ? (CHAIN_TO_WEIGHT_MAP[adj.setting_amount] || adj.setting_amount) : '';
-  const thumbUrl = q.photo_id ? `/api/thumb/${q.photo_id}` : null;
-  const finalNum = parseInt(String(finalInput).replace(/[^0-9]/g,'')) || 0;
-  const isPending = !q.final_price || q.final_price === 0;
+  // Fallback: parse description "戒指・藍寶石 1ct・輕奢"
+  const descParts = (q.description || '').split('・');
+  const catFB      = descParts[0]?.trim() || '';
+  const stonePartFB = descParts[1] || '';
+  const stoneNameFB = stonePartFB.replace(/\s+[\d.]+ct$/,'').trim();
+  const caratFB    = parseFloat(stonePartFB.match(/([\d.]+)ct/)?.[1]) || 0;
+  const styleFB    = descParts[2]?.trim() || '';
+  // Resolved fields (adj preferred, fallback to top-level or parsed)
+  const rCat      = adj.category       || catFB        || '';
+  const rStone    = adj.gemstone       || q.gemstone   || stoneNameFB || '';
+  const rCarat    = adj.carat          || caratFB      || 0;
+  const rMaterial = adj.material       || q.material   || '';
+  const rStyle    = adj.style          || styleFB      || '';
+  const rCraft    = adj.craft_complexity || '';
+  const rOrigin   = adj.origin         || '';
+  const rTreat    = adj.treatment      || '';
+  const rColorQ   = adj.colorQ         || '';
+  const rStoneMode= adj.stoneMode      || 'invest';
+  const rSidestone= adj.sidestone      || '';
+  const rPlating  = adj.plating        || '';
+  const rSize     = adj.size           || '';
+  const rWeightKey= adj.setting_amount ? (CHAIN_TO_WEIGHT_MAP[adj.setting_amount] || adj.setting_amount) : '';
+  const thumbUrl  = q.photo_id ? `/api/thumb/${q.photo_id}` : null;
+  const finalNum  = parseInt(String(finalInput).replace(/[^0-9]/g,'')) || 0;
 
   async function doSave() {
     if (!finalNum) return;
@@ -2778,10 +2798,7 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
             </div>
             <div style={{fontSize:11,color:'var(--text3)'}}>{q.inquiry_time || q.created_at?.slice(0,10)}</div>
           </div>
-          <button onClick={() => setShowCard(true)}
-            style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
-            📤 預覽截圖
-          </button>
+          <div style={{fontSize:11,color:'var(--text3)'}}>{q.inquiry_time || q.created_at?.slice(0,10)}</div>
         </div>
 
         <div style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'16px'}}>
@@ -2808,27 +2825,27 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
             </div>
           </div>
 
-          {/* Final price input */}
-          <div style={{background:'var(--s3)',borderRadius:12,padding:'14px 16px',marginBottom:16}}>
-            <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:8,letterSpacing:0.5}}>最終報價</div>
-            {saved || !isPending ? (
-              <div style={{fontSize:24,fontWeight:800,color:'var(--gold)'}}>{fmtNT(finalNum || q.final_price)}</div>
-            ) : (
-              <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <div style={{display:'flex',alignItems:'center',flex:1,background:'var(--surface)',border:'1.5px solid var(--border)',borderRadius:8,overflow:'hidden'}}>
-                  <span style={{padding:'0 6px 0 10px',color:'var(--text3)',fontSize:13,fontWeight:600,flexShrink:0}}>NT$</span>
-                  <input type="text" inputMode="numeric" placeholder="輸入最終成交金額" value={finalInput}
-                    onChange={e => setFinalInput(e.target.value.replace(/[^0-9]/g,''))}
-                    style={{flex:1,border:'none',padding:'11px 10px 11px 2px',fontSize:16,fontWeight:700,color:'var(--text)',outline:'none',background:'none',fontFamily:'inherit',minWidth:0}}
-                  />
-                </div>
-                <button onClick={doSave} disabled={saving || !finalNum}
-                  style={{background:finalNum?'var(--gold)':'var(--s3)',color:finalNum?'#fff':'var(--text3)',border:'none',borderRadius:8,padding:'11px 16px',fontSize:13,fontWeight:700,cursor:finalNum?'pointer':'default',flexShrink:0}}>
-                  {saving ? '…' : '確認'}
-                </button>
+          {/* Final price input — always editable */}
+          <div style={{background:'var(--s3)',borderRadius:12,padding:'14px 16px',marginBottom:12}}>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:8,letterSpacing:0.5}}>最終報價（可修改）</div>
+            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:10}}>
+              <div style={{display:'flex',alignItems:'center',flex:1,background:'var(--surface)',border:'1.5px solid var(--border)',borderRadius:8,overflow:'hidden'}}>
+                <span style={{padding:'0 6px 0 10px',color:'var(--text3)',fontSize:13,fontWeight:600,flexShrink:0}}>NT$</span>
+                <input type="text" inputMode="numeric" placeholder="輸入最終成交金額" value={finalInput}
+                  onChange={e => setFinalInput(e.target.value.replace(/[^0-9]/g,''))}
+                  style={{flex:1,border:'none',padding:'11px 10px 11px 2px',fontSize:16,fontWeight:700,color:'var(--text)',outline:'none',background:'none',fontFamily:'inherit',minWidth:0}}
+                />
               </div>
-            )}
-            {saved && <div style={{fontSize:11,color:'#4caf77',marginTop:6}}>✓ 已儲存，可預覽截圖傳給客人</div>}
+              <button onClick={doSave} disabled={saving || !finalNum}
+                style={{background:finalNum?'var(--accent)':'var(--s3)',color:finalNum?'#fff':'var(--text3)',border:'none',borderRadius:8,padding:'11px 16px',fontSize:13,fontWeight:700,cursor:finalNum?'pointer':'default',flexShrink:0}}>
+                {saving ? '…' : '儲存'}
+              </button>
+            </div>
+            {saved && <div style={{fontSize:11,color:'#4caf77',marginBottom:8}}>✓ 已儲存</div>}
+            <button onClick={() => setShowCard(true)} disabled={!finalNum}
+              style={{width:'100%',background:finalNum?'var(--gold)':'var(--s3)',color:finalNum?'#fff':'var(--text3)',border:'none',borderRadius:10,padding:'12px',fontSize:14,fontWeight:700,cursor:finalNum?'pointer':'default'}}>
+              📤 生成截圖傳給客人
+            </button>
           </div>
 
           {/* Detail rows */}
@@ -2858,10 +2875,20 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
           colorQ={adj.colorQ || ''}
           stoneMode={adj.stoneMode || 'invest'}
           materialType={adj.material || q.material || ''}
-          weightKey={weightKey}
-          craft={adj.craft_complexity || ''}
-          style={adj.style || ''}
-          sidestone={adj.sidestone || ''}
+          weightKey={rWeightKey}
+          craft={rCraft}
+          style={rStyle}
+          sidestone={rSidestone}
+          plating={rPlating}
+          itemSize={rSize}
+          cat={rCat}
+          stoneName={rStone}
+          carat={rCarat}
+          origin={rOrigin}
+          treatment={rTreat}
+          colorQ={rColorQ}
+          stoneMode={rStoneMode}
+          materialType={rMaterial}
           sourceChannel={q.source_channel || ''}
           inquiryDate={q.inquiry_time || ''}
           budget={q.budget || 0}
