@@ -325,7 +325,6 @@ async function logEvent(photo_id, event_type, extra = {}) {
 }
 const CATS = ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'];
 const CFG = {
-  photo_type:  { label: '照片類型', values: ['去背','情境'] },
   style:       { label: '鑽石數量', values: ['無鑽','簡約','輕奢','奢華'] },
   color:       { label: '寶石色', values: ['紅','粉','黃','綠','藍','紫','白','彩'] },
   metal_color: { label: '金工色', values: ['金','銀'] },
@@ -875,34 +874,18 @@ function PhotoGrid({ isFav, toggleFav, filters, role }) {
     <>
       <div className="grid-wrap" ref={gridWrapRef}>
         <div className="grid">
-          {photos.flatMap((p, i) => {
-            const items = [];
-            // Insert section divider in 綜合 mode (no photo_type filter) at the 去背→情境 boundary
-            const mixedMode = !filters.photo_type;
-            const hasCutout = mixedMode && photos.some(x => x.photo_type === '去背');
-            if (hasCutout && p.photo_type !== '去背' && (i === 0 || photos[i-1].photo_type === '去背')) {
-              items.push(
-                <div key="section-div" className="grid-section-div">
-                  <div className="grid-section-div-line" />
-                  <div className="grid-section-div-label">情境照片</div>
-                  <div className="grid-section-div-line" />
-                </div>
-              );
-            }
-            items.push(
-              <div key={p.id} className="card" style={{animationDelay:`${(i % 9) * 0.19}s`}}>
-                <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
-                <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
-                  onClick={e => { e.stopPropagation(); toggleFav(p); }}>
-                  {isFav(p.id) ? '♥' : '♡'}
-                </button>
-                <div className="card-lbl" onClick={() => setDetail(p)}>
-                  {[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}
-                </div>
+          {photos.map((p, i) => (
+            <div key={p.id} className="card" style={{animationDelay:`${(i % 9) * 0.19}s`}}>
+              <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
+              <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
+                onClick={e => { e.stopPropagation(); toggleFav(p); }}>
+                {isFav(p.id) ? '♥' : '♡'}
+              </button>
+              <div className="card-lbl" onClick={() => setDetail(p)}>
+                {[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}
               </div>
-            );
-            return items;
-          })}
+            </div>
+          ))}
         </div>
         {loading && <div className="loading-msg">載入中…</div>}
         {!loading && photos.length === 0 && !hasMoreRef.current && (
@@ -954,14 +937,17 @@ function PhotoGrid({ isFav, toggleFav, filters, role }) {
 }
 
 /* ── Browse tab ─────────────────────────────────────── */
-const DEFAULT_FILTERS = { photo_type: '去背' };
-
 function BrowseTab({ isFav, toggleFav, role }) {
-  const [catFilter, setCatFilter] = useState(null);
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const [counts,  setCounts]  = useState({});
+  const [photoMode, setPhotoMode] = useState('去背'); // '去背' | '情境'
+  const [catFilter, setCatFilter]  = useState(null);
+  const [filters,   setFilters]    = useState({});
+  const [counts,    setCounts]     = useState({});
 
-  const allFilters = catFilter ? { ...filters, category: catFilter } : filters;
+  const allFilters = {
+    ...(catFilter ? { category: catFilter } : {}),
+    ...filters,
+    photo_type: photoMode,
+  };
 
   useEffect(() => {
     const qs = new URLSearchParams();
@@ -979,22 +965,31 @@ function BrowseTab({ isFav, toggleFav, role }) {
     return n;
   });
 
-  const hasNonDefaultFilters = catFilter ||
-    Object.entries(filters).some(([k, v]) => DEFAULT_FILTERS[k] !== v);
-
   return (
     <>
       <div className="browse-hdr">
-      <CategoryTabs active={catFilter} onSelect={setCatFilter} />
-      <div className="chips-bar">
-        {Object.entries(CFG).map(([field]) => (
-          <FilterDropdown key={field} field={field} cur={filters[field] || null}
-            counts={counts[field] || {}} onPick={v => setF(field, v)} />
-        ))}
-        {hasNonDefaultFilters && (
-          <button className="chip-clr" onClick={() => { setFilters(DEFAULT_FILTERS); setCatFilter(null); }}>清除</button>
-        )}
-      </div>
+        {/* 去背 / 情境 切換 */}
+        <div style={{display:'flex',gap:0,margin:'8px 14px 0',background:'var(--s3)',borderRadius:10,padding:3,width:'fit-content'}}>
+          {['去背','情境'].map(mode => (
+            <button key={mode} onClick={() => setPhotoMode(mode)} style={{
+              padding:'6px 22px', border:'none', borderRadius:8, fontSize:13, fontWeight:600,
+              cursor:'pointer', transition:'all .18s',
+              background: photoMode===mode ? 'var(--surface)' : 'transparent',
+              color: photoMode===mode ? 'var(--text)' : 'var(--text3)',
+              boxShadow: photoMode===mode ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+            }}>{mode}</button>
+          ))}
+        </div>
+        <CategoryTabs active={catFilter} onSelect={setCatFilter} />
+        <div className="chips-bar">
+          {Object.entries(CFG).map(([field]) => (
+            <FilterDropdown key={field} field={field} cur={filters[field] || null}
+              counts={counts[field] || {}} onPick={v => setF(field, v)} />
+          ))}
+          {(catFilter || Object.keys(filters).length > 0) && (
+            <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
+          )}
+        </div>
       </div>
       <div className="body-row">
         <div className="main">

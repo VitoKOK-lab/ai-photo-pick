@@ -72,6 +72,7 @@ def find_similar(
           ) AS sim_score
         FROM photos
         WHERE category = ? AND id != ?
+          AND (photo_type = ? OR (? IS NULL AND photo_type IS NULL))
         ORDER BY sim_score DESC, RANDOM()
         """,
         (
@@ -83,6 +84,8 @@ def find_similar(
             anchor.get("price_band")  or "",
             anchor.get("category"),
             photo_id,
+            anchor.get("photo_type"),
+            anchor.get("photo_type"),
         ),
     )
     rows = cur.fetchall()
