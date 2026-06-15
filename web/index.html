@@ -787,7 +787,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
 }
 
 /* ── Photo grid ─────────────────────────────────────── */
-function PhotoGrid({ isFav, toggleFav, filters, role }) {
+function PhotoGrid({ isFav, toggleFav, filters, role, showAll }) {
   const [photos,     setPhotos]     = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [detail,     setDetail]     = useState(null);
@@ -876,8 +876,8 @@ function PhotoGrid({ isFav, toggleFav, filters, role }) {
         <div className="grid">
           {photos.flatMap((p, i) => {
             const items = [];
-            // Insert section divider at the first 情境 photo (after at least one 去背)
-            const hasCutout = photos.some(x => x.photo_type === '去背');
+            // Insert section divider in 綜合 mode at the 去背→情境 boundary
+            const hasCutout = showAll && photos.some(x => x.photo_type === '去背');
             if (hasCutout && p.photo_type !== '去背' && (i === 0 || photos[i-1].photo_type === '去背')) {
               items.push(
                 <div key="section-div" className="grid-section-div">
@@ -956,8 +956,11 @@ function BrowseTab({ isFav, toggleFav, role }) {
   const [catFilter, setCatFilter] = useState(null);
   const [filters, setFilters] = useState({});
   const [counts,  setCounts]  = useState({});
+  const [showAll, setShowAll] = useState(false); // false=去背 only, true=綜合
 
-  const allFilters = catFilter ? { ...filters, category: catFilter } : filters;
+  // 預設只顯示去背；切換到綜合時不傳 photo_type 讓後端返回所有
+  const photoTypeFilter = showAll ? {} : { photo_type: '去背' };
+  const allFilters = { ...(catFilter ? { category: catFilter } : {}), ...filters, ...photoTypeFilter };
 
   useEffect(() => {
     const qs = new URLSearchParams();
@@ -980,6 +983,26 @@ function BrowseTab({ isFav, toggleFav, role }) {
       <div className="browse-hdr">
       <CategoryTabs active={catFilter} onSelect={setCatFilter} />
       <div className="chips-bar">
+        {/* 去背 / 綜合 切換 */}
+        <button
+          onClick={() => setShowAll(false)}
+          style={{
+            padding:'5px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer',
+            border: !showAll ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
+            background: !showAll ? 'var(--accent)' : 'var(--surface)',
+            color: !showAll ? '#fff' : 'var(--text2)',
+            flexShrink:0,
+          }}>去背</button>
+        <button
+          onClick={() => setShowAll(true)}
+          style={{
+            padding:'5px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer',
+            border: showAll ? '1.5px solid var(--accent)' : '1.5px solid var(--border)',
+            background: showAll ? 'var(--accent)' : 'var(--surface)',
+            color: showAll ? '#fff' : 'var(--text2)',
+            flexShrink:0,
+          }}>綜合</button>
+        <div style={{width:1, height:20, background:'var(--border)', flexShrink:0}} />
         {Object.entries(CFG).map(([field]) => (
           <FilterDropdown key={field} field={field} cur={filters[field] || null}
             counts={counts[field] || {}} onPick={v => setF(field, v)} />
@@ -989,7 +1012,7 @@ function BrowseTab({ isFav, toggleFav, role }) {
       </div>
       <div className="body-row">
         <div className="main">
-          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role} />
+          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role} showAll={showAll} />
         </div>
       </div>
     </>
