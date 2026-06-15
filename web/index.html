@@ -279,6 +279,30 @@ const BANNERS = ['/banners/ｂ1.png','/banners/ｂ2.png','/banners/ｂ3.png','/b
 /* ── Session & event tracking ───────────────────────── */
 const ADMIN_PIN  = '1234'; // ← 老闆在這裡修改密碼
 const STAFF_PIN  = '5678'; // ← 員工密碼
+
+/* ── JWT auth toggle & utilities ────────────────────── */
+const USE_JWT_AUTH = false; // 切換到 true 即啟用新系統
+
+function getJwtToken() {
+  return localStorage.getItem('jwt_token');
+}
+
+function getJwtUser() {
+  try { return JSON.parse(localStorage.getItem('jwt_user') || 'null'); } catch { return null; }
+}
+
+function clearJwtAuth() {
+  localStorage.removeItem('jwt_token');
+  localStorage.removeItem('jwt_user');
+}
+
+async function apiFetch(url, options = {}) {
+  const token = getJwtToken();
+  if (token) {
+    options.headers = { ...(options.headers || {}), 'Authorization': `Bearer ${token}` };
+  }
+  return fetch(url, options);
+}
 const SESSION_ID = (sessionStorage.getItem('sid') || (() => { const s = Math.random().toString(36).slice(2); sessionStorage.setItem('sid', s); return s; })());
 async function logEvent(photo_id, event_type, extra = {}) {
   try {
@@ -1539,6 +1563,52 @@ function PinModal({ onClose, onAuth }) {
   );
 }
 
+/* ── Login modal (JWT, inactive when USE_JWT_AUTH=false) */
+function LoginModal({ onClose, onAuth }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function submit() {
+    if (!username || !password) return;
+    setLoading(true); setErr('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username, password}),
+      });
+      if (!res.ok) { setErr('帳號或密碼錯誤'); setLoading(false); return; }
+      const data = await res.json();
+      localStorage.setItem('jwt_token', data.token);
+      localStorage.setItem('jwt_user', JSON.stringify(data.user));
+      onAuth(data.user.role, data.user);
+      onClose();
+    } catch { setErr('連線失敗'); }
+    setLoading(false);
+  }
+
+  return (
+    <div className="pin-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="pin-box">
+        <div className="pin-title">登入</div>
+        <input className="pin-input" type="text" placeholder="帳號" value={username}
+          onChange={e => { setUsername(e.target.value); setErr(''); }}
+          style={{marginBottom:8}} />
+        <input className="pin-input" type="password" placeholder="密碼" value={password}
+          onChange={e => { setPassword(e.target.value); setErr(''); }}
+          onKeyDown={e => e.key === 'Enter' && submit()} />
+        <div className="pin-err">{err}</div>
+        <button className="pin-btn" onClick={submit} disabled={loading}>
+          {loading ? '登入中…' : '登入'}
+        </button>
+        <button className="pin-cancel" onClick={onClose}>取消</button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Upload button ─────────────────────────────────── */
 function UploadBtn({ onUploaded }) {
   const inputRef  = useRef(null);
@@ -1719,9 +1789,30 @@ function App() {
   const isAdmin = role === 'admin';
   const isStaff = role === 'staff' || role === 'admin';
 
+  // JWT init (only when USE_JWT_AUTH = true)
+  useEffect(() => {
+    if (!USE_JWT_AUTH) return;
+    const user = getJwtUser();
+    const token = getJwtToken();
+    if (user && token) {
+      setRole(user.role);
+      // Verify token is still valid in background
+      fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(data => { if (!data.authenticated) { clearJwtAuth(); setRole('guest'); } })
+        .catch(() => {});
+    }
+  }, []);
+
   function handleRoleKey() {
-    if (role !== 'guest') { localStorage.removeItem('userRole'); setRole('guest'); }
-    else setShowPin(true);
+    if (USE_JWT_AUTH) {
+      if (role !== 'guest') { clearJwtAuth(); setRole('guest'); }
+      else setShowPin(true);
+    } else {
+      // existing PIN logic
+      if (role !== 'guest') { localStorage.removeItem('userRole'); setRole('guest'); }
+      else setShowPin(true);
+    }
   }
 
   const toggleFav = photo => setFavs(prev => {
@@ -1758,7 +1849,10 @@ function App() {
           onDeleted={() => { setShowDarkBg(false); window.location.reload(); }}
         />
       )}
-      {showPin && <PinModal onClose={() => setShowPin(false)} onAuth={setRole} />}
+      {showPin && (USE_JWT_AUTH
+        ? <LoginModal onClose={() => setShowPin(false)} onAuth={(role, user) => setRole(role)} />
+        : <PinModal onClose={() => setShowPin(false)} onAuth={setRole} />
+      )}
       <div className="content">
         {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} role={role} />}
         {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
