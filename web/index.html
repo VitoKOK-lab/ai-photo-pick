@@ -1110,7 +1110,7 @@ function getBand(ct) { if(ct<1)return'B1'; if(ct<3)return'B2'; if(ct<5)return'B3
 function fmtNT(n) { return 'NT$ ' + Math.round(n).toLocaleString('zh-TW'); }
 
 /* ── Shareable quote card (screenshot for customer) ─── */
-function QuoteCard({ photo, description, estimatedMin, estimatedMax, finalPrice, customer, onClose }) {
+function QuoteCard({ photo, description, estimatedMin, estimatedMax, finalPrice, customer, itemSize, plating, onClose }) {
   const today = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.65)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:20}} onClick={e=>e.target===e.currentTarget&&onClose()}>
@@ -1138,7 +1138,8 @@ function QuoteCard({ photo, description, estimatedMin, estimatedMax, finalPrice,
 
         {/* Meta */}
         {customer && <div style={{fontSize:12,color:'#777',textAlign:'center',marginBottom:3}}>客戶：{customer}</div>}
-        <div style={{fontSize:12,color:'#aaa',textAlign:'center',marginBottom:16}}>{today}</div>
+        <div style={{fontSize:12,color:'#aaa',textAlign:'center',marginBottom:3}}>{today}</div>
+        <div style={{fontSize:11,color:'#ccc',textAlign:'center',marginBottom:12}}>{[itemSize&&`尺寸 ${itemSize}`, plating&&plating!=='無'&&`鍍${plating}`].filter(Boolean).join('  ·  ')}</div>
 
         {/* Disclaimer */}
         <div style={{fontSize:10,color:'#ccc',textAlign:'center',lineHeight:1.7,borderTop:'1px solid #f4f4f4',paddingTop:12}}>
@@ -1172,6 +1173,12 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [sidestone,   setSidestone]   = useState('無配石');
   const [slider,      setSlider]      = useState(0.5);
   const [customer,       setCustomer]       = useState('');
+  const [inquiryDate,    setInquiryDate]    = useState(`${new Date().getMonth()+1}/${new Date().getDate()}`);
+  const [sourceChannel,  setSourceChannel]  = useState('');
+  const [itemSize,       setItemSize]       = useState('');
+  const [plating,        setPlating]        = useState('');
+  const [stoneOrderNo,   setStoneOrderNo]   = useState('');
+  const [qNotes,         setQNotes]         = useState('');
   const [saving,         setSaving]         = useState(false);
   const [savedId,        setSavedId]        = useState(null);
   const [finalInput,     setFinalInput]     = useState('');
@@ -1188,6 +1195,11 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     }
     setSlider(0.5);
   }, [stoneKey, stoneMode]);
+
+  useEffect(() => {
+    const opts = SIZE_OPTS[cat];
+    setItemSize(opts ? opts[0] : '');
+  }, [cat]);
 
   // Compute price
   const ct = parseFloat(carat) || 0;
@@ -1237,22 +1249,33 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   async function doSave() {
     setSaving(true);
     try {
-      const adj = {category:cat, style, setting_amount:chain, craft_complexity:craft, metal_color:metalColor, gemstone:stoneName, stoneKey, stoneMode, carat:ct, origin, treatment, colorQ, sidestone};
+      const adj = {category:cat, style, setting_amount:chain, craft_complexity:craft, metal_color:metalColor, gemstone:stoneName, stoneKey, stoneMode, carat:ct, origin, treatment, colorQ, sidestone, size:itemSize, plating, stone_order_no:stoneOrderNo, notes:qNotes, inquiry_time:inquiryDate, source_channel:sourceChannel};
+      const notesText = [
+        inquiryDate && `詢價時間：${inquiryDate}${sourceChannel?' ('+sourceChannel+')':''}`,
+        itemSize && `尺寸：${itemSize}`,
+        plating && `鍍金：${plating}`,
+        stoneOrderNo && `裸石單號：${stoneOrderNo}`,
+        qNotes && `備註：${qNotes}`,
+      ].filter(Boolean).join('\n');
       const res = await fetch('/api/quotes', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
-          description:   `${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`,
-          final_price:   0,
-          material:      metalType,
-          gemstone:      stoneName,
-          photo_id:      photo.id,
-          customer_name: customer || null,
-          original_data: JSON.stringify(orig),
-          adjusted_data: JSON.stringify(adj),
-          estimated_min: totalMin > 0 ? Math.round(totalMin) : null,
-          estimated_max: totalMax > 0 ? Math.round(totalMax) : null,
-          budget:        budgetNum || null,
+          description:    `${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`,
+          final_price:    0,
+          material:       metalType,
+          gemstone:       stoneName,
+          photo_id:       photo.id,
+          customer_name:  customer || null,
+          original_data:  JSON.stringify(orig),
+          adjusted_data:  JSON.stringify(adj),
+          estimated_min:  totalMin > 0 ? Math.round(totalMin) : null,
+          estimated_max:  totalMax > 0 ? Math.round(totalMax) : null,
+          budget:         budgetNum || null,
+          stone_order_no: stoneOrderNo || null,
+          inquiry_time:   inquiryDate || null,
+          source_channel: sourceChannel || null,
+          notes:          notesText || null,
         }),
       });
       if (res.ok) { const d = await res.json(); setSavedId(d.id); }
@@ -1287,6 +1310,8 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           estimatedMax={Math.round(totalMax)}
           finalPrice={Math.round(finalPrice)}
           customer={customer}
+          itemSize={itemSize}
+          plating={plating}
           onClose={() => setShowCard(false)}
         />
       )}
@@ -1399,6 +1424,42 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 
         <div className="det-scroll" style={{padding:'12px 16px',paddingBottom:160}}>
 
+          {/* ── 詢單資訊 ─────────────────────────────── */}
+          <div style={{background:'var(--surface)',borderRadius:12,border:'1px solid var(--border)',padding:'14px 16px',marginBottom:10}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:'uppercase',color:'var(--text3)',marginBottom:10}}>詢單資訊</div>
+            {/* Row: date + source */}
+            <div style={{display:'flex',gap:8,marginBottom:10}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>詢價時間</div>
+                <input type="text" placeholder={`${new Date().getMonth()+1}/${new Date().getDate()}`} value={inquiryDate}
+                  onChange={e=>setInquiryDate(e.target.value)}
+                  style={{width:'100%',border:'1px solid var(--border)',borderRadius:7,padding:'8px 10px',fontSize:13,fontFamily:'inherit',outline:'none',background:'var(--surface)',color:'var(--text)'}}
+                  onFocus={e=>e.target.style.borderColor='var(--gold)'}
+                  onBlur={e=>e.target.style.borderColor='var(--border)'}
+                />
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>帳號來源</div>
+                <select value={sourceChannel} onChange={e=>setSourceChannel(e.target.value)}
+                  style={{width:'100%',border:'1px solid var(--border)',borderRadius:7,padding:'8px 10px',fontSize:13,fontFamily:'inherit',outline:'none',background:'var(--surface)',color:'var(--text)',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}
+                  onFocus={e=>e.target.style.borderColor='var(--gold)'}
+                  onBlur={e=>e.target.style.borderColor='var(--border)'}
+                >
+                  <option value="">— 選擇 —</option>
+                  {['FB','IG','LINE','WhatsApp','現場','官網','其他'].map(s=><option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+            {/* Customer name */}
+            <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>客人名字</div>
+            <input type="text" placeholder="林小姐" value={customer}
+              onChange={e=>setCustomer(e.target.value)}
+              style={{width:'100%',border:'1px solid var(--border)',borderRadius:7,padding:'8px 10px',fontSize:14,fontFamily:'inherit',outline:'none',background:'var(--surface)',color:'var(--text)'}}
+              onFocus={e=>e.target.style.borderColor='var(--gold)'}
+              onBlur={e=>e.target.style.borderColor='var(--border)'}
+            />
+          </div>
+
           {/* Reference photo */}
           <div style={{display:'flex',gap:12,alignItems:'center',background:'var(--surface)',borderRadius:12,padding:'12px',border:'1px solid var(--border)',marginBottom:14}}>
             <img src={photo.thumb_url} alt="" style={{width:64,height:64,objectFit:'cover',borderRadius:8,flexShrink:0}} />
@@ -1432,6 +1493,22 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
             {CATS.map(v => <Chip key={v} val={v} cur={cat} setCur={setCat} origVal={orig.category} />)}
           </div>
+
+          {/* Size – dynamic based on category */}
+          {SIZE_OPTS[cat] && (
+            <div style={{marginBottom:6}}>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:0.5,color:'var(--text3)',margin:'10px 0 4px'}}>
+                {cat === '戒指' ? '戒圍' : cat === '耳釘' ? '耳針款式' : '鍊長'}
+              </div>
+              <select value={itemSize} onChange={e=>setItemSize(e.target.value)}
+                style={{width:'100%',border:'1.5px solid var(--border)',borderRadius:8,padding:'10px 12px',fontSize:14,fontFamily:'inherit',outline:'none',background:'var(--surface)',color:'var(--text)',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}
+                onFocus={e=>e.target.style.borderColor='var(--gold)'}
+                onBlur={e=>e.target.style.borderColor='var(--border)'}
+              >
+                {SIZE_OPTS[cat].map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* Main stone */}
           <div style={{fontSize:11,fontWeight:700,letterSpacing:0.5,color:'var(--text3)',margin:'12px 0 4px'}}>
@@ -1532,6 +1609,15 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             {['金','銀'].map(v => <Chip key={v} val={v} cur={metalColor} setCur={setMetalColor} origVal={orig.metal_color} />)}
           </div>
 
+          {/* Plating */}
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:0.5,color:'var(--text3)',margin:'12px 0 4px'}}>鍍金</div>
+          <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
+            {['無','金色','玫瑰金','黑金'].map(v => {
+              const on = plating===v;
+              return <button key={v} onClick={()=>setPlating(v)} style={{padding:'7px 12px',borderRadius:8,margin:'3px 3px 3px 0',border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:12,fontWeight:on?700:400,cursor:'pointer',flexShrink:0}}>{v}</button>;
+            })}
+          </div>
+
           {/* Side stones */}
           <div style={{fontSize:11,fontWeight:700,letterSpacing:0.5,color:'var(--text3)',margin:'12px 0 4px'}}>配石</div>
           <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
@@ -1539,6 +1625,26 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               const on = sidestone===v;
               return <button key={v} onClick={()=>setSidestone(v)} style={{padding:'6px 10px',borderRadius:8,margin:'3px 3px 3px 0',border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:12,fontWeight:on?700:400,cursor:'pointer',flexShrink:0}}>{v}</button>;
             })}
+          </div>
+
+          {/* Stone order number + notes */}
+          <div style={{background:'var(--surface)',borderRadius:12,border:'1px solid var(--border)',padding:'14px 16px',margin:'12px 0'}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:'uppercase',color:'var(--text3)',marginBottom:10}}>訂單資訊</div>
+            <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>裸石訂單編號</div>
+            <input type="text" placeholder="例：TZ-2024-001" value={stoneOrderNo}
+              onChange={e=>setStoneOrderNo(e.target.value)}
+              style={{width:'100%',border:'1px solid var(--border)',borderRadius:7,padding:'8px 10px',fontSize:13,fontFamily:'inherit',outline:'none',background:'var(--surface)',color:'var(--text)',marginBottom:10}}
+              onFocus={e=>e.target.style.borderColor='var(--gold)'}
+              onBlur={e=>e.target.style.borderColor='var(--border)'}
+            />
+            <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>備註</div>
+            <textarea placeholder="詢問製作圖片款的戒指，預算彈性可談…" value={qNotes}
+              onChange={e=>setQNotes(e.target.value)}
+              rows={3}
+              style={{width:'100%',border:'1px solid var(--border)',borderRadius:7,padding:'8px 10px',fontSize:13,fontFamily:'inherit',outline:'none',background:'var(--surface)',color:'var(--text)',resize:'vertical',lineHeight:1.5}}
+              onFocus={e=>e.target.style.borderColor='var(--gold)'}
+              onBlur={e=>e.target.style.borderColor='var(--border)'}
+            />
           </div>
 
           {/* Delta summary */}
@@ -1554,16 +1660,6 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             </div>
           )}
 
-          {/* Customer name only — actual price filled after the deal closes */}
-          <div style={{background:'var(--surface)',borderRadius:12,border:'1px solid var(--border)',padding:'14px 16px',margin:'12px 0'}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:'uppercase',color:'var(--text3)',marginBottom:10}}>客戶</div>
-            <input type="text" placeholder="客戶姓名（選填）" value={customer}
-              onChange={e=>setCustomer(e.target.value)}
-              style={{width:'100%',border:'1px solid var(--border)',borderRadius:8,padding:'9px 12px',fontSize:14,color:'var(--text)',background:'var(--surface)',outline:'none',fontFamily:'inherit'}}
-              onFocus={e=>e.target.style.borderColor='var(--gold)'}
-              onBlur={e=>e.target.style.borderColor='var(--border)'}
-            />
-          </div>
 
         </div>{/* end det-scroll */}
 

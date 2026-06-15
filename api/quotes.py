@@ -15,13 +15,16 @@ router = APIRouter(prefix="/api/quotes", tags=["quotes"])
 def _migrate():
     conn = sqlite3.connect(SQLITE_PATH)
     for col, typ in [
-        ('customer_name',  'TEXT'),
-        ('original_data',  'TEXT'),
-        ('adjusted_data',  'TEXT'),
-        ('estimated_min',  'INTEGER'),
-        ('estimated_max',  'INTEGER'),
-        ('budget',         'INTEGER'),
-        ('updated_at',     'TEXT'),
+        ('customer_name',   'TEXT'),
+        ('original_data',   'TEXT'),
+        ('adjusted_data',   'TEXT'),
+        ('estimated_min',   'INTEGER'),
+        ('estimated_max',   'INTEGER'),
+        ('budget',          'INTEGER'),
+        ('updated_at',      'TEXT'),
+        ('stone_order_no',  'TEXT'),
+        ('inquiry_time',    'TEXT'),
+        ('source_channel',  'TEXT'),
     ]:
         try:
             conn.execute(f"ALTER TABLE quotes ADD COLUMN {col} {typ}")
@@ -77,6 +80,9 @@ class QuoteCreate(BaseModel):
     estimated_min: Optional[int] = None
     estimated_max: Optional[int] = None
     budget: Optional[int] = None
+    stone_order_no: Optional[str] = None
+    inquiry_time: Optional[str] = None
+    source_channel: Optional[str] = None
 
 class QuoteUpdate(BaseModel):
     description: Optional[str] = None
@@ -138,12 +144,14 @@ def create_quote(body: QuoteCreate):
         """INSERT INTO quotes (description, final_price, material, gemstone,
                                gemstone_origin, quote_date, notes, photo_id,
                                customer_name, original_data, adjusted_data,
-                               estimated_min, estimated_max, budget)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                               estimated_min, estimated_max, budget,
+                               stone_order_no, inquiry_time, source_channel)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (body.description, body.final_price, body.material, body.gemstone,
          body.gemstone_origin, body.quote_date, body.notes, body.photo_id,
          body.customer_name, body.original_data, body.adjusted_data,
-         body.estimated_min, body.estimated_max, body.budget)
+         body.estimated_min, body.estimated_max, body.budget,
+         body.stone_order_no, body.inquiry_time, body.source_channel)
     )
     qid = cur.lastrowid
     conn.commit()
