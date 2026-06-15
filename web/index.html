@@ -1258,7 +1258,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     stoneMax = currentStoneC.range[1] * ct;
   }
 
-  const STYLE_TO_LABOR = {'無鑽':'極簡','簡約(5顆鑽內)':'簡單','輕奢(20顆鑽內)':'中等','奢華滿鑲鑽':'複雜'};
+  const STYLE_TO_LABOR = {'無鑽':'極簡','簡約(5顆鑽內)':'簡單','輕奢(20顆鑽內)':'中等','奢華滿鑲鑽':'複雜','簡約':'簡單','輕奢':'中等','奢華':'複雜'};
   const CHAIN_TO_WEIGHT = {'少':'輕 (1.5–3g)','正常':'中 (3–5g)','多':'偏重 (5–8g)'};
   const laborKey   = STYLE_TO_LABOR[style] || craft || '中等';
   const laborRange = pricing.LABOR[cat]?.[laborKey] || [0,0];
@@ -1266,8 +1266,10 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const weightRange = (pricing.WEIGHTS[weightKey] || WEIGHTS[weightKey]) || [3,5];
   const metalPg    = pricing.METAL_PER_G[materialType] || METAL_PER_G[materialType] || 3800;
   const sideRange  = pricing.SIDESTONES[sidestone] || [0,0];
-  const mountMin   = laborRange[0] + metalPg * weightRange[0] + sideRange[0];
-  const mountMax   = laborRange[1] + metalPg * weightRange[1] + sideRange[1];
+  const metalCostMin = metalPg * weightRange[0];
+  const metalCostMax = metalPg * weightRange[1];
+  const mountMin   = laborRange[0] + metalCostMin + sideRange[0];
+  const mountMax   = laborRange[1] + metalCostMax + sideRange[1];
   const totalMin   = stoneMin + mountMin;
   const totalMax   = stoneMax + mountMax;
   const hasPrice   = totalMin > 0 || totalMax > 0;
@@ -1639,7 +1641,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           {/* Craft complexity */}
           <SLabel label="做工複雜度" origVal={orig.craft_complexity} adjVal={craft} />
           <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
-            {['極簡','普通','複雜','極複雜'].map(v => <Chip key={v} val={v} cur={craft} setCur={setCraft} origVal={orig.craft_complexity} />)}
+            {['極簡','簡單','中等','複雜','精工'].map(v => <Chip key={v} val={v} cur={craft} setCur={setCraft} origVal={orig.craft_complexity} />)}
           </div>
 
           {/* Metal color */}
@@ -1694,15 +1696,50 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             />
           </div>
 
+          {/* Price breakdown */}
+          {hasPrice && (
+            <div style={{background:'var(--surface)',borderRadius:10,border:'1px solid var(--border)',padding:'12px 16px',margin:'12px 0'}}>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:0.5,color:'var(--text3)',marginBottom:8}}>估價明細</div>
+              {stoneMin > 0 && (
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text)',marginBottom:4}}>
+                  <span>💎 主石 ({stoneName}{ct>0?' '+ct+'ct':''})</span>
+                  <span style={{fontWeight:600}}>{fmtNT(stoneMin)} – {fmtNT(stoneMax)}</span>
+                </div>
+              )}
+              {laborRange[1] > 0 && (
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text)',marginBottom:4}}>
+                  <span>🔨 工費 ({cat} · {laborKey})</span>
+                  <span style={{fontWeight:600}}>{fmtNT(laborRange[0])} – {fmtNT(laborRange[1])}</span>
+                </div>
+              )}
+              {metalCostMax > 0 && (
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text)',marginBottom:4}}>
+                  <span>⚙️ 金屬 ({materialType} · {weightKey})</span>
+                  <span style={{fontWeight:600}}>{fmtNT(metalCostMin)} – {fmtNT(metalCostMax)}</span>
+                </div>
+              )}
+              {sideRange[1] > 0 && (
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text)',marginBottom:4}}>
+                  <span>✨ 配石 ({sidestone})</span>
+                  <span style={{fontWeight:600}}>{fmtNT(sideRange[0])} – {fmtNT(sideRange[1])}</span>
+                </div>
+              )}
+              <div style={{borderTop:'1px solid var(--border)',marginTop:6,paddingTop:6,display:'flex',justifyContent:'space-between',fontSize:13,fontWeight:700,color:'var(--text)'}}>
+                <span>合計</span>
+                <span>{fmtNT(totalMin)} – {fmtNT(totalMax)}</span>
+              </div>
+            </div>
+          )}
+
           {/* Delta summary */}
           {anyChanged && (
-            <div style={{background:'#fffbf0',borderRadius:10,border:'1px solid rgba(184,147,90,.35)',padding:'10px 14px',margin:'12px 0'}}>
-              <div style={{fontSize:11,fontWeight:700,color:'var(--gold)',marginBottom:6,letterSpacing:0.5}}>調整明細（原始 → 調整後）</div>
+            <div style={{background:'#fffbf0',borderRadius:10,border:'1px solid rgba(184,147,90,.35)',padding:'10px 14px',margin:'0 0 12px'}}>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--gold)',marginBottom:6,letterSpacing:0.5}}>標籤調整（原始 → 調整後）</div>
               {isChanged('category',cat) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>品項&emsp;{orig.category} → <strong>{cat}</strong></div>}
               {isChanged('style',style) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>鑽石數量&emsp;{orig.style} → <strong>{style}</strong></div>}
-              {isChanged('setting_amount',chain) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>用料&emsp;{orig.setting_amount} → <strong>{chain}</strong></div>}
-              {isChanged('craft_complexity',craft) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>做工&emsp;{orig.craft_complexity} → <strong>{craft}</strong></div>}
-              {isChanged('metal_color',metalColor) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>金工&emsp;{orig.metal_color} → <strong>{metalColor}</strong></div>}
+              {isChanged('setting_amount',chain) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>用料多寡&emsp;{orig.setting_amount} → <strong>{chain}</strong></div>}
+              {isChanged('craft_complexity',craft) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>做工複雜度&emsp;{orig.craft_complexity} → <strong>{craft}</strong></div>}
+              {isChanged('metal_color',metalColor) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>金工顏色&emsp;{orig.metal_color} → <strong>{metalColor}</strong></div>}
               {orig.gemstone && orig.gemstone!=='未定' && stoneName && stoneName!==orig.gemstone && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>寶石&emsp;{orig.gemstone} → <strong>{stoneName}</strong></div>}
             </div>
           )}
