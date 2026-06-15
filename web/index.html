@@ -2987,7 +2987,7 @@ function App() {
       {splash && <Splash onDone={() => setSplash(false)} />}
       <header className="nav">
         <span className="nav-logo">Tahir Zainab Selection</span>
-        {isAdmin && <button className="darkbg-btn" onClick={() => setShowDarkBg(true)}>清黑底</button>}
+
         <button className={'admin-key' + (role === 'admin' ? ' admin' : role === 'staff' ? ' staff' : '')}
           onClick={handleRoleKey}
           title={role === 'admin' ? '退出管理員' : role === 'staff' ? '退出員工模式' : '登入'}>
