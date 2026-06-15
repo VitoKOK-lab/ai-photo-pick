@@ -49,6 +49,68 @@ def crop_square(img: Image.Image) -> Image.Image:
     return img.crop((left, top, left + size, top + size))
 
 
+def is_white_background(img: Image.Image, white_threshold: int = 235, border_width: int = 8, min_ratio: float = 0.60) -> bool:
+    """邊緣像素 60%+ 是白色 → True（去背）"""
+    w, h = img.size
+    b = min(border_width, w // 6, h // 6)
+    top_strip    = img.crop((0,   0,   w,   b))
+    bottom_strip = img.crop((0,   h-b, w,   h))
+    left_strip   = img.crop((0,   b,   b,   h-b))
+    right_strip  = img.crop((w-b, b,   w,   h-b))
+    pixels = (list(top_strip.getdata()) + list(bottom_strip.getdata()) +
+              list(left_strip.getdata()) + list(right_strip.getdata()))
+    if not pixels:
+        return False
+    white = sum(1 for r, g, bv in pixels if r > white_threshold and g > white_threshold and bv > white_threshold)
+    return (white / len(pixels)) >= min_ratio
+
+
+def crop_jewelry_centered(img: Image.Image, target_fill: float = 0.50) -> Image.Image:
+    """
+    去背照片智能裁切：偵測珠寶邊界框，置中並填白底，
+    使珠寶面積約佔畫布的 target_fill（預設 50%）。
+    找不到珠寶時 fallback 到 crop_square。
+    """
+    gray = img.convert("L")
+    mask = gray.point(lambda x: 0 if x >= 235 else 255)
+    bbox = mask.getbbox()
+
+    if bbox is None:
+        return crop_square(img)
+
+    left, top, right, bottom = bbox
+    jw = right - left
+    jh = bottom - top
+
+    if jw <= 4 or jh <= 4:
+        return crop_square(img)
+
+    # canvas_size 使得 max(jw,jh) / canvas_size = sqrt(target_fill)
+    jewelry_max = max(jw, jh)
+    canvas_size = int(jewelry_max / (target_fill ** 0.5))
+
+    w, h = img.size
+    cx = (left + right) // 2
+    cy = (top + bottom) // 2
+
+    half = canvas_size // 2
+    x1 = cx - half
+    y1 = cy - half
+    x2 = x1 + canvas_size
+    y2 = y1 + canvas_size
+
+    # 白底畫布，把影像對應區域貼入
+    result = Image.new("RGB", (canvas_size, canvas_size), (255, 255, 255))
+    src_x1 = max(0, x1)
+    src_y1 = max(0, y1)
+    src_x2 = min(w, x2)
+    src_y2 = min(h, y2)
+    if src_x2 > src_x1 and src_y2 > src_y1:
+        region = img.crop((src_x1, src_y1, src_x2, src_y2))
+        result.paste(region, (src_x1 - x1, src_y1 - y1))
+    return result
+
+
 def _ensure_dirs():
     for d in (ORIGINAL_DIR, FULL_DIR, THUMB_DIR, MICRO_DIR):
         d.mkdir(parents=True, exist_ok=True)
@@ -80,8 +142,11 @@ def process_one(source_path: Path, precomputed_hash: Optional[str] = None) -> di
     img = img.convert("RGB")
     width, height = img.size
 
-    # 3. 裁正方形
-    img_square = crop_square(img)
+    # 3. 裁正方形（去背照片智能置中珠寶）
+    if is_white_background(img):
+        img_square = crop_jewelry_centered(img)
+    else:
+        img_square = crop_square(img)
 
     # 4. 產生三種尺寸
     img_full  = img_square.resize(FULL_SIZE,  Image.LANCZOS)
