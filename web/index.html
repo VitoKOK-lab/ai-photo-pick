@@ -1168,7 +1168,7 @@ const GEM_COLORS = {
 /* ── Shareable quote card (screenshot for customer) ─── */
 function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, itemSize, plating,
   cat, stoneName, carat, origin, treatment, colorQ, stoneMode,
-  materialType, weightKey, craft, style, sidestone, sourceChannel, inquiryDate, onClose }) {
+  materialType, weightKey, craft, style, sidestone, sourceChannel, inquiryDate, budget, onClose }) {
   const today = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
   const R = ({label, value}) => value ? (
     <div style={{display:'flex',justifyContent:'space-between',padding:'4px 0',borderBottom:'1px solid #f5f5f5'}}>
@@ -1224,6 +1224,7 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
           <R label="鍍金" value={plating&&plating!=='無'?plating:null} />
           <R label="尺寸" value={itemSize} />
           {inquiryDate && <R label="詢價日期" value={inquiryDate} />}
+          {budget > 0 && <R label="客戶預算" value={fmtNT(budget)} />}
         </div>
 
         {/* Legal disclaimer */}
@@ -1424,6 +1425,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           sidestone={sidestone}
           sourceChannel={sourceChannel}
           inquiryDate={inquiryDate}
+          budget={budgetNum}
           onClose={() => setShowCard(false)}
         />
       )}
@@ -2743,6 +2745,8 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
   const [showCard,   setShowCard]   = useState(false);
 
   const adj = (() => { try { return JSON.parse(q.adjusted_data||'{}'); } catch { return {}; } })();
+  const CHAIN_TO_WEIGHT_MAP = {'少':'輕 (1.5–3g)','正常':'中 (3–5g)','多':'偏重 (5–8g)'};
+  const weightKey = adj.setting_amount ? (CHAIN_TO_WEIGHT_MAP[adj.setting_amount] || adj.setting_amount) : '';
   const thumbUrl = q.photo_id ? `/api/thumb/${q.photo_id}` : null;
   const finalNum = parseInt(String(finalInput).replace(/[^0-9]/g,'')) || 0;
   const isPending = !q.final_price || q.final_price === 0;
@@ -2794,6 +2798,11 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
               {q.estimated_min > 0 && (
                 <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>
                   AI估算：{fmtNT(q.estimated_min)} – {fmtNT(q.estimated_max)}
+                </div>
+              )}
+              {q.budget > 0 && (
+                <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>
+                  客戶預算：{fmtNT(q.budget)}
                 </div>
               )}
             </div>
@@ -2849,12 +2858,13 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
           colorQ={adj.colorQ || ''}
           stoneMode={adj.stoneMode || 'invest'}
           materialType={adj.material || q.material || ''}
-          weightKey={adj.weightKey || ''}
+          weightKey={weightKey}
           craft={adj.craft_complexity || ''}
           style={adj.style || ''}
           sidestone={adj.sidestone || ''}
           sourceChannel={q.source_channel || ''}
           inquiryDate={q.inquiry_time || ''}
+          budget={q.budget || 0}
           onClose={() => setShowCard(false)}
         />
       )}
