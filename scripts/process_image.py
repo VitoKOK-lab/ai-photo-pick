@@ -5,6 +5,7 @@ import sys
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 from PIL import Image, ImageOps
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -53,7 +54,7 @@ def _ensure_dirs():
         d.mkdir(parents=True, exist_ok=True)
 
 
-def process_one(source_path: Path, precomputed_hash: str | None = None) -> dict:
+def process_one(source_path: Path, precomputed_hash: Optional[str] = None) -> dict:
     """
     處理單張照片：
     1. 備份原始檔到 02_original/
