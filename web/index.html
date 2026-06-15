@@ -2742,7 +2742,7 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
   const [finalInput, setFinalInput] = useState(q.final_price > 0 ? String(q.final_price) : '');
   const [saving,     setSaving]     = useState(false);
   const [saved,      setSaved]      = useState(false);
-  const [showCard,   setShowCard]   = useState(false);
+  const [cardMode,   setCardMode]   = useState(null); // null | 'ai' | 'final'
 
   const adj = (() => { try { return JSON.parse(q.adjusted_data||'{}'); } catch { return {}; } })();
   const CHAIN_TO_WEIGHT_MAP = {'少':'輕 (1.5–3g)','正常':'中 (3–5g)','多':'偏重 (5–8g)'};
@@ -2781,8 +2781,13 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
         body: JSON.stringify({ final_price: finalNum }),
       });
       if (res.ok) { setSaved(true); }
-      else alert('儲存失敗');
-    } catch { alert('網路錯誤'); }
+      else {
+        const raw = await res.text().catch(() => '');
+        let detail = raw;
+        try { const j = JSON.parse(raw); detail = JSON.stringify(j.detail || j); } catch {}
+        alert('儲存失敗 ' + res.status + (detail ? '\n' + detail : ''));
+      }
+    } catch(e) { alert('網路錯誤：' + e.message); }
     setSaving(false);
   }
 
@@ -2842,10 +2847,16 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
               </button>
             </div>
             {saved && <div style={{fontSize:11,color:'#4caf77',marginBottom:8}}>✓ 已儲存</div>}
-            <button onClick={() => setShowCard(true)} disabled={!finalNum}
-              style={{width:'100%',background:finalNum?'var(--gold)':'var(--s3)',color:finalNum?'#fff':'var(--text3)',border:'none',borderRadius:10,padding:'12px',fontSize:14,fontWeight:700,cursor:finalNum?'pointer':'default'}}>
-              📤 生成截圖傳給客人
-            </button>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={() => setCardMode('ai')}
+                style={{flex:1,background:'var(--s2)',color:'var(--text)',border:'1.5px solid var(--border)',borderRadius:10,padding:'11px 8px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+                📊 AI估價截圖
+              </button>
+              <button onClick={() => setCardMode('final')} disabled={!finalNum}
+                style={{flex:1,background:finalNum?'var(--gold)':'var(--s3)',color:finalNum?'#fff':'var(--text3)',border:'none',borderRadius:10,padding:'11px 8px',fontSize:13,fontWeight:700,cursor:finalNum?'pointer':'default'}}>
+                📤 最終報價截圖
+              </button>
+            </div>
           </div>
 
           {/* Detail rows */}
@@ -2857,30 +2868,14 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
         </div>
       </div>
 
-      {/* QuoteCard preview */}
-      {showCard && (
+      {/* QuoteCard preview — ai mode shows estimated range, final mode shows confirmed price */}
+      {cardMode && (
         <QuoteCard
           photo={thumbUrl ? {thumb_url: thumbUrl} : null}
           description={q.description}
           estimatedMax={q.estimated_max || 0}
-          manualPrice={finalNum || q.final_price || 0}
+          manualPrice={cardMode === 'final' ? (finalNum || q.final_price || 0) : (q.estimated_min || 0)}
           customer={q.customer_name}
-          itemSize={adj.size || ''}
-          plating={adj.plating || ''}
-          cat={adj.category || ''}
-          stoneName={adj.gemstone || q.gemstone || ''}
-          carat={adj.carat || 0}
-          origin={adj.origin || ''}
-          treatment={adj.treatment || ''}
-          colorQ={adj.colorQ || ''}
-          stoneMode={adj.stoneMode || 'invest'}
-          materialType={adj.material || q.material || ''}
-          weightKey={rWeightKey}
-          craft={rCraft}
-          style={rStyle}
-          sidestone={rSidestone}
-          plating={rPlating}
-          itemSize={rSize}
           cat={rCat}
           stoneName={rStone}
           carat={rCarat}
@@ -2889,10 +2884,16 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
           colorQ={rColorQ}
           stoneMode={rStoneMode}
           materialType={rMaterial}
+          weightKey={rWeightKey}
+          craft={rCraft}
+          style={rStyle}
+          sidestone={rSidestone}
+          plating={rPlating}
+          itemSize={rSize}
           sourceChannel={q.source_channel || ''}
           inquiryDate={q.inquiry_time || ''}
           budget={q.budget || 0}
-          onClose={() => setShowCard(false)}
+          onClose={() => setCardMode(null)}
         />
       )}
     </div>
