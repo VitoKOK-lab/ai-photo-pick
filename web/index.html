@@ -1164,6 +1164,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [chain,       setChain]       = useState(photo.setting_amount  || '正常');
   const [craft,       setCraft]       = useState(photo.craft_complexity|| '普通');
   const [metalColor,  setMetalColor]  = useState(photo.metal_color     || '');
+  const [materialType,setMaterialType]= useState(photo.metal_color==='銀'?'925銀':'18K金');
   const [stoneKey,    setStoneKey]    = useState(initGem?.key  || '');
   const [stoneMode,   setStoneMode]   = useState(initGem?.mode || 'invest');
   const [carat,       setCarat]       = useState('1');
@@ -1224,8 +1225,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const laborRange = LABOR[cat]?.[laborKey] || [0,0];
   const weightKey  = CHAIN_TO_WEIGHT[chain] || '中 (3–5g)';
   const weightRange = WEIGHTS[weightKey] || [3,5];
-  const metalType  = metalColor === '金' ? '18K金' : metalColor === '銀' ? '925銀' : '18K金';
-  const metalPg    = METAL_PER_G[metalType] || 3800;
+  const metalPg    = METAL_PER_G[materialType] || 3800;
   const sideRange  = SIDESTONES[sidestone] || [0,0];
   const mountMin   = laborRange[0] + metalPg * weightRange[0] + sideRange[0];
   const mountMax   = laborRange[1] + metalPg * weightRange[1] + sideRange[1];
@@ -1249,7 +1249,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   async function doSave() {
     setSaving(true);
     try {
-      const adj = {category:cat, style, setting_amount:chain, craft_complexity:craft, metal_color:metalColor, gemstone:stoneName, stoneKey, stoneMode, carat:ct, origin, treatment, colorQ, sidestone, size:itemSize, plating, stone_order_no:stoneOrderNo, notes:qNotes, inquiry_time:inquiryDate, source_channel:sourceChannel};
+      const adj = {category:cat, style, setting_amount:chain, craft_complexity:craft, metal_color:metalColor, material:materialType, gemstone:stoneName, stoneKey, stoneMode, carat:ct, origin, treatment, colorQ, sidestone, size:itemSize, plating, stone_order_no:stoneOrderNo, notes:qNotes, inquiry_time:inquiryDate, source_channel:sourceChannel};
       const notesText = [
         inquiryDate && `詢價時間：${inquiryDate}${sourceChannel?' ('+sourceChannel+')':''}`,
         itemSize && `尺寸：${itemSize}`,
@@ -1263,7 +1263,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
         body: JSON.stringify({
           description:    `${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`,
           final_price:    0,
-          material:       metalType,
+          material:       materialType,
           gemstone:       stoneName,
           photo_id:       photo.id,
           customer_name:  customer || null,
@@ -1606,7 +1606,15 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           {/* Metal color */}
           <SLabel label="金工顏色" origVal={orig.metal_color} adjVal={metalColor} />
           <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
-            {['金','銀'].map(v => <Chip key={v} val={v} cur={metalColor} setCur={setMetalColor} origVal={orig.metal_color} />)}
+            {['金','銀'].map(v => <Chip key={v} val={v} cur={metalColor} setCur={v => { setMetalColor(v); setMaterialType(v==='銀'?'925銀':'18K金'); }} origVal={orig.metal_color} />)}
+          </div>
+
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:0.5,color:'var(--text3)',margin:'10px 0 4px'}}>材質</div>
+          <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
+            {Object.keys(METAL_PER_G).map(v => {
+              const on = materialType===v;
+              return <button key={v} onClick={()=>setMaterialType(v)} style={{padding:'7px 12px',borderRadius:8,margin:'3px 3px 3px 0',border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:12,fontWeight:on?700:400,cursor:'pointer',flexShrink:0}}>{v}</button>;
+            })}
           </div>
 
           {/* Plating */}
