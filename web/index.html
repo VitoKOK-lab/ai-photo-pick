@@ -2986,7 +2986,7 @@ function App() {
     <React.Fragment>
       {splash && <Splash onDone={() => setSplash(false)} />}
       <header className="nav">
-        <span className="nav-logo">Tahir Zainab Selection</span>
+        <span className="nav-logo" style={{cursor:'pointer'}} onClick={() => setSplash(true)}>Tahir Zainab Selection</span>
 
         <button className={'admin-key' + (role === 'admin' ? ' admin' : role === 'staff' ? ' staff' : '')}
           onClick={handleRoleKey}
