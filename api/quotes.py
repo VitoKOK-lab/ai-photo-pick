@@ -14,6 +14,21 @@ router = APIRouter(prefix="/api/quotes", tags=["quotes"])
 
 def _migrate():
     conn = sqlite3.connect(SQLITE_PATH)
+    # Create table if it doesn't exist (safe if already exists)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS quotes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            photo_id INTEGER,
+            description TEXT,
+            final_price INTEGER NOT NULL DEFAULT 0,
+            material TEXT,
+            gemstone TEXT,
+            gemstone_origin TEXT,
+            quote_date DATE,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     for col, typ in [
         ('customer_name',   'TEXT'),
         ('original_data',   'TEXT'),

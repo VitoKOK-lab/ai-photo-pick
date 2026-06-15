@@ -197,6 +197,13 @@ _SEED_SIDESTONES = [
     ("碎鑽/莫桑 50+顆",  20000, 60000),
 ]
 
+_SEED_PLATING = [
+    ("無",    0,     0),
+    ("金色",  500,  1500),
+    ("玫瑰金", 500, 1500),
+    ("黑金",  800,  2000),
+]
+
 
 def _init_db():
     conn = sqlite3.connect(PRICING_DB_PATH)
@@ -266,6 +273,12 @@ def _init_db():
             price_min INTEGER NOT NULL,
             price_max INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS pricing_plating (
+            id INTEGER PRIMARY KEY,
+            label TEXT UNIQUE NOT NULL,
+            price_min INTEGER NOT NULL,
+            price_max INTEGER NOT NULL
+        );
     """)
 
     # Seed only if tables are empty
@@ -295,6 +308,9 @@ def _init_db():
 
     if not c.execute("SELECT 1 FROM pricing_sidestones LIMIT 1").fetchone():
         c.executemany("INSERT OR IGNORE INTO pricing_sidestones (label, price_min, price_max) VALUES (?,?,?)", _SEED_SIDESTONES)
+
+    if not c.execute("SELECT 1 FROM pricing_plating LIMIT 1").fetchone():
+        c.executemany("INSERT OR IGNORE INTO pricing_plating (label, price_min, price_max) VALUES (?,?,?)", _SEED_PLATING)
 
     conn.commit()
     conn.close()
@@ -376,6 +392,9 @@ def get_all_pricing():
     sidestone_rows = c.execute("SELECT label, price_min, price_max FROM pricing_sidestones ORDER BY price_min").fetchall()
     sidestones = {r["label"]: [r["price_min"], r["price_max"]] for r in sidestone_rows}
 
+    plating_rows = c.execute("SELECT label, price_min, price_max FROM pricing_plating ORDER BY price_min").fetchall()
+    plating = {r["label"]: [r["price_min"], r["price_max"]] for r in plating_rows}
+
     conn.close()
     return {
         "metals": metals,
@@ -384,6 +403,7 @@ def get_all_pricing():
         "stones_invest": stones_invest,
         "stones_commercial": stones_commercial,
         "sidestones": sidestones,
+        "plating": plating,
     }
 
 

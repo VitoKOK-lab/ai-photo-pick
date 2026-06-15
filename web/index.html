@@ -1126,6 +1126,7 @@ function usePricing() {
             LABOR:             d.labor        || {},
             WEIGHTS:           d.weights      || {},
             SIDESTONES:        d.sidestones   || {},
+            PLATING:           d.plating      || {},
             STONES_COMMERCIAL: Object.fromEntries(
               Object.entries(d.stones_commercial || {}).map(([k, v]) => [k, { name: v.name, range: v.range || [v.price_min||0, v.price_max||0] }])
             ),
@@ -1144,8 +1145,22 @@ function usePricing() {
     WEIGHTS:           p?.WEIGHTS           || WEIGHTS,
     SIDESTONES:        p?.SIDESTONES        || SIDESTONES,
     STONES_COMMERCIAL: p?.STONES_COMMERCIAL || STONES_COMMERCIAL,
+    PLATING:           p?.PLATING           || {'無':[0,0],'金色':[500,1500],'玫瑰金':[500,1500],'黑金':[800,2000]},
   };
 }
+
+/* ── Gem color preference mapping ── */
+const GEM_COLORS = {
+  '紅': new Set(['RUBY','SPINEL','GARNET','PYROPE','RHODOLITE','SPESSARTITE','STAR_RUBY']),
+  '粉': new Set(['MORGANITE','KUNZITE','RHODOLITE','SPINEL']),
+  '橙': new Set(['SPESSARTITE','PADPARADSCHA','IMPERIAL_TOPAZ','SUNSTONE']),
+  '黃': new Set(['YELLOW_SAP','IMPERIAL_TOPAZ','CITRINE']),
+  '綠': new Set(['EMERALD','TSAVORITE','TOURMALINE','CHRYSOPRASE','PERIDOT','PREHNITE','ALEXANDRITE']),
+  '藍': new Set(['SAPPHIRE','TANZANITE','AQUAMARINE','IOLITE','BLUE_TOPAZ','PARAIBA','TANZANITE_C','STAR_SAP']),
+  '紫': new Set(['AMETHYST','TANZANITE','KUNZITE','TANZANITE_C']),
+  '白': new Set(['DIAMOND','MOONSTONE','CHALCEDONY','ZIRCON']),
+  '彩': new Set(['OPAL','LABRADORITE','ALEXANDRITE','TOURMALINE']),
+};
 
 /* ── Shareable quote card (screenshot for customer) ─── */
 function QuoteCard({ photo, description, estimatedMin, estimatedMax, finalPrice, customer, itemSize, plating, onClose }) {
@@ -1219,6 +1234,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [plating,        setPlating]        = useState('');
   const [stoneOrderNo,   setStoneOrderNo]   = useState('');
   const [qNotes,         setQNotes]         = useState('');
+  const [colorPref,      setColorPref]      = useState('');
   const [saving,         setSaving]         = useState(false);
   const [savedId,        setSavedId]        = useState(null);
   const [finalInput,     setFinalInput]     = useState('');
@@ -1268,8 +1284,9 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const sideRange  = pricing.SIDESTONES[sidestone] || [0,0];
   const metalCostMin = metalPg * weightRange[0];
   const metalCostMax = metalPg * weightRange[1];
-  const mountMin   = laborRange[0] + metalCostMin + sideRange[0];
-  const mountMax   = laborRange[1] + metalCostMax + sideRange[1];
+  const plateRange  = pricing.PLATING[plating] || [0,0];
+  const mountMin   = laborRange[0] + metalCostMin + sideRange[0] + plateRange[0];
+  const mountMax   = laborRange[1] + metalCostMax + sideRange[1] + plateRange[1];
   const totalMin   = stoneMin + mountMin;
   const totalMax   = stoneMax + mountMax;
   const hasPrice   = totalMin > 0 || totalMax > 0;
@@ -1320,8 +1337,11 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
         }),
       });
       if (res.ok) { const d = await res.json(); setSavedId(d.id); }
-      else alert('儲存失敗');
-    } catch { alert('網路錯誤'); }
+      else {
+        const err = await res.json().catch(() => null);
+        alert('儲存失敗 ' + res.status + (err?.detail ? '\n' + JSON.stringify(err.detail) : ''));
+      }
+    } catch(e) { alert('網路錯誤：' + e.message); }
     setSaving(false);
   }
 
@@ -1450,8 +1470,8 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     </div>
   );
 
-  const anyChanged = ['category','style','setting_amount','craft_complexity','metal_color'].some(k =>
-    isChanged(k, {category:cat,style,setting_amount:chain,craft_complexity:craft,metal_color:metalColor}[k])
+  const anyChanged = ['category','style','setting_amount','craft_complexity'].some(k =>
+    isChanged(k, {category:cat,style,setting_amount:chain,craft_complexity:craft}[k])
   ) || (orig.gemstone && orig.gemstone !== '未定' && stoneName && stoneName !== orig.gemstone);
 
   return (
@@ -1514,10 +1534,10 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             </div>
           </div>
 
-          {/* Budget */}
+          {/* Budget + color preference */}
           <div style={{background:'var(--surface)',borderRadius:12,border:'1px solid var(--border)',padding:'14px 16px',marginBottom:10}}>
             <div style={{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:'uppercase',color:'var(--text3)',marginBottom:8}}>客戶預算</div>
-            <div style={{position:'relative'}}>
+            <div style={{position:'relative',marginBottom:12}}>
               <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',fontSize:15,color:'var(--text2)',fontWeight:600,pointerEvents:'none'}}>NT$</span>
               <input type="text" inputMode="numeric" placeholder="0"
                 value={budget}
@@ -1526,6 +1546,21 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
                 onFocus={e=>e.target.style.borderColor='var(--gold)'}
                 onBlur={e=>e.target.style.borderColor='var(--border)'}
               />
+            </div>
+            <div style={{fontSize:11,color:'var(--text3)',marginBottom:6,fontWeight:600}}>顏色偏好（選擇後寶石區會亮起建議）</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+              {['','紅','粉','橙','黃','綠','藍','紫','白','彩'].map(c => {
+                const COLOR_DOT = {紅:'#e53935',粉:'#f48fb1',橙:'#fb8c00',黃:'#fdd835',綠:'#43a047',藍:'#1e88e5',紫:'#8e24aa',白:'#e0e0e0',彩:'linear-gradient(135deg,#e53935,#fdd835,#43a047,#1e88e5)'};
+                const on = colorPref === c;
+                return (
+                  <button key={c} onClick={() => setColorPref(c)}
+                    style={{padding:'5px 10px',borderRadius:20,border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:12,fontWeight:on?700:400,cursor:'pointer',display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+                    {c === '' ? '不限' : (
+                      <><span style={{width:10,height:10,borderRadius:'50%',background:COLOR_DOT[c]||'#ccc',flexShrink:0,display:'inline-block',border:'1px solid rgba(0,0,0,.1)'}} />{c}</>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1557,28 +1592,38 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               <span style={{fontSize:10,fontWeight:400,color:'rgba(184,147,90,.8)',marginLeft:8}}>原: {orig.gemstone}</span>
             )}
           </div>
-          <div style={{fontSize:10,color:'var(--gold)',fontWeight:600,marginBottom:3,marginTop:4}}>投資級</div>
+          <div style={{fontSize:10,color:'var(--text2)',fontWeight:600,marginBottom:3,marginTop:4}}>商業級</div>
           <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
-            {Object.entries(STONES_INVEST).map(([k,s]) => {
-              const on = stoneKey===k && stoneMode==='invest';
+            {Object.entries(pricing.STONES_COMMERCIAL).map(([k,s]) => {
+              const on = stoneKey===k && stoneMode==='commercial';
               const isOrig = orig.gemstone === s.name;
+              const suggested = colorPref && GEM_COLORS[colorPref]?.has(k);
               return (
-                <button key={k} onClick={() => { setStoneMode('invest'); setStoneKey(k); }}
-                  style={{padding:'6px 10px',borderRadius:8,margin:'3px 3px 3px 0',border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':isOrig?'rgba(184,147,90,.06)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:12,fontWeight:on?700:400,cursor:'pointer',position:'relative',flexShrink:0}}>
+                <button key={k} onClick={() => { setStoneMode('commercial'); setStoneKey(k); }}
+                  style={{padding:'6px 10px',borderRadius:8,margin:'3px 3px 3px 0',
+                    border:on?'1.5px solid var(--gold)':suggested?'1.5px solid rgba(184,147,90,.5)':'1px solid var(--border)',
+                    background:on?'rgba(184,147,90,.14)':suggested?'rgba(184,147,90,.08)':isOrig?'rgba(184,147,90,.06)':'var(--surface)',
+                    color:on?'var(--gold)':suggested?'rgba(184,147,90,.9)':'var(--text)',
+                    fontSize:12,fontWeight:(on||suggested)?700:400,cursor:'pointer',position:'relative',flexShrink:0}}>
                   {s.name}
                   {isOrig && !on && <span style={{position:'absolute',top:-6,right:-4,background:'var(--gold)',color:'#fff',fontSize:8,fontWeight:700,padding:'1px 4px',borderRadius:4,lineHeight:1.3}}>原</span>}
                 </button>
               );
             })}
           </div>
-          <div style={{fontSize:10,color:'var(--text2)',fontWeight:600,marginBottom:3}}>商業級</div>
+          <div style={{fontSize:10,color:'var(--gold)',fontWeight:600,marginBottom:3}}>投資級</div>
           <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
-            {Object.entries(pricing.STONES_COMMERCIAL).map(([k,s]) => {
-              const on = stoneKey===k && stoneMode==='commercial';
+            {Object.entries(STONES_INVEST).map(([k,s]) => {
+              const on = stoneKey===k && stoneMode==='invest';
               const isOrig = orig.gemstone === s.name;
+              const suggested = colorPref && GEM_COLORS[colorPref]?.has(k);
               return (
-                <button key={k} onClick={() => { setStoneMode('commercial'); setStoneKey(k); }}
-                  style={{padding:'6px 10px',borderRadius:8,margin:'3px 3px 3px 0',border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':isOrig?'rgba(184,147,90,.06)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:12,fontWeight:on?700:400,cursor:'pointer',position:'relative',flexShrink:0}}>
+                <button key={k} onClick={() => { setStoneMode('invest'); setStoneKey(k); }}
+                  style={{padding:'6px 10px',borderRadius:8,margin:'3px 3px 3px 0',
+                    border:on?'1.5px solid var(--gold)':suggested?'1.5px solid rgba(184,147,90,.5)':'1px solid var(--border)',
+                    background:on?'rgba(184,147,90,.14)':suggested?'rgba(184,147,90,.08)':isOrig?'rgba(184,147,90,.06)':'var(--surface)',
+                    color:on?'var(--gold)':suggested?'rgba(184,147,90,.9)':'var(--text)',
+                    fontSize:12,fontWeight:(on||suggested)?700:400,cursor:'pointer',position:'relative',flexShrink:0}}>
                   {s.name}
                   {isOrig && !on && <span style={{position:'absolute',top:-6,right:-4,background:'var(--gold)',color:'#fff',fontSize:8,fontWeight:700,padding:'1px 4px',borderRadius:4,lineHeight:1.3}}>原</span>}
                 </button>
@@ -1642,12 +1687,6 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           <SLabel label="做工複雜度" origVal={orig.craft_complexity} adjVal={craft} />
           <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
             {['極簡','簡單','中等','複雜','精工'].map(v => <Chip key={v} val={v} cur={craft} setCur={setCraft} origVal={orig.craft_complexity} />)}
-          </div>
-
-          {/* Metal color */}
-          <SLabel label="金工顏色" origVal={orig.metal_color} adjVal={metalColor} />
-          <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
-            {['金','銀'].map(v => <Chip key={v} val={v} cur={metalColor} setCur={v => { setMetalColor(v); setMaterialType(v==='銀'?'925銀':'18K金'); }} origVal={orig.metal_color} />)}
           </div>
 
           <div style={{fontSize:11,fontWeight:700,letterSpacing:0.5,color:'var(--text3)',margin:'10px 0 4px'}}>材質</div>
@@ -1724,6 +1763,12 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
                   <span style={{fontWeight:600}}>{fmtNT(sideRange[0])} – {fmtNT(sideRange[1])}</span>
                 </div>
               )}
+              {plateRange[1] > 0 && (
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text)',marginBottom:4}}>
+                  <span>🎨 鍍金 ({plating})</span>
+                  <span style={{fontWeight:600}}>{fmtNT(plateRange[0])} – {fmtNT(plateRange[1])}</span>
+                </div>
+              )}
               <div style={{borderTop:'1px solid var(--border)',marginTop:6,paddingTop:6,display:'flex',justifyContent:'space-between',fontSize:13,fontWeight:700,color:'var(--text)'}}>
                 <span>合計</span>
                 <span>{fmtNT(totalMin)} – {fmtNT(totalMax)}</span>
@@ -1739,7 +1784,6 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               {isChanged('style',style) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>鑽石數量&emsp;{orig.style} → <strong>{style}</strong></div>}
               {isChanged('setting_amount',chain) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>用料多寡&emsp;{orig.setting_amount} → <strong>{chain}</strong></div>}
               {isChanged('craft_complexity',craft) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>做工複雜度&emsp;{orig.craft_complexity} → <strong>{craft}</strong></div>}
-              {isChanged('metal_color',metalColor) && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>金工顏色&emsp;{orig.metal_color} → <strong>{metalColor}</strong></div>}
               {orig.gemstone && orig.gemstone!=='未定' && stoneName && stoneName!==orig.gemstone && <div style={{fontSize:12,color:'var(--text)',marginBottom:3}}>寶石&emsp;{orig.gemstone} → <strong>{stoneName}</strong></div>}
             </div>
           )}
