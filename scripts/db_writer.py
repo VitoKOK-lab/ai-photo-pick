@@ -47,9 +47,10 @@ def insert_photo(metadata: dict, classification: dict, embedding: list) -> int:
             metal_color,
             style, style_confidence,
             setting_amount, craft_complexity,
+            photo_type,
             price_band,
             file_hash, file_size, width, height
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         metadata["filename"], metadata["original_filename"], metadata["original_path"],
         metadata["full_path"], metadata["thumb_path"], metadata["micro_path"],
@@ -64,6 +65,7 @@ def insert_photo(metadata: dict, classification: dict, embedding: list) -> int:
         classification.get("style", {}).get("confidence"),
         classification.get("setting_amount", {}).get("label"),
         classification.get("craft_complexity", {}).get("label"),
+        classification.get("photo_type", {}).get("label"),
         classification.get("price_band", {}).get("label"),
         metadata["file_hash"], metadata["file_size"],
         metadata["width"], metadata["height"],

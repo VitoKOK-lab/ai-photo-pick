@@ -1,10 +1,10 @@
-"""classify_photo_type.py - 白底去背 vs 情境照片 偵測
+"""classify_photo_type.py - 用 CLIP 分類去背（白底）vs 情境照片
 
-偵測方式：取縮圖四個角落 30×30 px 的平均亮度，
-若 3 個以上角落亮度 > 220 → '去背'，否則 → '情境'
+原理與 classify.py 相同：CLIP 比對圖片和文字描述的語意相似度。
+photo_type 維度已加入 config/prompts.json。
 
 使用方式：
-  python3 -m scripts.classify_photo_type          # 全部照片
+  python3 -m scripts.classify_photo_type          # 全部重新分類
   python3 -m scripts.classify_photo_type --missing  # 只補 NULL 的
 """
 import sqlite3
@@ -12,37 +12,14 @@ import sys
 import time
 import logging
 from pathlib import Path
-from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config.settings import SQLITE_PATH, THUMB_DIR
+from config.settings import SQLITE_PATH, FULL_DIR
+from scripts.classify import classify_one
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s",
                     handlers=[logging.StreamHandler()])
 log = logging.getLogger(__name__)
-
-PATCH = 30
-THRESHOLD = 220
-WHITE_CORNERS_NEEDED = 3
-
-
-def detect_type(thumb_path: Path) -> str:
-    img = Image.open(thumb_path).convert('RGB')
-    w, h = img.size
-    p = min(PATCH, w // 4, h // 4)
-    corners = [
-        img.crop((0,   0,   p,   p  )),
-        img.crop((w-p, 0,   w,   p  )),
-        img.crop((0,   h-p, p,   h  )),
-        img.crop((w-p, h-p, w,   h  )),
-    ]
-    white = 0
-    for c in corners:
-        pixels = list(c.getdata())
-        avg = sum(r + g + b for r, g, b in pixels) / (len(pixels) * 3)
-        if avg > THRESHOLD:
-            white += 1
-    return '去背' if white >= WHITE_CORNERS_NEEDED else '情境'
 
 
 def main(missing_only: bool = False):
@@ -59,7 +36,7 @@ def main(missing_only: bool = False):
         ).fetchall()
 
     total = len(rows)
-    log.info(f"共 {total} 張需要分類")
+    log.info(f"共 {total} 張需要分類（CLIP 語意判斷）")
     if total == 0:
         conn.close()
         return
@@ -67,29 +44,29 @@ def main(missing_only: bool = False):
     counts = {'去背': 0, '情境': 0, 'error': 0}
     start = time.time()
     for i, row in enumerate(rows, 1):
-        thumb_path = THUMB_DIR / row['filename']
-        if not thumb_path.exists():
+        full_path = FULL_DIR / row['filename']
+        if not full_path.exists():
             counts['error'] += 1
             continue
         try:
-            ptype = detect_type(thumb_path)
+            cls, _ = classify_one(full_path)
+            ptype = cls.get('photo_type', {}).get('label', '情境')
             conn.execute("UPDATE photos SET photo_type = ? WHERE id = ?", (ptype, row['id']))
-            if i % 500 == 0:
+            if i % 200 == 0:
                 conn.commit()
-            counts[ptype] += 1
-            if i % 1000 == 0:
+            counts[ptype] = counts.get(ptype, 0) + 1
+            if i % 500 == 0:
                 elapsed = time.time() - start
                 eta = (total - i) / (i / elapsed) if elapsed > 0 else 0
-                log.info(f"[{i}/{total}] ETA {eta:.0f}s 去背={counts['去背']} 情境={counts['情境']}")
+                log.info(f"[{i}/{total}] ETA {eta:.0f}s 去背={counts.get('去背',0)} 情境={counts.get('情境',0)}")
         except Exception as e:
             counts['error'] += 1
-            if i % 1000 == 0:
-                log.error(f"  [{i}] ERROR {row['filename']}: {e}")
+            log.error(f"  [{i}] ERROR {row['filename']}: {e}")
 
     conn.commit()
     conn.close()
     elapsed = time.time() - start
-    log.info(f"\n完成 {elapsed:.1f}s — 去背:{counts['去背']} 情境:{counts['情境']} 錯誤:{counts['error']}")
+    log.info(f"\n完成 {elapsed:.1f}s — 去背:{counts.get('去背',0)} 情境:{counts.get('情境',0)} 錯誤:{counts['error']}")
 
 
 if __name__ == '__main__':
