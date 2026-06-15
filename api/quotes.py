@@ -21,6 +21,7 @@ def _migrate():
         ('estimated_min',  'INTEGER'),
         ('estimated_max',  'INTEGER'),
         ('budget',         'INTEGER'),
+        ('updated_at',     'TEXT'),
     ]:
         try:
             conn.execute(f"ALTER TABLE quotes ADD COLUMN {col} {typ}")
@@ -85,6 +86,7 @@ class QuoteUpdate(BaseModel):
     gemstone_origin: Optional[str] = None
     quote_date: Optional[str] = None
     notes: Optional[str] = None
+    customer_name: Optional[str] = None
 
 
 # ─── CRUD ──────────────────────────────────────────────────
@@ -147,6 +149,37 @@ def create_quote(body: QuoteCreate):
     conn.commit()
     conn.close()
     return {"id": qid}
+
+
+@router.patch("/{quote_id}")
+def update_quote(quote_id: int, body: QuoteUpdate):
+    conn = _conn()
+    row = conn.execute("SELECT * FROM quotes WHERE id=?", (quote_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Quote not found")
+    r = dict(row)
+    fields: dict = {}
+    if body.final_price is not None:
+        if body.final_price < 0:
+            raise HTTPException(400, "final_price 不可為負數")
+        fields["final_price"] = body.final_price
+    for attr in ("description","material","gemstone","gemstone_origin","quote_date","notes","customer_name"):
+        val = getattr(body, attr)
+        if val is not None:
+            fields[attr] = val
+    if not fields:
+        conn.close()
+        return dict(r)
+    set_clause = ", ".join(f"{k}=?" for k in fields)
+    conn.execute(
+        f"UPDATE quotes SET {set_clause}, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+        list(fields.values()) + [quote_id]
+    )
+    conn.commit()
+    updated = conn.execute("SELECT * FROM quotes WHERE id=?", (quote_id,)).fetchone()
+    conn.close()
+    return dict(updated)
 
 
 @router.delete("/{quote_id}")
