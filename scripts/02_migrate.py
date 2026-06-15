@@ -24,6 +24,7 @@ def migrate():
         ("metal_color",            "TEXT"),
         ("diamond_status",         "TEXT"),
         ("photo_type",             "TEXT"),
+        ("updated_at",             "TIMESTAMP"),
     ]
     for col, typ in missing_cols:
         try:
