@@ -30,14 +30,18 @@ PIL_WHITE_RATIO = 0.85  # 珠寶框外背景 85%+ 是白 → PIL 認定去背
 # ── CLIP 文字描述 ──────────────────────────────────────────
 CLIP_PROMPTS = {
     '去背': (
-        "a jewelry product photo shot on a pure white background, "
-        "no hands no body no scenery no table no fabric, "
-        "just the jewelry piece isolated on white, e-commerce catalog style"
+        "a jewelry product photo shot on a pure white background with nothing else visible — "
+        "no display stand, no ring holder, no ring cone, no jewelry box, no props, no shadows of props, "
+        "no hands, no body, no fabric, no table surface — "
+        "just the single jewelry piece floating isolated on a completely plain white background, "
+        "e-commerce catalog style with white all around the jewelry"
     ),
     '情境': (
-        "a jewelry lifestyle photo with a real background — "
-        "worn on a hand wrist neck or ear, placed on marble wood or fabric surface, "
-        "or photographed outdoors in a room or studio setting with visible environment"
+        "a jewelry photo with any real-world context — worn on a hand, wrist, neck or ear, "
+        "placed on a ring display cone or stand, inside a jewelry box, "
+        "on marble, wood, fabric or any textured surface, "
+        "photographed outdoors or in a room, or any photo where you can see "
+        "a background other than plain white behind the jewelry"
     ),
 }
 

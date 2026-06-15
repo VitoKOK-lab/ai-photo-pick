@@ -34,7 +34,7 @@ def recrop_one(row: dict, dry_run: bool = False) -> str:
     filename = row["filename"]
     original_filename = row.get("original_filename") or filename
 
-    # 找原始檔（支援 .heic / .jpg / .jpeg / .png / .webp）
+    # 找原始檔；找不到就用 full 圖當來源（已是 1200px 正方形，仍可重新裁切）
     base = Path(filename).stem
     original_path = None
     for ext in (".jpg", ".jpeg", ".png", ".webp", ".heic", ".HEIC", ".JPG", ".PNG"):
@@ -42,10 +42,13 @@ def recrop_one(row: dict, dry_run: bool = False) -> str:
         if candidate.exists():
             original_path = candidate
             break
-
     if original_path is None:
-        log.warning(f"  找不到原始檔: {base}.*")
-        return "skip"
+        full_candidate = FULL_DIR / filename
+        if full_candidate.exists():
+            original_path = full_candidate
+        else:
+            log.warning(f"  找不到原始檔也找不到 full 圖: {filename}")
+            return "skip"
 
     if dry_run:
         log.info(f"  [DRY] {filename} <- {original_path.name}")
