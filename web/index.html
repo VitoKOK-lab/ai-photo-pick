@@ -1109,6 +1109,44 @@ const SIZE_OPTS = {'戒指':['活圍','#5','#6','#7','#8','#9','#10','#11','#12'
 function getBand(ct) { if(ct<1)return'B1'; if(ct<3)return'B2'; if(ct<5)return'B3'; if(ct<10)return'B4'; return'B5'; }
 function fmtNT(n) { return 'NT$ ' + Math.round(n).toLocaleString('zh-TW'); }
 
+/* ── Pricing DB hook – fetches from /api/pricing/all, falls back to hardcoded ── */
+const _pricingState = { data: null, promise: null };
+function usePricing() {
+  const [p, setP] = React.useState(_pricingState.data);
+  React.useEffect(() => {
+    if (_pricingState.data) { setP(_pricingState.data); return; }
+    if (!_pricingState.promise) {
+      _pricingState.promise = fetch('/api/pricing/all')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (!d) return;
+          // Map DB shapes → frontend constant shapes
+          const data = {
+            METAL_PER_G:       d.metals       || {},
+            LABOR:             d.labor        || {},
+            WEIGHTS:           d.weights      || {},
+            SIDESTONES:        d.sidestones   || {},
+            STONES_COMMERCIAL: Object.fromEntries(
+              Object.entries(d.stones_commercial || {}).map(([k, v]) => [k, { name: v.name, range: v.range || [v.price_min||0, v.price_max||0] }])
+            ),
+          };
+          _pricingState.data = data;
+          setP(data);
+        })
+        .catch(() => {});
+    } else {
+      _pricingState.promise.then(() => { if (_pricingState.data) setP(_pricingState.data); });
+    }
+  }, []);
+  return {
+    METAL_PER_G:       p?.METAL_PER_G       || METAL_PER_G,
+    LABOR:             p?.LABOR             || LABOR,
+    WEIGHTS:           p?.WEIGHTS           || WEIGHTS,
+    SIDESTONES:        p?.SIDESTONES        || SIDESTONES,
+    STONES_COMMERCIAL: p?.STONES_COMMERCIAL || STONES_COMMERCIAL,
+  };
+}
+
 /* ── Shareable quote card (screenshot for customer) ─── */
 function QuoteCard({ photo, description, estimatedMin, estimatedMax, finalPrice, customer, itemSize, plating, onClose }) {
   const today = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
@@ -1152,10 +1190,11 @@ function QuoteCard({ photo, description, estimatedMin, estimatedMax, finalPrice,
 
 /* ── Photo-triggered estimator ──────────────────────── */
 function PhotoQuoteFlow({ photo, onBack, onClose }) {
+  const pricing = usePricing();
   // Map photo gemstone name → stoneKey
   const GEM_MAP = {};
   Object.entries(STONES_INVEST).forEach(([k,s]) => { GEM_MAP[s.name] = {key:k,mode:'invest'}; });
-  Object.entries(STONES_COMMERCIAL).forEach(([k,s]) => { GEM_MAP[s.name] = {key:k,mode:'commercial'}; });
+  Object.entries(pricing.STONES_COMMERCIAL).forEach(([k,s]) => { GEM_MAP[s.name] = {key:k,mode:'commercial'}; });
   const initGem = GEM_MAP[photo.gemstone] || null;
 
   const [budget,      setBudget]      = useState('');
@@ -1206,7 +1245,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const ct = parseFloat(carat) || 0;
   let stoneMin = 0, stoneMax = 0;
   const currentStone = stoneMode === 'invest' ? STONES_INVEST[stoneKey] : null;
-  const currentStoneC = stoneMode === 'commercial' ? STONES_COMMERCIAL[stoneKey] : null;
+  const currentStoneC = stoneMode === 'commercial' ? pricing.STONES_COMMERCIAL[stoneKey] : null;
   const stoneName = currentStone?.name || currentStoneC?.name || '';
 
   if (currentStone && ct > 0) {
@@ -1222,11 +1261,11 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const STYLE_TO_LABOR = {'無鑽':'極簡','簡約(5顆鑽內)':'簡單','輕奢(20顆鑽內)':'中等','奢華滿鑲鑽':'複雜'};
   const CHAIN_TO_WEIGHT = {'少':'輕 (1.5–3g)','正常':'中 (3–5g)','多':'偏重 (5–8g)'};
   const laborKey   = STYLE_TO_LABOR[style] || craft || '中等';
-  const laborRange = LABOR[cat]?.[laborKey] || [0,0];
+  const laborRange = pricing.LABOR[cat]?.[laborKey] || [0,0];
   const weightKey  = CHAIN_TO_WEIGHT[chain] || '中 (3–5g)';
-  const weightRange = WEIGHTS[weightKey] || [3,5];
-  const metalPg    = METAL_PER_G[materialType] || 3800;
-  const sideRange  = SIDESTONES[sidestone] || [0,0];
+  const weightRange = (pricing.WEIGHTS[weightKey] || WEIGHTS[weightKey]) || [3,5];
+  const metalPg    = pricing.METAL_PER_G[materialType] || METAL_PER_G[materialType] || 3800;
+  const sideRange  = pricing.SIDESTONES[sidestone] || [0,0];
   const mountMin   = laborRange[0] + metalPg * weightRange[0] + sideRange[0];
   const mountMax   = laborRange[1] + metalPg * weightRange[1] + sideRange[1];
   const totalMin   = stoneMin + mountMin;
@@ -1532,7 +1571,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           </div>
           <div style={{fontSize:10,color:'var(--text2)',fontWeight:600,marginBottom:3}}>商業級</div>
           <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
-            {Object.entries(STONES_COMMERCIAL).map(([k,s]) => {
+            {Object.entries(pricing.STONES_COMMERCIAL).map(([k,s]) => {
               const on = stoneKey===k && stoneMode==='commercial';
               const isOrig = orig.gemstone === s.name;
               return (
@@ -1611,7 +1650,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 
           <div style={{fontSize:11,fontWeight:700,letterSpacing:0.5,color:'var(--text3)',margin:'10px 0 4px'}}>材質</div>
           <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
-            {Object.keys(METAL_PER_G).map(v => {
+            {Object.keys(pricing.METAL_PER_G).map(v => {
               const on = materialType===v;
               return <button key={v} onClick={()=>setMaterialType(v)} style={{padding:'7px 12px',borderRadius:8,margin:'3px 3px 3px 0',border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:12,fontWeight:on?700:400,cursor:'pointer',flexShrink:0}}>{v}</button>;
             })}
@@ -1629,7 +1668,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           {/* Side stones */}
           <div style={{fontSize:11,fontWeight:700,letterSpacing:0.5,color:'var(--text3)',margin:'12px 0 4px'}}>配石</div>
           <div style={{display:'flex',flexWrap:'wrap',marginBottom:6}}>
-            {Object.keys(SIDESTONES).map(v => {
+            {Object.keys(pricing.SIDESTONES).map(v => {
               const on = sidestone===v;
               return <button key={v} onClick={()=>setSidestone(v)} style={{padding:'6px 10px',borderRadius:8,margin:'3px 3px 3px 0',border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:12,fontWeight:on?700:400,cursor:'pointer',flexShrink:0}}>{v}</button>;
             })}
@@ -1711,7 +1750,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 
 /* ── Quote / Estimator tab ──────────────────────────── */
 function QuoteTab() {
-  /* ── Pricing data ── */
+  const pricing = usePricing();
   /* ── State ── */
   const [stoneKey,    setStoneKey]    = useState('');       // invest key or '' or COMMERCIAL_*
   const [stoneMode,   setStoneMode]   = useState('invest'); // 'invest' | 'commercial'
@@ -1794,8 +1833,8 @@ function QuoteTab() {
     stoneMin    = fpc * 0.8 * ct;
     stoneMax    = cpc * 0.8 * ct;
     stoneTarget = ref * 0.8 * ct;
-  } else if (stoneMode === 'commercial' && stoneKey && STONES_COMMERCIAL[stoneKey] && ct > 0) {
-    const s = STONES_COMMERCIAL[stoneKey];
+  } else if (stoneMode === 'commercial' && stoneKey && pricing.STONES_COMMERCIAL[stoneKey] && ct > 0) {
+    const s = pricing.STONES_COMMERCIAL[stoneKey];
     stoneLabel = s.name;
     stoneMin    = s.range[0] * ct;
     stoneMax    = s.range[1] * ct;
@@ -1804,10 +1843,10 @@ function QuoteTab() {
 
   let mountMin = 0, mountMax = 0;
   if (hasMounting) {
-    const laborRange  = (LABOR[item] && LABOR[item][complexity]) ? LABOR[item][complexity] : [0,0];
-    const weightRange = WEIGHTS[weight] || [0,0];
-    const metalPg     = METAL_PER_G[metal] || 0;
-    const sideRange   = SIDESTONES[sidestone] || [0,0];
+    const laborRange  = (pricing.LABOR[item] && pricing.LABOR[item][complexity]) ? pricing.LABOR[item][complexity] : [0,0];
+    const weightRange = pricing.WEIGHTS[weight] || WEIGHTS[weight] || [0,0];
+    const metalPg     = pricing.METAL_PER_G[metal] || METAL_PER_G[metal] || 0;
+    const sideRange   = pricing.SIDESTONES[sidestone] || [0,0];
     mountMin = laborRange[0] + metalPg * weightRange[0] + sideRange[0];
     mountMax = laborRange[1] + metalPg * weightRange[1] + sideRange[1];
   }
@@ -1872,7 +1911,7 @@ function QuoteTab() {
 
   /* ── Invest stone select options ── */
   const investKeys = Object.keys(STONES_INVEST);
-  const commercialKeys = Object.keys(STONES_COMMERCIAL);
+  const commercialKeys = Object.keys(pricing.STONES_COMMERCIAL);
 
   const currentInvestStone = stoneMode === 'invest' && stoneKey ? STONES_INVEST[stoneKey] : null;
 
@@ -1997,7 +2036,7 @@ function QuoteTab() {
               onBlur:  e => e.target.style.borderColor = 'var(--border)',
             },
               React.createElement('option', { value: '' }, '— 選擇商業級寶石 —'),
-              commercialKeys.map(k => React.createElement('option', { key: k, value: k }, STONES_COMMERCIAL[k].name))
+              commercialKeys.map(k => React.createElement('option', { key: k, value: k }, (pricing.STONES_COMMERCIAL[k]||{}).name||k))
             )
           ),
 
@@ -2105,7 +2144,7 @@ function QuoteTab() {
                 onFocus: e => e.target.style.borderColor = 'var(--gold)',
                 onBlur:  e => e.target.style.borderColor = 'var(--border)',
               },
-                Object.keys(METAL_PER_G).map(m => React.createElement('option', { key: m, value: m }, m + '  (' + METAL_PER_G[m].toLocaleString('zh-TW') + '/g)'))
+                Object.keys(pricing.METAL_PER_G).map(m => React.createElement('option', { key: m, value: m }, m + '  (' + (pricing.METAL_PER_G[m]||0).toLocaleString('zh-TW') + '/g)'))
               )
             ),
             /* Weight */
@@ -2117,7 +2156,7 @@ function QuoteTab() {
                 onFocus: e => e.target.style.borderColor = 'var(--gold)',
                 onBlur:  e => e.target.style.borderColor = 'var(--border)',
               },
-                Object.keys(WEIGHTS).map(w => React.createElement('option', { key: w, value: w }, w))
+                Object.keys(pricing.WEIGHTS).map(w => React.createElement('option', { key: w, value: w }, w))
               )
             ),
             /* Complexity */
@@ -2147,7 +2186,7 @@ function QuoteTab() {
                 onFocus: e => e.target.style.borderColor = 'var(--gold)',
                 onBlur:  e => e.target.style.borderColor = 'var(--border)',
               },
-                Object.keys(SIDESTONES).map(s => React.createElement('option', { key: s, value: s }, s))
+                Object.keys(pricing.SIDESTONES).map(s => React.createElement('option', { key: s, value: s }, s))
               )
             ),
             /* Size */

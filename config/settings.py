@@ -26,6 +26,7 @@ MICRO_DIR = PROCESSED_DIR / "micro"
 # 資料庫
 DB_DIR = BASE_DIR / "db"
 SQLITE_PATH = DB_DIR / "jewelry.sqlite"
+PRICING_DB_PATH = DB_DIR / "pricing.sqlite"
 CHROMA_PATH = DB_DIR / "chroma"
 
 # 設定檔
