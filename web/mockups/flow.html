@@ -1,0 +1,93 @@
+<!DOCTYPE html><html lang="zh-TW"><head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{--gold:#C4956A;--goldbg:#FBF0E8;--ink:#1F1F1F;--ink2:#5a5a5a;--line:#E0DCD6;
+        --tw:#A67A50;--twbg:#FBF0E8;--sz:#2f6db0;--szbg:#EAF2FC;--sys:#666;--sysbg:#EFEFEF;
+        --risk:#E53830;--riskbg:#FDECEA;--ok:#3F9E6A;--okbg:#E7F4EC;--dec:#B58A12;--decbg:#FBF4D6;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans TC',sans-serif;background:#F4F2EF;color:var(--ink);padding:34px}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:34px;font-weight:900;text-align:center}
+  .sub{text-align:center;color:var(--ink2);font-size:18px;font-weight:500;margin:8px 0 24px}
+  .col{display:flex;flex-direction:column;align-items:center;gap:0}
+  .box{border:3px solid var(--line);background:#fff;border-radius:14px;padding:13px 20px;font-size:21px;font-weight:700;text-align:center;min-width:230px}
+  .box .s{display:block;font-size:14px;font-weight:500;color:var(--ink2);margin-top:3px}
+  .tw{border-color:var(--gold);background:var(--twbg)} .sz{border-color:#8fb8e6;background:var(--szbg)}
+  .sys{border-color:#bbb;background:var(--sysbg)} .dec{border-color:#e0c558;background:var(--decbg)}
+  .risk{border-color:var(--risk);background:var(--riskbg);color:var(--risk)} .ok{border-color:var(--ok);background:var(--okbg);color:#2c7a52;font-size:24px}
+  .ar{font-size:22px;color:var(--gold);line-height:1.1;padding:5px 0}
+  .branch{display:grid;grid-template-columns:1fr 1fr;gap:22px;width:100%;margin:6px 0}
+  .lane{border:2px dashed var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:0;background:#FBFAF8}
+  .lane h3{font-size:20px;margin-bottom:10px}
+  .lane.spec h3{color:var(--gold)} .lane.cust h3{color:var(--sz)}
+  .small{min-width:200px;font-size:18px;padding:10px 16px}
+  .merge{font-size:18px;font-weight:700;color:var(--ink2);background:#fff;border:2px solid var(--line);border-radius:999px;padding:8px 22px;margin:8px 0}
+  .tail{width:100%;display:flex;flex-direction:column;align-items:center}
+  .row2{display:flex;gap:10px;align-items:center;justify-content:center}
+  .lbl{font-size:14px;color:var(--ink2);font-weight:700}
+  .note{margin-top:22px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 20px;font-size:16px;color:var(--ink2);text-align:center;font-weight:500}
+</style></head><body>
+<div class="wrap">
+  <h1>客服訂單流程（含分類與分支）</h1>
+  <div class="sub">🟫台灣做　🟦深圳做　⬜系統/客戶　🟨判斷　🟥退貨/修改　·　每關都記「時間＋經手人」</div>
+
+  <div class="col">
+    <div class="box sys">客戶下單<span class="s">SHOPLINE 自動匯入</span></div>
+    <div class="ar">▼</div>
+    <div class="box tw">台灣會計：確認入帳<span class="s">記 會計人＋時間</span></div>
+    <div class="ar">▼</div>
+    <div class="box dec">分類：規格 還是 訂製？</div>
+  </div>
+
+  <div class="branch">
+    <div class="lane spec">
+      <h3>規格品</h3>
+      <div class="box small dec">有貨？</div>
+      <div class="row2" style="margin-top:8px;width:100%;justify-content:space-around;align-items:flex-start">
+        <div class="col"><div class="lbl">有貨</div><div class="ar">▼</div><div class="box small sz">直接進品管</div></div>
+        <div class="col"><div class="lbl">沒貨</div><div class="ar">▼</div><div class="box small sz">採購/叫貨<span class="s">記叫貨人+日期</span></div><div class="ar">▼</div><div class="box small sz">到貨<span class="s">到貨日+照片</span></div></div>
+      </div>
+    </div>
+
+    <div class="lane cust">
+      <h3>訂製品</h3>
+      <div class="box small sz">報價 → 客人確認報價</div>
+      <div class="ar">▼</div>
+      <div class="box small sz">採購裸石・確認有沒有貨<span class="s">先買到那顆石頭</span></div>
+      <div class="ar">▼</div>
+      <div class="box small sz">用「那顆裸石」設計、畫 3D 圖</div>
+      <div class="ar">▼</div>
+      <div class="box small risk">客人確認 3D 圖<span class="s">⏰ 客人沒即時回 → 延後出貨，要催</span></div>
+      <div class="ar">▼</div>
+      <div class="box small sz">製作</div>
+      <div class="ar">▼</div>
+      <div class="box small sz">追單</div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="merge">↓　兩種都匯入以下共同流程　↓</div>
+    <div class="tail">
+      <div class="box sz">深圳：品管</div><div class="ar">▼</div>
+      <div class="box sz">拍照<span class="s">訂製：成品一做好就拍成品照 → 寄客人確認（務必打包前，不能等打包後才拍）</span></div><div class="ar">▼</div>
+      <div class="box sz">打包</div><div class="ar">▼</div>
+      <div class="box sz">寄回台灣<span class="s">記 寄件時間＋寄件人</span></div><div class="ar">▼</div>
+      <div class="box tw">台灣：打開品管<span class="s">記 到台時間＋檢貨人</span></div><div class="ar">▼</div>
+      <div class="box tw">寄出給客人<span class="s">記 出貨時間＋出貨人</span></div><div class="ar">▼</div>
+      <div class="box sys">客人收到貨</div><div class="ar">▼</div>
+      <div class="box dec">退貨 / 修改？</div>
+      <div class="row2" style="margin-top:8px;align-items:flex-start;gap:40px">
+        <div class="col"><div class="lbl">要</div><div class="ar">▼</div><div class="box small risk">退貨或修改<span class="s">主管簽核 · 回上面品管重來</span></div></div>
+        <div class="col"><div class="lbl">不用</div><div class="ar">▼</div><div class="box small dec">7 天內有客訴？</div>
+          <div class="row2" style="margin-top:8px;gap:24px;align-items:flex-start">
+            <div class="col"><div class="lbl">有客訴</div><div class="ar">▼</div><div class="box small risk">處理/修改</div></div>
+            <div class="col"><div class="lbl">沒客訴</div><div class="ar">▼</div><div class="box ok">✅ 結案</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">🔔 防客訴：下單後 <b>7／14／21 天</b> 系統提醒客服主動通知客人進度　·　全程記進購物旅程（誰/何時/做了什麼）</div>
+</div></body></html>
