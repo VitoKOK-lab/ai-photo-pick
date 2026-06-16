@@ -97,7 +97,7 @@ def step3_backfill():
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
 
-    fill_cols = ["gemstone", "metal_color", "setting_amount", "craft_complexity"]
+    fill_cols = ["gemstone", "metal_color", "setting_amount", "craft_complexity", "style"]
     where = " OR ".join(f"{c} IS NULL" for c in fill_cols)
     rows = conn.execute(
         f"SELECT id, filename FROM photos WHERE {where} ORDER BY id"
@@ -128,7 +128,9 @@ def step3_backfill():
                     gemstone_confidence = COALESCE(gemstone_confidence, ?),
                     metal_color         = COALESCE(metal_color,         ?),
                     setting_amount      = COALESCE(setting_amount,      ?),
-                    craft_complexity    = COALESCE(craft_complexity,     ?)
+                    craft_complexity    = COALESCE(craft_complexity,     ?),
+                    style               = COALESCE(style,               ?),
+                    style_confidence    = COALESCE(style_confidence,    ?)
                 WHERE id = ?
             """, (
                 cls["gemstone"]["label"],
@@ -136,6 +138,8 @@ def step3_backfill():
                 cls.get("metal_color", {}).get("label"),
                 cls.get("setting_amount", {}).get("label"),
                 cls.get("craft_complexity", {}).get("label"),
+                cls.get("style", {}).get("label"),
+                cls.get("style", {}).get("confidence"),
                 row["id"],
             ))
             conn.commit()
