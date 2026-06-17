@@ -395,6 +395,8 @@ def get_all_pricing():
     plating_rows = c.execute("SELECT label, price_min, price_max FROM pricing_plating ORDER BY price_min").fetchall()
     plating = {r["label"]: [r["price_min"], r["price_max"]] for r in plating_rows}
 
+    metals_updated = c.execute("SELECT MIN(updated_at) FROM pricing_metals").fetchone()[0]
+
     conn.close()
     return {
         "metals": metals,
@@ -404,6 +406,7 @@ def get_all_pricing():
         "stones_commercial": stones_commercial,
         "sidestones": sidestones,
         "plating": plating,
+        "metals_last_updated": metals_updated,
     }
 
 

@@ -276,6 +276,355 @@ button { font-family: inherit; cursor: pointer; }
 @media (min-width: 1600px) { :root { --side-w: 248px; } .grid { grid-template-columns: repeat(5, 1fr); } }
 /* card label narrower to maximise photo area */
 .card-lbl { padding: 4px 7px 6px; font-size: 11px; }
+
+/* ── Pricing Banner ────────────────────────────────────── */
+.pricing-banner {
+  position: fixed;
+  top: var(--nav-h);
+  left: 0; right: 0;
+  z-index: 190;
+  background: #fff8e1;
+  border-bottom: 1px solid #ffe082;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #7a5c00;
+  box-shadow: 0 2px 6px rgba(0,0,0,.07);
+}
+.pricing-banner .banner-msg { flex: 1; font-weight: 500; }
+.pricing-banner .banner-goto {
+  background: var(--gold);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pricing-banner .banner-dismiss {
+  background: none;
+  border: none;
+  color: #a08020;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+/* ── Pricing Settings Tab ─────────────────────────────── */
+.pricing-settings-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+.pricing-section-selector {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.pricing-section-selector::-webkit-scrollbar { display: none; }
+.pricing-sec-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: none;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all .15s;
+}
+.pricing-sec-btn.on {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #fff;
+  font-weight: 600;
+}
+.pricing-settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+.pricing-section-card {
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin: 12px 16px;
+  overflow: hidden;
+}
+.pricing-section-hdr {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 12px 16px 6px;
+  letter-spacing: .05em;
+}
+.pricing-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+.pricing-row:first-of-type { border-top: none; }
+.pricing-row-label {
+  min-width: 72px;
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.pricing-input {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  width: 90px;
+  background: var(--s2);
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+.pricing-input:focus { border-color: var(--gold); background: var(--surface); }
+.pricing-unit {
+  font-size: 12px;
+  color: var(--text2);
+  white-space: nowrap;
+}
+.pricing-save-btn {
+  margin-left: auto;
+  background: var(--gold);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: opacity .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pricing-save-btn:disabled { opacity: .5; cursor: default; }
+.pricing-save-btn.saved { background: #4caf50; }
+.pricing-tilde {
+  font-size: 13px;
+  color: var(--text2);
+}
+.pricing-cat-selector {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 10px 16px 6px;
+}
+.pricing-cat-selector::-webkit-scrollbar { display: none; }
+.pricing-cat-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: none;
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.pricing-cat-btn.on {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #fff;
+  font-weight: 600;
+}
+.pricing-invest-accordion {
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+}
+.pricing-invest-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  border-top: 1px solid var(--border);
+}
+.pricing-invest-hdr:first-of-type { border-top: none; }
+.pricing-invest-band-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px 8px 24px;
+  border-top: 1px solid var(--s3);
+  background: var(--s2);
+}
+.pricing-invest-band-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  min-width: 28px;
+}
+.pricing-invest-band-val {
+  font-size: 13px;
+  color: var(--text);
+}
+.metals-last-updated {
+  font-size: 12px;
+  color: var(--text2);
+  padding: 8px 16px 4px;
+}
+
+/* ── SwipeMode ──────────────────────────────────────────── */
+.swipe-overlay {
+  position: fixed; inset: 0; z-index: 900;
+  background: #111;
+  display: flex; flex-direction: column; align-items: center;
+  overflow: hidden;
+  touch-action: none;
+}
+.swipe-topbar {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px 8px;
+  flex-shrink: 0;
+}
+.swipe-back-btn {
+  background: none; border: none; color: #ccc; font-size: 15px; cursor: pointer; padding: 4px 8px;
+}
+.swipe-counter { font-size: 13px; color: #888; }
+.swipe-arena {
+  flex: 1; width: 100%; display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.swipe-card-wrap {
+  position: absolute;
+  width: min(90vw, 420px);
+  border-radius: 16px; overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow .2s;
+  will-change: transform;
+}
+.swipe-card-wrap.back-card {
+  transform: scale(.95) translateY(12px);
+  filter: brightness(.7);
+  pointer-events: none;
+  z-index: 0;
+}
+.swipe-card-wrap.front-card { z-index: 1; }
+.swipe-card-wrap img {
+  width: 100%; aspect-ratio: 1/1; display: block; object-fit: cover;
+  pointer-events: none;
+}
+.swipe-card-info {
+  background: linear-gradient(transparent, rgba(0,0,0,.85));
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 24px 16px 16px;
+}
+.swipe-card-tags {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.swipe-card-tag {
+  background: rgba(255,255,255,.15); backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 20px; padding: 3px 10px;
+  font-size: 12px; color: #fff; font-weight: 500;
+}
+.swipe-hint {
+  position: absolute; top: 20px; padding: 6px 16px;
+  border-radius: 8px; font-size: 22px; font-weight: 800;
+  border: 3px solid; pointer-events: none;
+  opacity: 0; transition: opacity .1s;
+}
+.swipe-hint.like  { right: 20px; color: #4caf77; border-color: #4caf77; }
+.swipe-hint.skip  { left: 20px;  color: #e05555; border-color: #e05555; }
+.swipe-hint.show  { opacity: 1; }
+@keyframes flyLeft  { to { transform: translateX(-150vw) rotate(-30deg); opacity: 0; } }
+@keyframes flyRight { to { transform: translateX( 150vw) rotate( 30deg); opacity: 0; } }
+.fly-left  { animation: flyLeft  .3s ease-in forwards; }
+.fly-right { animation: flyRight .3s ease-in forwards; }
+.swipe-btns {
+  width: min(90vw,420px); display: flex; justify-content: space-around; align-items: center;
+  padding: 16px 0 8px; flex-shrink: 0;
+}
+.swipe-btn {
+  width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer;
+  font-size: 24px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4); transition: transform .1s;
+}
+.swipe-btn:active { transform: scale(.9); }
+.swipe-btn-skip { background: #2a2a2a; color: #e05555; }
+.swipe-btn-fav  { background: #2a2a2a; color: #f0c040; width: 48px; height: 48px; font-size: 20px; }
+.swipe-btn-like { background: #2a2a2a; color: #4caf77; }
+.swipe-empty {
+  text-align: center; color: #888; padding: 40px 20px;
+}
+.swipe-empty h3 { color: #ccc; margin-bottom: 8px; }
+
+/* ── Agent login & management ───────────────────────────── */
+.agent-login-tab { margin-top: 12px; }
+.agent-login-toggle {
+  background: none; border: none; color: var(--gold);
+  font-size: 13px; cursor: pointer; padding: 4px 0; text-decoration: underline;
+}
+.agent-section-card {
+  background: var(--surface); border-radius: 12px;
+  border: 1px solid var(--border); margin: 12px 16px; overflow: hidden;
+}
+.agent-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.agent-row:last-child { border-bottom: none; }
+.agent-row-info { flex: 1; }
+.agent-row-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.agent-row-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.agent-del-btn {
+  background: none; border: 1px solid #e05555; color: #e05555;
+  border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+}
+.agent-add-form {
+  padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;
+  border-top: 1px solid var(--border);
+}
+.agent-add-form input {
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
+  font-size: 13px; background: var(--bg); color: var(--text); width: 100%; box-sizing: border-box;
+}
+.agent-add-btn {
+  background: var(--gold); color: #fff; border: none; border-radius: 8px;
+  padding: 9px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.swipe-mode-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: linear-gradient(135deg, #2a1f0a, #5c3d11);
+  border: 1px solid var(--gold); color: var(--gold);
+  border-radius: 22px; padding: 8px 18px; font-size: 14px; font-weight: 600;
+  cursor: pointer; margin: 8px auto; transition: all .15s;
+}
+.swipe-mode-btn:active { transform: scale(.97); }
   </style>
 </head>
 <body>
@@ -937,7 +1286,7 @@ function PhotoGrid({ isFav, toggleFav, filters, role }) {
 }
 
 /* ── Browse tab ─────────────────────────────────────── */
-function BrowseTab({ isFav, toggleFav, role }) {
+function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [photoMode, setPhotoMode] = useState('去背'); // '去背' | '情境'
   const [catFilter, setCatFilter]  = useState(null);
   const [filters,   setFilters]    = useState({});
@@ -990,6 +1339,13 @@ function BrowseTab({ isFav, toggleFav, role }) {
             <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
           )}
         </div>
+        {role === 'agent' && onStartSwipe && (
+          <div style={{display:'flex',justifyContent:'center',padding:'6px 0 4px'}}>
+            <button className="swipe-mode-btn" onClick={() => onStartSwipe(allFilters)}>
+              <span style={{fontSize:18}}>✦</span> 探索模式
+            </button>
+          </div>
+        )}
       </div>
       <div className="body-row">
         <div className="main">
@@ -2401,7 +2757,7 @@ function QuoteTab() {
 }
 
 /* ── Login PIN modal ───────────────────────────────── */
-function PinModal({ onClose, onAuth }) {
+function PinModal({ onClose, onAuth, onAgentLogin }) {
   const [pin, setPin] = useState('');
   const [err, setErr] = useState(false);
   function submit() {
@@ -2420,6 +2776,11 @@ function PinModal({ onClose, onAuth }) {
         <div className="pin-err">{err ? '密碼錯誤' : ''}</div>
         <button className="pin-btn" onClick={submit}>確認</button>
         <button className="pin-cancel" onClick={onClose}>取消</button>
+        {onAgentLogin && (
+          <div style={{textAlign:'center',marginTop:10}}>
+            <button className="agent-login-toggle" onClick={onAgentLogin}>代理商登入</button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2466,6 +2827,332 @@ function LoginModal({ onClose, onAuth }) {
           {loading ? '登入中…' : '登入'}
         </button>
         <button className="pin-cancel" onClick={onClose}>取消</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Agent login modal ─────────────────────────────── */
+function AgentLoginModal({ onClose, onAuth }) {
+  const [mode, setMode] = useState('phone'); // 'phone' | 'name'
+  const [name,  setName]  = useState('');
+  const [phone, setPhone] = useState('');
+  const [pin,   setPin]   = useState('');
+  const [err,   setErr]   = useState('');
+  const [busy,  setBusy]  = useState(false);
+
+  async function submit() {
+    if (!pin) { setErr('請輸入 PIN'); return; }
+    if (mode === 'phone' && !phone) { setErr('請輸入電話'); return; }
+    if (mode === 'name'  && !name)  { setErr('請輸入姓名'); return; }
+    setBusy(true); setErr('');
+    try {
+      const res = await fetch('/api/agents/login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), pin: pin.trim() }),
+      });
+      if (!res.ok) { setErr('帳號或 PIN 錯誤'); setBusy(false); return; }
+      const agent = await res.json();
+      localStorage.setItem('agentUser', JSON.stringify({...agent, pin: pin.trim()}));
+      onAuth(agent);
+      onClose();
+    } catch { setErr('連線失敗'); }
+    setBusy(false);
+  }
+
+  return (
+    <div className="pin-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="pin-box">
+        <div className="pin-title">代理商登入</div>
+        <div className="agent-login-tab" style={{display:'flex', gap:8, marginBottom:10}}>
+          <button onClick={() => setMode('phone')} style={{flex:1, padding:'6px 0', borderRadius:8, border:'1.5px solid', borderColor: mode==='phone'?'var(--gold)':'var(--border)', background: mode==='phone'?'var(--gold)':'none', color: mode==='phone'?'#fff':'var(--text2)', fontSize:13, cursor:'pointer'}}>電話</button>
+          <button onClick={() => setMode('name')}  style={{flex:1, padding:'6px 0', borderRadius:8, border:'1.5px solid', borderColor: mode==='name'?'var(--gold)':'var(--border)',  background: mode==='name'?'var(--gold)':'none',  color: mode==='name'?'#fff':'var(--text2)',  fontSize:13, cursor:'pointer'}}>姓名</button>
+        </div>
+        {mode === 'phone'
+          ? <input className="pin-input" type="tel" placeholder="電話號碼" value={phone}
+              autoFocus onChange={e => { setPhone(e.target.value); setErr(''); }} style={{marginBottom:8}} />
+          : <input className="pin-input" type="text" placeholder="姓名" value={name}
+              autoFocus onChange={e => { setName(e.target.value);  setErr(''); }} style={{marginBottom:8}} />
+        }
+        <input className="pin-input" type="password" inputMode="numeric" maxLength={6}
+          placeholder="PIN ••••" value={pin}
+          onChange={e => { setPin(e.target.value); setErr(''); }}
+          onKeyDown={e => e.key === 'Enter' && submit()} />
+        <div className="pin-err">{err}</div>
+        <button className="pin-btn" onClick={submit} disabled={busy}>{busy ? '登入中…' : '登入'}</button>
+        <button className="pin-cancel" onClick={onClose}>取消</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── SwipeMode ─────────────────────────────────────────── */
+function SwipeMode({ agentUser, filters, onClose, onFavAdded }) {
+  const [queue,    setQueue]    = useState([]);
+  const [idx,      setIdx]      = useState(0);
+  const [loading,  setLoading]  = useState(true);
+  const [done,     setDone]     = useState(false);
+
+  // Drag state
+  const [dragX,    setDragX]    = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragStartX = useRef(0);
+  const flyRef     = useRef(null); // 'left' | 'right'
+  const cardRef    = useRef(null);
+
+  // Swipe count for display
+  const [swiped, setSwiped] = useState(0);
+
+  const loadBatch = async () => {
+    try {
+      const qs = new URLSearchParams({ pin: agentUser.pin, limit: 20, ...filters });
+      const res = await fetch(`/api/agents/${agentUser.id}/recommendations?${qs}`);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch { return []; }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    loadBatch().then(batch => {
+      setQueue(batch);
+      setLoading(false);
+      if (!batch.length) setDone(true);
+    });
+  }, []);
+
+  // Prefetch next batch when near end
+  useEffect(() => {
+    if (!done && queue.length - idx < 5 && !loading) {
+      setLoading(true);
+      loadBatch().then(batch => {
+        if (!batch.length) { setDone(true); }
+        else { setQueue(prev => [...prev, ...batch]); }
+        setLoading(false);
+      });
+    }
+  }, [idx, queue.length]);
+
+  const postSwipe = (photo_id, action) => {
+    fetch(`/api/agents/${agentUser.id}/swipe`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ photo_id, action, pin: agentUser.pin }),
+    }).catch(() => {});
+  };
+
+  const doSwipe = (action) => {
+    const photo = queue[idx];
+    if (!photo) return;
+    postSwipe(photo.id, action);
+    setSwiped(n => n + 1);
+
+    // animate
+    if (cardRef.current) {
+      cardRef.current.classList.add(action === 'like' ? 'fly-right' : 'fly-left');
+    }
+    setTimeout(() => {
+      setDragX(0);
+      setIdx(i => {
+        const next = i + 1;
+        if (next >= queue.length && done) setDone(true);
+        return next;
+      });
+      if (cardRef.current) {
+        cardRef.current.classList.remove('fly-right', 'fly-left');
+      }
+    }, 280);
+  };
+
+  const doFavorite = () => {
+    const photo = queue[idx];
+    if (!photo) return;
+    fetch(`/api/agents/${agentUser.id}/favorites/${photo.id}`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ pin: agentUser.pin }),
+    }).catch(() => {});
+    if (onFavAdded) onFavAdded(photo);
+    doSwipe('like');
+  };
+
+  // Touch / mouse drag
+  const onStart = (x) => { dragStartX.current = x; setDragging(true); };
+  const onMove  = (x) => { if (!dragging) return; setDragX(x - dragStartX.current); };
+  const onEnd   = (x) => {
+    setDragging(false);
+    const diff = x - dragStartX.current;
+    if (Math.abs(diff) > 80) doSwipe(diff > 0 ? 'like' : 'unlike');
+    else setDragX(0);
+  };
+
+  const photo = queue[idx];
+  const nextPhoto = queue[idx + 1];
+
+  const rotation = dragX * 0.06;
+  const cardStyle = {
+    transform: `translateX(${dragX}px) rotate(${rotation}deg)`,
+    transition: dragging ? 'none' : 'transform .25s ease',
+  };
+
+  const showLike  = dragX >  50;
+  const showSkip  = dragX < -50;
+
+  if (loading && !queue.length) return (
+    <div className="swipe-overlay">
+      <div className="swipe-topbar">
+        <button className="swipe-back-btn" onClick={onClose}>← 返回</button>
+      </div>
+      <div className="swipe-empty"><div style={{color:'#888',marginTop:60}}>載入中…</div></div>
+    </div>
+  );
+
+  if ((!photo && done) || (!photo && !loading)) return (
+    <div className="swipe-overlay">
+      <div className="swipe-topbar">
+        <button className="swipe-back-btn" onClick={onClose}>← 返回</button>
+      </div>
+      <div className="swipe-empty">
+        <h3>已看完所有款式 ✓</h3>
+        <div>已滑過 {swiped} 張</div>
+        <div style={{marginTop:8,fontSize:13,color:'#666'}}>換個條件繼續探索，或查看收藏</div>
+        <button onClick={onClose} style={{marginTop:20,background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'10px 24px',fontSize:14,cursor:'pointer'}}>查看收藏</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="swipe-overlay"
+      onMouseMove={e => onMove(e.clientX)}
+      onMouseUp={e => { onEnd(e.clientX); }}
+      onMouseLeave={() => { if (dragging) { setDragging(false); setDragX(0); } }}
+    >
+      <div className="swipe-topbar">
+        <button className="swipe-back-btn" onClick={onClose}>← 返回</button>
+        <span className="swipe-counter">已滑 {swiped} 張</span>
+      </div>
+
+      <div className="swipe-arena">
+        {/* Background next card */}
+        {nextPhoto && (
+          <div className="swipe-card-wrap back-card">
+            <img src={`/static/full/${nextPhoto.filename}`} alt="" draggable={false} />
+          </div>
+        )}
+
+        {/* Front card */}
+        {photo && (
+          <div
+            ref={cardRef}
+            className="swipe-card-wrap front-card"
+            style={cardStyle}
+            onTouchStart={e => onStart(e.touches[0].clientX)}
+            onTouchMove={e  => onMove(e.touches[0].clientX)}
+            onTouchEnd={e   => onEnd(e.changedTouches[0].clientX)}
+            onMouseDown={e  => { e.preventDefault(); onStart(e.clientX); }}
+          >
+            <img src={`/static/full/${photo.filename}`} alt="" draggable={false} />
+            <div className="swipe-card-info">
+              <div className="swipe-card-tags">
+                {[photo.category, photo.gemstone, photo.stone_shape, photo.style, photo.color].filter(Boolean).map((t,i) => (
+                  <span key={i} className="swipe-card-tag">{t}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Direction hints */}
+            <div className={`swipe-hint like ${showLike ? 'show' : ''}`}>❤ 喜歡</div>
+            <div className={`swipe-hint skip ${showSkip ? 'show' : ''}`}>✕ 跳過</div>
+          </div>
+        )}
+      </div>
+
+      <div className="swipe-btns">
+        <button className="swipe-btn swipe-btn-skip" onClick={() => doSwipe('unlike')} title="跳過（不再出現）">✕</button>
+        <button className="swipe-btn swipe-btn-fav"  onClick={doFavorite} title="收藏">★</button>
+        <button className="swipe-btn swipe-btn-like" onClick={() => doSwipe('like')} title="喜歡">❤</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Agent management section (for admin) ─────────────── */
+function AgentManageSection() {
+  const [agents,   setAgents]   = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [newName,  setNewName]  = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [newPin,   setNewPin]   = useState('');
+  const [newNotes, setNewNotes] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [err, setErr] = useState('');
+
+  const load = () => {
+    setLoading(true);
+    fetch(`/api/agents?admin_pin=${ADMIN_PIN}`)
+      .then(r => r.json()).then(d => { setAgents(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+  useEffect(load, []);
+
+  const create = async () => {
+    if (!newName.trim() || !newPin.trim()) { setErr('姓名和 PIN 必填'); return; }
+    setErr('');
+    const res = await fetch('/api/agents', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ admin_pin: ADMIN_PIN, name: newName.trim(), phone: newPhone.trim(), pin: newPin.trim(), notes: newNotes.trim() }),
+    });
+    if (!res.ok) { setErr('建立失敗'); return; }
+    setNewName(''); setNewPhone(''); setNewPin(''); setNewNotes(''); setShowForm(false);
+    load();
+  };
+
+  const del = async (id, name) => {
+    if (!confirm(`確定刪除代理「${name}」及所有紀錄？`)) return;
+    await fetch(`/api/agents/${id}?admin_pin=${ADMIN_PIN}`, { method: 'DELETE' });
+    load();
+  };
+
+  return (
+    <div className="pricing-section-card">
+      <div className="pricing-section-hdr" style={{padding:'10px 16px 6px',fontWeight:700,fontSize:12,color:'var(--text2)'}}>
+        代理商管理
+      </div>
+      {loading
+        ? <div style={{padding:'12px 16px',color:'var(--text2)',fontSize:13}}>載入中…</div>
+        : agents.length === 0
+          ? <div style={{padding:'12px 16px',color:'var(--text2)',fontSize:13}}>尚無代理</div>
+          : agents.map(a => (
+            <div key={a.id} className="agent-row">
+              <div className="agent-row-info">
+                <div className="agent-row-name">{a.name}</div>
+                <div className="agent-row-meta">
+                  {a.phone && <span>{a.phone} · </span>}
+                  喜歡 {a.likes} / 跳過 {a.unlikes} / 收藏 {a.favs}
+                </div>
+              </div>
+              <button className="agent-del-btn" onClick={() => del(a.id, a.name)}>刪除</button>
+            </div>
+          ))
+      }
+      <div style={{padding:'8px 16px',borderTop:'1px solid var(--border)'}}>
+        {!showForm
+          ? <button onClick={() => setShowForm(true)} style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}>+ 新增代理</button>
+          : (
+            <div className="agent-add-form">
+              <input placeholder="姓名 *" value={newName}  onChange={e => setNewName(e.target.value)} />
+              <input placeholder="電話"   value={newPhone} onChange={e => setNewPhone(e.target.value)} />
+              <input placeholder="PIN * (4-6位數)" type="password" value={newPin} onChange={e => setNewPin(e.target.value)} />
+              <input placeholder="備注"   value={newNotes} onChange={e => setNewNotes(e.target.value)} />
+              {err && <div style={{color:'#e05555',fontSize:12}}>{err}</div>}
+              <div style={{display:'flex',gap:8}}>
+                <button className="agent-add-btn" onClick={create} style={{flex:1}}>確認新增</button>
+                <button onClick={() => { setShowForm(false); setErr(''); }} style={{flex:1,background:'none',border:'1px solid var(--border)',borderRadius:8,padding:9,fontSize:14,cursor:'pointer',color:'var(--text2)'}}>取消</button>
+              </div>
+            </div>
+          )
+        }
       </div>
     </div>
   );
@@ -2934,17 +3621,442 @@ function QuotePendingBadge() {
   );
 }
 
+/* ── PricingBanner ──────────────────────────────────── */
+function PricingBanner({ metalsLastUpdated, onGotoSettings }) {
+  const DISMISS_KEY = 'pricingBannerDismissed';
+  const DISMISS_TTL = 7 * 24 * 3600 * 1000; // 7 days in ms
+
+  const [visible, setVisible] = React.useState(() => {
+    try {
+      const raw = localStorage.getItem(DISMISS_KEY);
+      if (!raw) return true;
+      const { ts } = JSON.parse(raw);
+      return Date.now() - ts > DISMISS_TTL;
+    } catch { return true; }
+  });
+
+  if (!visible || !metalsLastUpdated) return null;
+
+  // Calculate days since last update
+  const lastMs = new Date(metalsLastUpdated).getTime();
+  const daysSince = Math.floor((Date.now() - lastMs) / (24 * 3600 * 1000));
+  if (daysSince <= 7) return null;
+
+  function dismiss() {
+    localStorage.setItem(DISMISS_KEY, JSON.stringify({ ts: Date.now() }));
+    setVisible(false);
+  }
+
+  return (
+    <div className="pricing-banner">
+      <span className="banner-msg">⚠️ 金銀行情已 {daysSince} 天未更新</span>
+      {onGotoSettings && (
+        <button className="banner-goto" onClick={onGotoSettings}>前往更新</button>
+      )}
+      <button className="banner-dismiss" onClick={dismiss} title="關閉">✕</button>
+    </div>
+  );
+}
+
+/* ── PricingSettingsTab ─────────────────────────────── */
+function PricingSettingsTab() {
+  const SECTIONS = ['金銀', '金工', '彩寶', '投資寶石', '代理商'];
+  const LABOR_CATS = ['戒指', '墜子', '耳釘', '手鍊', '項鍊', '胸針', '手鐲'];
+  // Map display names to DB keys (labor table uses 吊墜 for 墜子)
+  const LABOR_CAT_KEYS = { '戒指':'戒指', '墜子':'吊墜', '耳釘':'耳釘', '手鍊':'手鍊', '項鍊':'項鍊', '胸針':'胸針', '手鐲':'手鐲' };
+  const COMPLEXITIES = ['極簡', '簡單', '中等', '複雜', '精工'];
+  const METAL_NAMES = ['925銀', '9K金', '14K金', '18K金', 'Pt950'];
+
+  const [sec, setSec] = React.useState('金銀');
+  const [laborCat, setLaborCat] = React.useState('戒指');
+  const [pricing, setPricing] = React.useState(null);
+  const [saving, setSaving] = React.useState({});
+  const [saved, setSaved] = React.useState({});
+  const [investOpen, setInvestOpen] = React.useState({});
+
+  // Local edit state — metals
+  const [metalVals, setMetalVals] = React.useState({});
+  // Local edit state — labor: { 'catKey/complexity': { min, max } }
+  const [laborVals, setLaborVals] = React.useState({});
+  // Local edit state — commercial stones
+  const [commVals, setCommVals] = React.useState({});
+
+  useEffect(() => {
+    fetch('/api/pricing/all')
+      .then(r => r.json())
+      .then(d => {
+        setPricing(d);
+        // Init local state from fetched data
+        const mv = {};
+        (d.metals ? Object.entries(d.metals) : []).forEach(([mat, val]) => {
+          mv[mat] = String(val);
+        });
+        setMetalVals(mv);
+
+        const lv = {};
+        (d.labor ? Object.entries(d.labor) : []).forEach(([cat, comps]) => {
+          Object.entries(comps).forEach(([comp, range]) => {
+            lv[cat + '/' + comp] = { min: String(range[0]), max: String(range[1]) };
+          });
+        });
+        setLaborVals(lv);
+
+        const cv = {};
+        (d.stones_commercial ? Object.entries(d.stones_commercial) : []).forEach(([key, info]) => {
+          cv[key] = { min: String(info.range[0]), max: String(info.range[1]) };
+        });
+        setCommVals(cv);
+      })
+      .catch(() => {});
+  }, []);
+
+  function markSaved(key) {
+    setSaved(s => ({ ...s, [key]: true }));
+    setTimeout(() => setSaved(s => { const n = { ...s }; delete n[key]; return n; }), 2000);
+  }
+
+  async function saveMetal(mat) {
+    const key = 'metal/' + mat;
+    setSaving(s => ({ ...s, [key]: true }));
+    try {
+      const res = await fetch('/api/pricing/metals/' + encodeURIComponent(mat), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price_per_g: parseInt(metalVals[mat]) || 0 }),
+      });
+      if (res.ok) {
+        markSaved(key);
+        setPricing(p => ({ ...p, metals: { ...p.metals, [mat]: parseInt(metalVals[mat]) || 0 } }));
+      }
+    } catch {}
+    setSaving(s => { const n = { ...s }; delete n[key]; return n; });
+  }
+
+  async function saveLabor(catDisplay, comp) {
+    const catKey = LABOR_CAT_KEYS[catDisplay] || catDisplay;
+    const lkey = catKey + '/' + comp;
+    const key = 'labor/' + lkey;
+    setSaving(s => ({ ...s, [key]: true }));
+    try {
+      const res = await fetch(
+        '/api/pricing/labor/' + encodeURIComponent(catKey) + '/' + encodeURIComponent(comp),
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            price_min: parseInt(laborVals[lkey]?.min) || 0,
+            price_max: parseInt(laborVals[lkey]?.max) || 0,
+          }),
+        }
+      );
+      if (res.ok) markSaved(key);
+    } catch {}
+    setSaving(s => { const n = { ...s }; delete n[key]; return n; });
+  }
+
+  async function saveCommercial(stoneKey) {
+    const key = 'comm/' + stoneKey;
+    setSaving(s => ({ ...s, [key]: true }));
+    try {
+      const res = await fetch('/api/pricing/stones-commercial/' + encodeURIComponent(stoneKey), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          price_min: parseInt(commVals[stoneKey]?.min) || 0,
+          price_max: parseInt(commVals[stoneKey]?.max) || 0,
+        }),
+      });
+      if (res.ok) markSaved(key);
+    } catch {}
+    setSaving(s => { const n = { ...s }; delete n[key]; return n; });
+  }
+
+  function fmtDaysAgo(ts) {
+    if (!ts) return '未知';
+    const d = Math.floor((Date.now() - new Date(ts).getTime()) / (24 * 3600 * 1000));
+    return d === 0 ? '今天' : d + ' 天前';
+  }
+
+  function renderMetals() {
+    return (
+      <div>
+        <div className="metals-last-updated">
+          最後更新：{fmtDaysAgo(pricing?.metals_last_updated)}
+        </div>
+        <div className="pricing-section-card">
+          <div className="pricing-section-hdr">金屬單價</div>
+          {METAL_NAMES.map(mat => {
+            const key = 'metal/' + mat;
+            return (
+              <div className="pricing-row" key={mat}>
+                <span className="pricing-row-label">{mat}</span>
+                <input
+                  className="pricing-input"
+                  type="number"
+                  value={metalVals[mat] ?? ''}
+                  onChange={e => setMetalVals(v => ({ ...v, [mat]: e.target.value }))}
+                  min="0"
+                />
+                <span className="pricing-unit">元/g</span>
+                <button
+                  className={'pricing-save-btn' + (saved[key] ? ' saved' : '')}
+                  disabled={!!saving[key]}
+                  onClick={() => saveMetal(mat)}
+                >
+                  {saved[key] ? '✓ 已儲存' : saving[key] ? '儲存中…' : '儲存'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function renderLabor() {
+    const catKey = LABOR_CAT_KEYS[laborCat] || laborCat;
+    return (
+      <div>
+        <div className="pricing-cat-selector">
+          {LABOR_CATS.map(cat => (
+            <button
+              key={cat}
+              className={'pricing-cat-btn' + (laborCat === cat ? ' on' : '')}
+              onClick={() => setLaborCat(cat)}
+            >{cat}</button>
+          ))}
+        </div>
+        <div className="pricing-section-card">
+          <div className="pricing-section-hdr">{laborCat} 金工費用</div>
+          {COMPLEXITIES.map(comp => {
+            const lkey = catKey + '/' + comp;
+            const key = 'labor/' + lkey;
+            const vals = laborVals[lkey] || { min: '', max: '' };
+            return (
+              <div className="pricing-row" key={comp}>
+                <span className="pricing-row-label">{comp}</span>
+                <span className="pricing-unit" style={{marginRight:2}}>NT$</span>
+                <input
+                  className="pricing-input"
+                  type="number"
+                  value={vals.min}
+                  onChange={e => setLaborVals(v => ({ ...v, [lkey]: { ...vals, min: e.target.value } }))}
+                  min="0"
+                />
+                <span className="pricing-tilde">~</span>
+                <input
+                  className="pricing-input"
+                  type="number"
+                  value={vals.max}
+                  onChange={e => setLaborVals(v => ({ ...v, [lkey]: { ...vals, max: e.target.value } }))}
+                  min="0"
+                />
+                <button
+                  className={'pricing-save-btn' + (saved[key] ? ' saved' : '')}
+                  disabled={!!saving[key]}
+                  onClick={() => saveLabor(laborCat, comp)}
+                >
+                  {saved[key] ? '✓ 已儲存' : saving[key] ? '儲存中…' : '儲存'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function renderCommercial() {
+    if (!pricing?.stones_commercial) return null;
+    return (
+      <div>
+        <div className="pricing-section-card">
+          <div className="pricing-section-hdr">平替彩寶（/ct）</div>
+          {Object.entries(pricing.stones_commercial).map(([stoneKey, info]) => {
+            const key = 'comm/' + stoneKey;
+            const vals = commVals[stoneKey] || { min: '', max: '' };
+            return (
+              <div className="pricing-row" key={stoneKey}>
+                <span className="pricing-row-label">{info.name}</span>
+                <input
+                  className="pricing-input"
+                  type="number"
+                  value={vals.min}
+                  onChange={e => setCommVals(v => ({ ...v, [stoneKey]: { ...vals, min: e.target.value } }))}
+                  min="0"
+                />
+                <span className="pricing-tilde">~</span>
+                <input
+                  className="pricing-input"
+                  type="number"
+                  value={vals.max}
+                  onChange={e => setCommVals(v => ({ ...v, [stoneKey]: { ...vals, max: e.target.value } }))}
+                  min="0"
+                />
+                <span className="pricing-unit">/ct</span>
+                <button
+                  className={'pricing-save-btn' + (saved[key] ? ' saved' : '')}
+                  disabled={!!saving[key]}
+                  onClick={() => saveCommercial(stoneKey)}
+                >
+                  {saved[key] ? '✓' : saving[key] ? '…' : '儲存'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function renderInvest() {
+    if (!pricing?.stones_invest) return null;
+    const BANDS = ['B1', 'B2', 'B3', 'B4', 'B5'];
+    return (
+      <div>
+        <div className="pricing-section-card">
+          <div className="pricing-section-hdr">投資寶石參考（只讀）</div>
+          {Object.entries(pricing.stones_invest).map(([key, info]) => {
+            const open = !!investOpen[key];
+            return (
+              <div key={key} className="pricing-invest-accordion">
+                <button
+                  className="pricing-invest-hdr"
+                  onClick={() => setInvestOpen(o => ({ ...o, [key]: !open }))}
+                >
+                  <span>{info.name}</span>
+                  <span style={{fontSize:12,color:'var(--text3)'}}>{open ? '▲' : '▼'}</span>
+                </button>
+                {open && BANDS.map(band => (
+                  info.floor[band] != null ? (
+                    <div key={band} className="pricing-invest-band-row">
+                      <span className="pricing-invest-band-label">{band}</span>
+                      <span className="pricing-invest-band-val">
+                        NT$ {(info.floor[band] || 0).toLocaleString()} ~ {(info.ceil[band] || 0).toLocaleString()}
+                      </span>
+                    </div>
+                  ) : null
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (!pricing) return (
+    <div style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>載入中…</div>
+  );
+
+  return (
+    <div className="pricing-settings-page">
+      <div className="pricing-section-selector">
+        {SECTIONS.map(s => (
+          <button
+            key={s}
+            className={'pricing-sec-btn' + (sec === s ? ' on' : '')}
+            onClick={() => setSec(s)}
+          >{s}</button>
+        ))}
+      </div>
+      <div className="pricing-settings-body">
+        {sec === '金銀'   && renderMetals()}
+        {sec === '金工'   && renderLabor()}
+        {sec === '彩寶'   && renderCommercial()}
+        {sec === '投資寶石' && renderInvest()}
+        {sec === '代理商'   && <AgentManageSection />}
+      </div>
+    </div>
+  );
+}
+
+/* ── AgentFavsTab ──────────────────────────────────────── */
+function AgentFavsTab({ agentUser, onSelectPhoto }) {
+  const [favs,   setFavs]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [detail,  setDetail]  = useState(null);
+
+  useEffect(() => {
+    fetch(`/api/agents/${agentUser.id}/favorites?pin=${encodeURIComponent(agentUser.pin)}`)
+      .then(r => r.json()).then(d => { setFavs(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [agentUser.id]);
+
+  const removeFav = async (photo_id) => {
+    await fetch(`/api/agents/${agentUser.id}/favorites/${photo_id}?pin=${encodeURIComponent(agentUser.pin)}`, { method: 'DELETE' });
+    setFavs(prev => prev.filter(p => p.id !== photo_id));
+  };
+
+  if (loading) return <div style={{padding:32,textAlign:'center',color:'var(--text2)'}}>載入中…</div>;
+  if (!favs.length) return (
+    <div style={{padding:40,textAlign:'center',color:'var(--text2)'}}>
+      <div style={{fontSize:32,marginBottom:8}}>★</div>
+      <div>還沒有收藏</div>
+      <div style={{fontSize:13,marginTop:4}}>在探索模式中點 ★ 收藏喜歡的款式</div>
+    </div>
+  );
+
+  return (
+    <div style={{padding:'12px 8px'}}>
+      <div style={{padding:'0 8px 8px',fontSize:13,color:'var(--text2)'}}>收藏 {favs.length} 款</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4}}>
+        {favs.map(p => (
+          <div key={p.id} style={{position:'relative',cursor:'pointer'}} onClick={() => setDetail(p)}>
+            <img src={`/static/thumb/${p.filename}`} alt="" style={{width:'100%',aspectRatio:'1/1',objectFit:'cover',borderRadius:8,display:'block'}} />
+            <button onClick={e => { e.stopPropagation(); removeFav(p.id); }}
+              style={{position:'absolute',top:4,right:4,background:'rgba(0,0,0,.5)',border:'none',borderRadius:50,width:22,height:22,color:'#fff',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      {detail && (
+        <PhotoDetail
+          photo={detail} onClose={() => setDetail(null)}
+          isFav={() => true}
+          toggleFav={() => { removeFav(detail.id); setDetail(null); }}
+          onSelectPhoto={() => {}} onDeleted={() => {}} onUpdated={() => {}}
+          role="agent"
+        />
+      )}
+    </div>
+  );
+}
+
 /* ── App ────────────────────────────────────────────── */
 function App() {
-  const [splash,    setSplash]    = useState(true);
-  const [tab,       setTab]       = useState('browse');
-  const [favs,      setFavs]      = useState(loadFavs);
-  const [showDarkBg,setShowDarkBg]= useState(false);
-  const [role,      setRole]      = useState(() => localStorage.getItem('userRole') || 'guest');
-  const [showPin,   setShowPin]   = useState(false);
+  const [splash,         setSplash]         = useState(true);
+  const [tab,            setTab]            = useState('browse');
+  const [favs,           setFavs]           = useState(loadFavs);
+  const [showDarkBg,     setShowDarkBg]     = useState(false);
+  const [role,           setRole]           = useState(() => {
+    const stored = localStorage.getItem('userRole') || 'guest';
+    // If agentUser exists in localStorage, role is agent
+    const agent = (() => { try { return JSON.parse(localStorage.getItem('agentUser') || 'null'); } catch { return null; } })();
+    return agent ? 'agent' : stored;
+  });
+  const [showPin,        setShowPin]        = useState(false);
+  const [showAgentLogin, setShowAgentLogin] = useState(false);
+  const [metalsLastUpd,  setMetalsLastUpd]  = useState(null);
+  const [agentUser,      setAgentUser]      = useState(() => {
+    try { return JSON.parse(localStorage.getItem('agentUser') || 'null'); } catch { return null; }
+  });
+  const [swipeMode,      setSwipeMode]      = useState(false);
+  const [swipeFilters,   setSwipeFilters]   = useState({});
 
   const isAdmin = role === 'admin';
   const isStaff = role === 'staff' || role === 'admin';
+  const isAgent = role === 'agent';
+
+  // Fetch metals_last_updated for banner
+  useEffect(() => {
+    if (!isStaff) return;
+    fetch('/api/pricing/all')
+      .then(r => r.json())
+      .then(d => { if (d.metals_last_updated) setMetalsLastUpd(d.metals_last_updated); })
+      .catch(() => {});
+  }, [isStaff]);
 
   // JWT init (only when USE_JWT_AUTH = true)
   useEffect(() => {
@@ -2953,7 +4065,6 @@ function App() {
     const token = getJwtToken();
     if (user && token) {
       setRole(user.role);
-      // Verify token is still valid in background
       fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } })
         .then(r => r.json())
         .then(data => { if (!data.authenticated) { clearJwtAuth(); setRole('guest'); } })
@@ -2962,11 +4073,17 @@ function App() {
   }, []);
 
   function handleRoleKey() {
+    if (isAgent) {
+      // Logout agent
+      localStorage.removeItem('agentUser');
+      setAgentUser(null);
+      setRole('guest');
+      return;
+    }
     if (USE_JWT_AUTH) {
       if (role !== 'guest') { clearJwtAuth(); setRole('guest'); }
       else setShowPin(true);
     } else {
-      // existing PIN logic
       if (role !== 'guest') { localStorage.removeItem('userRole'); setRole('guest'); }
       else setShowPin(true);
     }
@@ -2982,25 +4099,50 @@ function App() {
   const clearFavs = () => { setFavs([]); saveFavs([]); };
   const isFav = id => favs.some(p => p.id === id);
 
+  const roleIcon  = isAdmin ? '🔑' : isStaff ? '👔' : isAgent ? '👤' : '🔒';
+  const roleCls   = isAdmin ? ' admin' : isStaff ? ' staff' : isAgent ? ' staff' : '';
+  const roleTitle = isAdmin ? '退出管理員' : isStaff ? '退出員工模式' : isAgent ? `退出（${agentUser?.name}）` : '登入';
+
+  const favCount  = isAgent ? null : favs.length;
+
   return (
     <React.Fragment>
       {splash && <Splash onDone={() => setSplash(false)} />}
+      {isStaff && (
+        <PricingBanner
+          metalsLastUpdated={metalsLastUpd}
+          onGotoSettings={isAdmin ? () => setTab('settings') : null}
+        />
+      )}
+
+      {/* SwipeMode full-screen overlay */}
+      {swipeMode && isAgent && agentUser && (
+        <SwipeMode
+          agentUser={agentUser}
+          filters={swipeFilters}
+          onClose={() => setSwipeMode(false)}
+          onFavAdded={() => {}}
+        />
+      )}
+
       <header className="nav">
         <span className="nav-logo" style={{cursor:'pointer'}} onClick={() => setSplash(true)}>Tahir Zainab Selection</span>
-
-        <button className={'admin-key' + (role === 'admin' ? ' admin' : role === 'staff' ? ' staff' : '')}
-          onClick={handleRoleKey}
-          title={role === 'admin' ? '退出管理員' : role === 'staff' ? '退出員工模式' : '登入'}>
-          {role === 'admin' ? '🔑' : role === 'staff' ? '👔' : '🔒'}
+        <button className={'admin-key' + roleCls} onClick={handleRoleKey} title={roleTitle}>
+          {roleIcon}
         </button>
         <div className="nav-tabs">
           <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>找款</button>
           <button className={'nav-tab' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
-            收藏 {favs.length > 0 && <span className="badge">{favs.length}</span>}
+            收藏 {favCount > 0 && <span className="badge">{favCount}</span>}
           </button>
           {isStaff && (
             <button className={'nav-tab' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>
               💎 估價紀錄 <QuotePendingBadge />
+            </button>
+          )}
+          {isAdmin && (
+            <button className={'nav-tab' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>
+              ⚙ 設定
             </button>
           )}
         </div>
@@ -3011,16 +4153,32 @@ function App() {
           onDeleted={() => { setShowDarkBg(false); window.location.reload(); }}
         />
       )}
-      {showPin && (USE_JWT_AUTH
-        ? <LoginModal onClose={() => setShowPin(false)} onAuth={(role, user) => setRole(role)} />
-        : <PinModal onClose={() => setShowPin(false)} onAuth={setRole} />
+      {showPin && !isAgent && (
+        <PinModal
+          onClose={() => setShowPin(false)}
+          onAuth={setRole}
+          onAgentLogin={() => { setShowPin(false); setShowAgentLogin(true); }}
+        />
+      )}
+      {showAgentLogin && (
+        <AgentLoginModal
+          onClose={() => setShowAgentLogin(false)}
+          onAuth={agent => { setAgentUser(agent); setRole('agent'); }}
+        />
       )}
       <div className="content">
-        {tab === 'browse'    && <BrowseTab    isFav={isFav} toggleFav={toggleFav} role={role} />}
-        {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
-        {tab === 'quote'     && isStaff && <QuoteHistoryPage role={role} />}
+        {tab === 'browse'    && !isAgent && <BrowseTab isFav={isFav} toggleFav={toggleFav} role={role} />}
+        {tab === 'browse'    && isAgent  && (
+          <BrowseTab
+            isFav={isFav} toggleFav={toggleFav} role={role}
+            onStartSwipe={(filters) => { setSwipeFilters(filters); setSwipeMode(true); }}
+          />
+        )}
+        {tab === 'favorites' && !isAgent && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
+        {tab === 'favorites' && isAgent  && agentUser && <AgentFavsTab agentUser={agentUser} />}
+        {tab === 'quote'     && isStaff  && <QuoteHistoryPage role={role} />}
+        {tab === 'settings'  && isAdmin  && <PricingSettingsTab />}
       </div>
-      {/* UploadBtn removed per user request */}
       <nav className="tab-bar">
         <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>
           <IcoGrid /><span>找款</span>
