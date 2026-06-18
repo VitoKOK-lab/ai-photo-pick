@@ -28,10 +28,10 @@ def main():
     conn.row_factory = sqlite3.Row
 
     rows = conn.execute(
-        "SELECT id, filename, category FROM photos ORDER BY id"
+        "SELECT id, filename, category FROM photos WHERE category IN ('其他','未定') OR category IS NULL ORDER BY id"
     ).fetchall()
     total = len(rows)
-    log.info(f"共 {total} 張照片，重新分類 category…")
+    log.info(f"共 {total} 張「其他/未定/空白」照片，重新分類 category…")
 
     stats = {"ok": 0, "skip": 0, "err": 0}
     start = time.time()
