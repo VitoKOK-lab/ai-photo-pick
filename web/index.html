@@ -236,6 +236,18 @@ button { font-family: inherit; cursor: pointer; }
 .upload-toast { position: fixed; bottom: calc(var(--tab-h) + 78px); right: 14px; z-index: 301; background: #1a1a1a; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px; line-height: 1.6; animation: fadeUp .3s ease both; pointer-events: none; white-space: pre-line; max-width: 220px; }
 .upload-prog { position: fixed; bottom: calc(var(--tab-h) + 78px); right: 14px; z-index: 301; background: #1a1a1a; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px; animation: fadeUp .3s ease both; pointer-events: none; }
 
+/* ── Staging panel ───────────────────────────────────────── */
+.staging-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px 0; }
+.staging-card { position: relative; border-radius: 10px; overflow: hidden; background: #f0f0f0; aspect-ratio: 1; }
+.staging-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.staging-card-del { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; border: none; font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.staging-empty { text-align: center; color: var(--muted); padding: 32px 16px; font-size: 14px; }
+.staging-actions { display: flex; gap: 10px; padding: 12px 0 4px; }
+.staging-ingest-btn { flex: 1; background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.staging-ingest-btn:disabled { opacity: .5; cursor: default; }
+.staging-status { margin-top: 10px; padding: 10px 12px; background: #f5f5f5; border-radius: 8px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+.staging-badge { background: #e05; color: #fff; border-radius: 10px; font-size: 10px; font-weight: 700; padding: 1px 5px; margin-left: 4px; vertical-align: top; }
+
 /* ── Splash ──────────────────────────────────────────────── */
 .splash { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: splashOut .7s ease 3.2s forwards; pointer-events: none; overflow: hidden; }
 @keyframes splashOut { to { opacity: 0; } }
@@ -3658,16 +3670,104 @@ function PricingBanner({ metalsLastUpdated, onGotoSettings }) {
   );
 }
 
+/* ── StagingSection ─────────────────────────────────── */
+function StagingSection() {
+  const [files,   setFiles]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [status,  setStatus]  = useState(null);
+  const [polling, setPolling] = useState(false);
+
+  function load() {
+    setLoading(true);
+    fetch('/api/staging').then(r => r.json()).then(d => {
+      setFiles(d.files || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }
+
+  useEffect(() => { load(); }, []);
+
+  // poll ingest status while running
+  useEffect(() => {
+    if (!polling) return;
+    const id = setInterval(() => {
+      fetch('/api/staging/ingest-status').then(r => r.json()).then(s => {
+        setStatus(s);
+        if (!s.running) {
+          setPolling(false);
+          load();
+        }
+      });
+    }, 1500);
+    return () => clearInterval(id);
+  }, [polling]);
+
+  function del(rel) {
+    fetch(`/api/staging/${encodeURIComponent(rel)}`, { method: 'DELETE' })
+      .then(() => setFiles(f => f.filter(x => x.rel !== rel)));
+  }
+
+  function startIngest() {
+    fetch('/api/staging/ingest', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        setStatus(d.status || {});
+        setPolling(true);
+      });
+  }
+
+  const running = status?.running;
+  const done    = status?.done;
+
+  return (
+    <div>
+      <div style={{fontSize:13,color:'var(--muted)',marginBottom:8}}>
+        將照片放入 <code>data/01_unsorted/</code>，預看後按「確認匯入」。
+      </div>
+      {loading
+        ? <div className="staging-empty">載入中…</div>
+        : files.length === 0
+          ? <div className="staging-empty">目前沒有待匯入照片</div>
+          : (
+            <div className="staging-grid">
+              {files.map(f => (
+                <div key={f.rel} className="staging-card">
+                  <img src={`/api/staging/thumb/${encodeURIComponent(f.rel)}`} loading="lazy" />
+                  <button className="staging-card-del" onClick={() => del(f.rel)} title="刪除">✕</button>
+                </div>
+              ))}
+            </div>
+          )
+      }
+      <div className="staging-actions">
+        <button
+          className="staging-ingest-btn"
+          disabled={files.length === 0 || running}
+          onClick={startIngest}
+        >
+          {running ? `匯入中… ${status?.step || ''}` : `確認匯入 ${files.length} 張`}
+        </button>
+        <button className="staging-ingest-btn" style={{flex:'none',background:'#888'}} onClick={load}>重新整理</button>
+      </div>
+      {status && (
+        <div className="staging-status">
+          {done ? '✅ 匯入完成' : running ? `⏳ ${status.step}` : status.step || ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── PricingSettingsTab ─────────────────────────────── */
 function PricingSettingsTab() {
-  const SECTIONS = ['金銀', '金工', '彩寶', '投資寶石', '代理商'];
+  const SECTIONS = ['待匯入', '金銀', '金工', '彩寶', '投資寶石', '代理商'];
   const LABOR_CATS = ['戒指', '墜子', '耳釘', '手鍊', '項鍊', '胸針', '手鐲'];
   // Map display names to DB keys (labor table uses 吊墜 for 墜子)
   const LABOR_CAT_KEYS = { '戒指':'戒指', '墜子':'吊墜', '耳釘':'耳釘', '手鍊':'手鍊', '項鍊':'項鍊', '胸針':'胸針', '手鐲':'手鐲' };
   const COMPLEXITIES = ['極簡', '簡單', '中等', '複雜', '精工'];
   const METAL_NAMES = ['925銀', '9K金', '14K金', '18K金', 'Pt950'];
 
-  const [sec, setSec] = React.useState('金銀');
+  const [sec, setSec] = React.useState('待匯入');
   const [laborCat, setLaborCat] = React.useState('戒指');
   const [pricing, setPricing] = React.useState(null);
   const [saving, setSaving] = React.useState({});
@@ -3945,7 +4045,12 @@ function PricingSettingsTab() {
     );
   }
 
-  if (!pricing) return (
+  const [stagingCount, setStagingCount] = useState(0);
+  useEffect(() => {
+    fetch('/api/staging').then(r => r.json()).then(d => setStagingCount(d.count || 0)).catch(() => {});
+  }, [sec]);
+
+  if (!pricing && sec !== '待匯入') return (
     <div style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>載入中…</div>
   );
 
@@ -3957,13 +4062,17 @@ function PricingSettingsTab() {
             key={s}
             className={'pricing-sec-btn' + (sec === s ? ' on' : '')}
             onClick={() => setSec(s)}
-          >{s}</button>
+          >
+            {s}
+            {s === '待匯入' && stagingCount > 0 && <span className="staging-badge">{stagingCount}</span>}
+          </button>
         ))}
       </div>
       <div className="pricing-settings-body">
-        {sec === '金銀'   && renderMetals()}
-        {sec === '金工'   && renderLabor()}
-        {sec === '彩寶'   && renderCommercial()}
+        {sec === '待匯入'  && <StagingSection />}
+        {sec === '金銀'    && renderMetals()}
+        {sec === '金工'    && renderLabor()}
+        {sec === '彩寶'    && renderCommercial()}
         {sec === '投資寶石' && renderInvest()}
         {sec === '代理商'   && <AgentManageSection />}
       </div>
