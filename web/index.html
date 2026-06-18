@@ -672,7 +672,7 @@ async function logEvent(photo_id, event_type, extra = {}) {
       body: JSON.stringify({ photo_id, event_type, session_id: SESSION_ID, ...extra }) });
   } catch {}
 }
-const CATS = ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'];
+const CATS = ['戒指','手鏈','項鍊','耳釘','胸針','其他'];
 const CFG = {
   style:       { label: '鑽石數量', values: ['無鑽','簡約','輕奢','奢華'] },
   color:       { label: '寶石色', values: ['紅','粉','黃','綠','藍','紫','白','彩'] },
@@ -692,7 +692,7 @@ function IcoHeart({ fill }) {
 }
 
 const CAT_IMGS = {
-  '戒指': '/banners/戒指.png', '手鏈': '/banners/手鏈.png', '墜子': '/banners/墜子.png',
+  '戒指': '/banners/戒指.png', '手鏈': '/banners/手鏈.png',
   '項鍊': '/banners/項鍊.png', '耳釘': '/banners/耳釘.png', '胸針': '/banners/胸針.png', '其他': '/banners/其他.png',
 };
 

@@ -124,8 +124,11 @@ def list_photos(
 
     add_in("color",          color)
     # 查「其他」時同時包含「未定」，避免未定照片消失
+    # 查「項鍊」時同時包含舊的「墜子」記錄（向後相容）
     if category == "其他":
         wheres.append("(category IN ('其他','未定') OR category IS NULL)")
+    elif category == "項鍊":
+        wheres.append("category IN ('項鍊','墜子')")
     else:
         add_in("category", category)
     add_in("material",       material)
@@ -198,7 +201,7 @@ def filter_counts(
 ):
     """根據目前已選篩選器，回傳各維度每個值的照片數量（faceted counts）。"""
     CFG_VALS = {
-        "category":    ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'],
+        "category":    ['戒指','手鏈','項鍊','耳釘','胸針','其他'],
         "style":       ['無鑽','簡約','輕奢','奢華'],
         "color":       ['紅','粉','黃','綠','藍','紫','白','彩'],
         "metal_color": ['金','銀'],

@@ -49,6 +49,9 @@ def _run_migrations():
     conn.execute("UPDATE photos SET metal_color='金' WHERE metal_color IS NULL AND material IN ('18K黃金','18K玫瑰金')")
     conn.execute("UPDATE photos SET metal_color='銀' WHERE metal_color IS NULL AND material IN ('18K白金','925銀','鴣金')")
 
+    # 墜子合併至項鍊
+    conn.execute("UPDATE photos SET category='項鍊' WHERE category='墜子'")
+
     conn.commit()
     conn.close()
 
