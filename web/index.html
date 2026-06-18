@@ -3766,46 +3766,69 @@ function PricingSettingsTab() {
   const LABOR_CAT_KEYS = { '戒指':'戒指', '墜子':'吊墜', '耳釘':'耳釘', '手鍊':'手鍊', '項鍊':'項鍊', '胸針':'胸針', '手鐲':'手鐲' };
   const COMPLEXITIES = ['極簡', '簡單', '中等', '複雜', '精工'];
   const METAL_NAMES = ['925銀', '9K金', '14K金', '18K金', 'Pt950'];
+  const INVEST_STONES = ['RUBY', 'SAPPHIRE', 'EMERALD', 'DIAMOND', 'ALEXANDRITE', 'TANZANITE'];
+  const BANDS = ['B1', 'B2', 'B3', 'B4', 'B5'];
 
   const [sec, setSec] = React.useState('待匯入');
   const [laborCat, setLaborCat] = React.useState('戒指');
+  const [laborSubTab, setLaborSubTab] = React.useState('品項費');
+  const [investStone, setInvestStone] = React.useState('RUBY');
   const [pricing, setPricing] = React.useState(null);
   const [saving, setSaving] = React.useState({});
   const [saved, setSaved] = React.useState({});
-  const [investOpen, setInvestOpen] = React.useState({});
 
-  // Local edit state — metals
   const [metalVals, setMetalVals] = React.useState({});
-  // Local edit state — labor: { 'catKey/complexity': { min, max } }
   const [laborVals, setLaborVals] = React.useState({});
-  // Local edit state — commercial stones
   const [commVals, setCommVals] = React.useState({});
+  const [sidestoneVals, setSidestoneVals] = React.useState({});
+  const [platingVals, setPlatingVals] = React.useState({});
+  const [investBandVals, setInvestBandVals] = React.useState({});
+  const [investMultVals, setInvestMultVals] = React.useState({});
+  const [spotData, setSpotData] = React.useState(null);
+  const [fetchingSpot, setFetchingSpot] = React.useState(false);
 
   useEffect(() => {
     fetch('/api/pricing/all')
       .then(r => r.json())
       .then(d => {
         setPricing(d);
-        // Init local state from fetched data
         const mv = {};
-        (d.metals ? Object.entries(d.metals) : []).forEach(([mat, val]) => {
-          mv[mat] = String(val);
-        });
+        (d.metals ? Object.entries(d.metals) : []).forEach(([mat, val]) => { mv[mat] = String(val); });
         setMetalVals(mv);
 
         const lv = {};
         (d.labor ? Object.entries(d.labor) : []).forEach(([cat, comps]) => {
-          Object.entries(comps).forEach(([comp, range]) => {
-            lv[cat + '/' + comp] = { min: String(range[0]), max: String(range[1]) };
-          });
+          Object.entries(comps).forEach(([comp, range]) => { lv[cat + '/' + comp] = { min: String(range[0]), max: String(range[1]) }; });
         });
         setLaborVals(lv);
 
         const cv = {};
-        (d.stones_commercial ? Object.entries(d.stones_commercial) : []).forEach(([key, info]) => {
-          cv[key] = { min: String(info.range[0]), max: String(info.range[1]) };
-        });
+        (d.stones_commercial ? Object.entries(d.stones_commercial) : []).forEach(([key, info]) => { cv[key] = { min: String(info.range[0]), max: String(info.range[1]) }; });
         setCommVals(cv);
+
+        const sv = {};
+        (d.sidestones ? Object.entries(d.sidestones) : []).forEach(([label, range]) => { sv[label] = { min: String(range[0]), max: String(range[1]) }; });
+        setSidestoneVals(sv);
+
+        const pv = {};
+        (d.plating ? Object.entries(d.plating) : []).forEach(([label, range]) => { pv[label] = { min: String(range[0]), max: String(range[1]) }; });
+        setPlatingVals(pv);
+
+        const ibv = {};
+        (d.stones_invest ? Object.entries(d.stones_invest) : []).forEach(([skey, info]) => {
+          ['B1','B2','B3','B4','B5'].forEach(band => {
+            if (info.floor[band] != null) ibv[skey + '/' + band] = { floor: String(info.floor[band]), ceil: String(info.ceil[band]) };
+          });
+        });
+        setInvestBandVals(ibv);
+
+        const imv = {};
+        (d.stones_invest ? Object.entries(d.stones_invest) : []).forEach(([skey, info]) => {
+          Object.entries(info.origins    || {}).forEach(([o, m]) => { imv[skey + '/origins/'    + o] = String(m); });
+          Object.entries(info.treatments || {}).forEach(([t, m]) => { imv[skey + '/treatments/' + t] = String(m); });
+          Object.entries(info.colors     || {}).forEach(([c, m]) => { imv[skey + '/colors/'     + c] = String(m); });
+        });
+        setInvestMultVals(imv);
       })
       .catch(() => {});
   }, []);
@@ -3871,6 +3894,70 @@ function PricingSettingsTab() {
     setSaving(s => { const n = { ...s }; delete n[key]; return n; });
   }
 
+  async function saveSidestone(label) {
+    const key = 'side/' + label;
+    setSaving(s => ({ ...s, [key]: true }));
+    try {
+      const res = await fetch('/api/pricing/sidestones/' + encodeURIComponent(label), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price_min: parseInt(sidestoneVals[label]?.min) || 0, price_max: parseInt(sidestoneVals[label]?.max) || 0 }),
+      });
+      if (res.ok) markSaved(key);
+    } catch {}
+    setSaving(s => { const n = { ...s }; delete n[key]; return n; });
+  }
+
+  async function savePlating(label) {
+    const key = 'plating/' + label;
+    setSaving(s => ({ ...s, [key]: true }));
+    try {
+      const res = await fetch('/api/pricing/plating/' + encodeURIComponent(label), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price_min: parseInt(platingVals[label]?.min) || 0, price_max: parseInt(platingVals[label]?.max) || 0 }),
+      });
+      if (res.ok) markSaved(key);
+    } catch {}
+    setSaving(s => { const n = { ...s }; delete n[key]; return n; });
+  }
+
+  async function saveInvestBand(skey, band) {
+    const vkey = skey + '/' + band;
+    const key = 'iband/' + vkey;
+    setSaving(s => ({ ...s, [key]: true }));
+    try {
+      const res = await fetch('/api/pricing/stones-invest/' + encodeURIComponent(skey) + '/' + encodeURIComponent(band), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price_floor: parseInt(investBandVals[vkey]?.floor) || 0, price_ceil: parseInt(investBandVals[vkey]?.ceil) || 0 }),
+      });
+      if (res.ok) markSaved(key);
+    } catch {}
+    setSaving(s => { const n = { ...s }; delete n[key]; return n; });
+  }
+
+  async function saveInvestMult(skey, endpoint, subKey, vkey) {
+    const key = 'imult/' + vkey;
+    setSaving(s => ({ ...s, [key]: true }));
+    try {
+      const res = await fetch('/api/pricing/' + endpoint + '/' + encodeURIComponent(skey) + '/' + encodeURIComponent(subKey), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ multiplier: parseFloat(investMultVals[vkey]) || 1 }),
+      });
+      if (res.ok) markSaved(key);
+    } catch {}
+    setSaving(s => { const n = { ...s }; delete n[key]; return n; });
+  }
+
+  async function fetchSpot() {
+    setFetchingSpot(true);
+    try {
+      const data = await fetch('/api/pricing/metals-spot').then(r => r.json());
+      setSpotData(data);
+    } catch {
+      setSpotData({ errors: ['無法連線，請稍後再試'] });
+    }
+    setFetchingSpot(false);
+  }
+
   function fmtDaysAgo(ts) {
     if (!ts) return '未知';
     const d = Math.floor((Date.now() - new Date(ts).getTime()) / (24 * 3600 * 1000));
@@ -3883,27 +3970,49 @@ function PricingSettingsTab() {
         <div className="metals-last-updated">
           最後更新：{fmtDaysAgo(pricing?.metals_last_updated)}
         </div>
+
+        <div className="pricing-section-card" style={{marginBottom:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+            <button className="pricing-save-btn" style={{fontSize:13,padding:'7px 16px'}}
+              disabled={fetchingSpot} onClick={fetchSpot}>
+              {fetchingSpot ? '取得中…' : '🔄 自動取得行情'}
+            </button>
+            {spotData?.errors?.length > 0 && <span style={{color:'var(--err)',fontSize:12}}>{spotData.errors[0]}</span>}
+            {spotData?.spot && (
+              <span style={{fontSize:12,color:'var(--text2)'}}>
+                金 NT${(spotData.spot.gold||0).toLocaleString()}/g
+                &nbsp; 銀 NT${(spotData.spot.silver||0).toLocaleString()}/g
+                {spotData.spot.platinum ? <> &nbsp; 鉑 NT${spotData.spot.platinum.toLocaleString()}/g</> : null}
+              </span>
+            )}
+          </div>
+          {spotData?.suggested && Object.keys(spotData.suggested).length > 0 && (
+            <div style={{marginTop:10,fontSize:12,color:'var(--text2)',lineHeight:'2'}}>
+              <span style={{marginRight:6,color:'var(--text3)'}}>建議材料成本：</span>
+              {Object.entries(spotData.suggested).map(([mat, val]) => (
+                <span key={mat} style={{marginRight:12}}>
+                  {mat} <b>NT${val.toLocaleString()}</b>
+                  <button style={{marginLeft:4,fontSize:11,padding:'1px 7px',cursor:'pointer',border:'1px solid var(--border)',borderRadius:4,background:'var(--bg2)'}}
+                    onClick={() => setMetalVals(v => ({ ...v, [mat]: String(val) }))}>套用</button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="pricing-section-card">
-          <div className="pricing-section-hdr">金屬單價</div>
+          <div className="pricing-section-hdr">金屬單價（元/g）</div>
           {METAL_NAMES.map(mat => {
             const key = 'metal/' + mat;
             return (
               <div className="pricing-row" key={mat}>
                 <span className="pricing-row-label">{mat}</span>
-                <input
-                  className="pricing-input"
-                  type="number"
-                  value={metalVals[mat] ?? ''}
-                  onChange={e => setMetalVals(v => ({ ...v, [mat]: e.target.value }))}
-                  min="0"
-                />
+                <input className="pricing-input" type="number" value={metalVals[mat] ?? ''} min="0"
+                  onChange={e => setMetalVals(v => ({ ...v, [mat]: e.target.value }))} />
                 <span className="pricing-unit">元/g</span>
-                <button
-                  className={'pricing-save-btn' + (saved[key] ? ' saved' : '')}
-                  disabled={!!saving[key]}
-                  onClick={() => saveMetal(mat)}
-                >
-                  {saved[key] ? '✓ 已儲存' : saving[key] ? '儲存中…' : '儲存'}
+                <button className={'pricing-save-btn' + (saved[key] ? ' saved' : '')} disabled={!!saving[key]}
+                  onClick={() => saveMetal(mat)}>
+                  {saved[key] ? '✓' : saving[key] ? '…' : '儲存'}
                 </button>
               </div>
             );
@@ -3917,51 +4026,94 @@ function PricingSettingsTab() {
     const catKey = LABOR_CAT_KEYS[laborCat] || laborCat;
     return (
       <div>
-        <div className="pricing-cat-selector">
-          {LABOR_CATS.map(cat => (
-            <button
-              key={cat}
-              className={'pricing-cat-btn' + (laborCat === cat ? ' on' : '')}
-              onClick={() => setLaborCat(cat)}
-            >{cat}</button>
+        <div className="pricing-cat-selector" style={{marginBottom:8}}>
+          {['品項費','配石費','電鍍費'].map(t => (
+            <button key={t} className={'pricing-cat-btn' + (laborSubTab === t ? ' on' : '')} onClick={() => setLaborSubTab(t)}>{t}</button>
           ))}
         </div>
-        <div className="pricing-section-card">
-          <div className="pricing-section-hdr">{laborCat} 金工費用</div>
-          {COMPLEXITIES.map(comp => {
-            const lkey = catKey + '/' + comp;
-            const key = 'labor/' + lkey;
-            const vals = laborVals[lkey] || { min: '', max: '' };
-            return (
-              <div className="pricing-row" key={comp}>
-                <span className="pricing-row-label">{comp}</span>
-                <span className="pricing-unit" style={{marginRight:2}}>NT$</span>
-                <input
-                  className="pricing-input"
-                  type="number"
-                  value={vals.min}
-                  onChange={e => setLaborVals(v => ({ ...v, [lkey]: { ...vals, min: e.target.value } }))}
-                  min="0"
-                />
-                <span className="pricing-tilde">~</span>
-                <input
-                  className="pricing-input"
-                  type="number"
-                  value={vals.max}
-                  onChange={e => setLaborVals(v => ({ ...v, [lkey]: { ...vals, max: e.target.value } }))}
-                  min="0"
-                />
-                <button
-                  className={'pricing-save-btn' + (saved[key] ? ' saved' : '')}
-                  disabled={!!saving[key]}
-                  onClick={() => saveLabor(laborCat, comp)}
-                >
-                  {saved[key] ? '✓ 已儲存' : saving[key] ? '儲存中…' : '儲存'}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+
+        {laborSubTab === '品項費' && (
+          <div>
+            <div className="pricing-cat-selector">
+              {LABOR_CATS.map(cat => (
+                <button key={cat} className={'pricing-cat-btn' + (laborCat === cat ? ' on' : '')} onClick={() => setLaborCat(cat)}>{cat}</button>
+              ))}
+            </div>
+            <div className="pricing-section-card">
+              <div className="pricing-section-hdr">{laborCat} 金工費用</div>
+              {COMPLEXITIES.map(comp => {
+                const lkey = catKey + '/' + comp;
+                const key = 'labor/' + lkey;
+                const vals = laborVals[lkey] || { min: '', max: '' };
+                return (
+                  <div className="pricing-row" key={comp}>
+                    <span className="pricing-row-label">{comp}</span>
+                    <span className="pricing-unit" style={{marginRight:2}}>NT$</span>
+                    <input className="pricing-input" type="number" value={vals.min} min="0"
+                      onChange={e => setLaborVals(v => ({ ...v, [lkey]: { ...vals, min: e.target.value } }))} />
+                    <span className="pricing-tilde">~</span>
+                    <input className="pricing-input" type="number" value={vals.max} min="0"
+                      onChange={e => setLaborVals(v => ({ ...v, [lkey]: { ...vals, max: e.target.value } }))} />
+                    <button className={'pricing-save-btn' + (saved[key] ? ' saved' : '')} disabled={!!saving[key]}
+                      onClick={() => saveLabor(laborCat, comp)}>
+                      {saved[key] ? '✓' : saving[key] ? '…' : '儲存'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {laborSubTab === '配石費' && (
+          <div className="pricing-section-card">
+            <div className="pricing-section-hdr">配石費用</div>
+            {Object.keys(pricing?.sidestones || {}).map(label => {
+              const key = 'side/' + label;
+              const vals = sidestoneVals[label] || { min: '', max: '' };
+              return (
+                <div className="pricing-row" key={label}>
+                  <span className="pricing-row-label" style={{fontSize:12}}>{label}</span>
+                  <span className="pricing-unit" style={{marginRight:2}}>NT$</span>
+                  <input className="pricing-input" type="number" value={vals.min} min="0"
+                    onChange={e => setSidestoneVals(v => ({ ...v, [label]: { ...vals, min: e.target.value } }))} />
+                  <span className="pricing-tilde">~</span>
+                  <input className="pricing-input" type="number" value={vals.max} min="0"
+                    onChange={e => setSidestoneVals(v => ({ ...v, [label]: { ...vals, max: e.target.value } }))} />
+                  <button className={'pricing-save-btn' + (saved[key] ? ' saved' : '')} disabled={!!saving[key]}
+                    onClick={() => saveSidestone(label)}>
+                    {saved[key] ? '✓' : saving[key] ? '…' : '儲存'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {laborSubTab === '電鍍費' && (
+          <div className="pricing-section-card">
+            <div className="pricing-section-hdr">電鍍費用</div>
+            {Object.keys(pricing?.plating || {}).map(label => {
+              const key = 'plating/' + label;
+              const vals = platingVals[label] || { min: '', max: '' };
+              return (
+                <div className="pricing-row" key={label}>
+                  <span className="pricing-row-label">{label}</span>
+                  <span className="pricing-unit" style={{marginRight:2}}>NT$</span>
+                  <input className="pricing-input" type="number" value={vals.min} min="0"
+                    onChange={e => setPlatingVals(v => ({ ...v, [label]: { ...vals, min: e.target.value } }))} />
+                  <span className="pricing-tilde">~</span>
+                  <input className="pricing-input" type="number" value={vals.max} min="0"
+                    onChange={e => setPlatingVals(v => ({ ...v, [label]: { ...vals, max: e.target.value } }))} />
+                  <button className={'pricing-save-btn' + (saved[key] ? ' saved' : '')} disabled={!!saving[key]}
+                    onClick={() => savePlating(label)}>
+                    {saved[key] ? '✓' : saving[key] ? '…' : '儲存'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }
@@ -4011,36 +4163,109 @@ function PricingSettingsTab() {
 
   function renderInvest() {
     if (!pricing?.stones_invest) return null;
-    const BANDS = ['B1', 'B2', 'B3', 'B4', 'B5'];
+    const stoneInfo = pricing.stones_invest[investStone];
+    if (!stoneInfo) return null;
     return (
       <div>
+        <div className="pricing-cat-selector">
+          {INVEST_STONES.map(sk => {
+            const info = pricing.stones_invest[sk];
+            return info ? (
+              <button key={sk} className={'pricing-cat-btn' + (investStone === sk ? ' on' : '')} onClick={() => setInvestStone(sk)}>{info.name}</button>
+            ) : null;
+          })}
+        </div>
+
         <div className="pricing-section-card">
-          <div className="pricing-section-hdr">投資寶石參考（只讀）</div>
-          {Object.entries(pricing.stones_invest).map(([key, info]) => {
-            const open = !!investOpen[key];
+          <div className="pricing-section-hdr">{stoneInfo.name} 價格帶（NT$/ct）</div>
+          {BANDS.map(band => {
+            const vkey = investStone + '/' + band;
+            const key = 'iband/' + vkey;
+            const vals = investBandVals[vkey];
+            if (!vals) return null;
             return (
-              <div key={key} className="pricing-invest-accordion">
-                <button
-                  className="pricing-invest-hdr"
-                  onClick={() => setInvestOpen(o => ({ ...o, [key]: !open }))}
-                >
-                  <span>{info.name}</span>
-                  <span style={{fontSize:12,color:'var(--text3)'}}>{open ? '▲' : '▼'}</span>
+              <div className="pricing-row" key={band}>
+                <span className="pricing-row-label">{band}</span>
+                <span className="pricing-unit" style={{marginRight:2}}>NT$</span>
+                <input className="pricing-input" type="number" value={vals.floor} min="0"
+                  onChange={e => setInvestBandVals(v => ({ ...v, [vkey]: { ...vals, floor: e.target.value } }))} />
+                <span className="pricing-tilde">~</span>
+                <input className="pricing-input" type="number" value={vals.ceil} min="0"
+                  onChange={e => setInvestBandVals(v => ({ ...v, [vkey]: { ...vals, ceil: e.target.value } }))} />
+                <button className={'pricing-save-btn' + (saved[key] ? ' saved' : '')} disabled={!!saving[key]}
+                  onClick={() => saveInvestBand(investStone, band)}>
+                  {saved[key] ? '✓' : saving[key] ? '…' : '儲存'}
                 </button>
-                {open && BANDS.map(band => (
-                  info.floor[band] != null ? (
-                    <div key={band} className="pricing-invest-band-row">
-                      <span className="pricing-invest-band-label">{band}</span>
-                      <span className="pricing-invest-band-val">
-                        NT$ {(info.floor[band] || 0).toLocaleString()} ~ {(info.ceil[band] || 0).toLocaleString()}
-                      </span>
-                    </div>
-                  ) : null
-                ))}
               </div>
             );
           })}
         </div>
+
+        {Object.keys(stoneInfo.origins || {}).length > 0 && (
+          <div className="pricing-section-card">
+            <div className="pricing-section-hdr">產地倍率</div>
+            {Object.keys(stoneInfo.origins).map(origin => {
+              const vkey = investStone + '/origins/' + origin;
+              const key = 'imult/' + vkey;
+              return (
+                <div className="pricing-row" key={origin}>
+                  <span className="pricing-row-label" style={{fontSize:12}}>{origin}</span>
+                  <input className="pricing-input" type="number" step="0.01" min="0" style={{width:70}}
+                    value={investMultVals[vkey] ?? ''} onChange={e => setInvestMultVals(v => ({ ...v, [vkey]: e.target.value }))} />
+                  <span className="pricing-unit">×</span>
+                  <button className={'pricing-save-btn' + (saved[key] ? ' saved' : '')} disabled={!!saving[key]}
+                    onClick={() => saveInvestMult(investStone, 'stone-origins', origin, vkey)}>
+                    {saved[key] ? '✓' : saving[key] ? '…' : '儲存'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {Object.keys(stoneInfo.treatments || {}).length > 0 && (
+          <div className="pricing-section-card">
+            <div className="pricing-section-hdr">處理方式倍率</div>
+            {Object.keys(stoneInfo.treatments).map(treat => {
+              const vkey = investStone + '/treatments/' + treat;
+              const key = 'imult/' + vkey;
+              return (
+                <div className="pricing-row" key={treat}>
+                  <span className="pricing-row-label" style={{fontSize:12}}>{treat}</span>
+                  <input className="pricing-input" type="number" step="0.01" min="0" style={{width:70}}
+                    value={investMultVals[vkey] ?? ''} onChange={e => setInvestMultVals(v => ({ ...v, [vkey]: e.target.value }))} />
+                  <span className="pricing-unit">×</span>
+                  <button className={'pricing-save-btn' + (saved[key] ? ' saved' : '')} disabled={!!saving[key]}
+                    onClick={() => saveInvestMult(investStone, 'stone-treatments', treat, vkey)}>
+                    {saved[key] ? '✓' : saving[key] ? '…' : '儲存'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {Object.keys(stoneInfo.colors || {}).length > 0 && (
+          <div className="pricing-section-card">
+            <div className="pricing-section-hdr">顏色品質倍率</div>
+            {Object.keys(stoneInfo.colors).map(col => {
+              const vkey = investStone + '/colors/' + col;
+              const key = 'imult/' + vkey;
+              return (
+                <div className="pricing-row" key={col}>
+                  <span className="pricing-row-label" style={{fontSize:12}}>{col}</span>
+                  <input className="pricing-input" type="number" step="0.01" min="0" style={{width:70}}
+                    value={investMultVals[vkey] ?? ''} onChange={e => setInvestMultVals(v => ({ ...v, [vkey]: e.target.value }))} />
+                  <span className="pricing-unit">×</span>
+                  <button className={'pricing-save-btn' + (saved[key] ? ' saved' : '')} disabled={!!saving[key]}
+                    onClick={() => saveInvestMult(investStone, 'stone-colors', col, vkey)}>
+                    {saved[key] ? '✓' : saving[key] ? '…' : '儲存'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }

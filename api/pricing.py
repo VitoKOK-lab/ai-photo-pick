@@ -479,3 +479,102 @@ def update_sidestone(label: str, body: SidestoneUpdate):
     conn.commit()
     conn.close()
     return {"ok": True}
+
+
+class PlatingUpdate(BaseModel):
+    price_min: int
+    price_max: int
+
+@router.put("/plating/{label}")
+def update_plating(label: str, body: PlatingUpdate):
+    conn = _conn()
+    r = conn.execute("SELECT id FROM pricing_plating WHERE label=?", (label,)).fetchone()
+    if not r:
+        conn.close()
+        raise HTTPException(404, "Plating entry not found")
+    conn.execute("UPDATE pricing_plating SET price_min=?, price_max=? WHERE label=?",
+                 (body.price_min, body.price_max, label))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+class MultiplierUpdate(BaseModel):
+    multiplier: float
+
+@router.put("/stone-origins/{stone_key}/{origin}")
+def update_stone_origin(stone_key: str, origin: str, body: MultiplierUpdate):
+    conn = _conn()
+    r = conn.execute("SELECT id FROM pricing_stone_origins WHERE stone_key=? AND origin=?", (stone_key, origin)).fetchone()
+    if not r:
+        conn.close()
+        raise HTTPException(404, "Origin not found")
+    conn.execute("UPDATE pricing_stone_origins SET multiplier=? WHERE stone_key=? AND origin=?",
+                 (body.multiplier, stone_key, origin))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@router.put("/stone-treatments/{stone_key}/{treatment}")
+def update_stone_treatment(stone_key: str, treatment: str, body: MultiplierUpdate):
+    conn = _conn()
+    r = conn.execute("SELECT id FROM pricing_stone_treatments WHERE stone_key=? AND treatment=?", (stone_key, treatment)).fetchone()
+    if not r:
+        conn.close()
+        raise HTTPException(404, "Treatment not found")
+    conn.execute("UPDATE pricing_stone_treatments SET multiplier=? WHERE stone_key=? AND treatment=?",
+                 (body.multiplier, stone_key, treatment))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@router.put("/stone-colors/{stone_key}/{color_quality}")
+def update_stone_color(stone_key: str, color_quality: str, body: MultiplierUpdate):
+    conn = _conn()
+    r = conn.execute("SELECT id FROM pricing_stone_colors WHERE stone_key=? AND color_quality=?", (stone_key, color_quality)).fetchone()
+    if not r:
+        conn.close()
+        raise HTTPException(404, "Color quality not found")
+    conn.execute("UPDATE pricing_stone_colors SET multiplier=? WHERE stone_key=? AND color_quality=?",
+                 (body.multiplier, stone_key, color_quality))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@router.get("/metals-spot")
+def get_metals_spot():
+    """從 Yahoo Finance 取得金、銀、鉑現貨價（TWD/g）。"""
+    import urllib.request
+
+    TROY_OZ_TO_G = 31.1035
+    SYMBOLS = {"gold": "XAUTWD=X", "silver": "XAGTWD=X", "platinum": "XPTTWD=X"}
+    spot: dict = {}
+    errors: list = []
+
+    for metal, symbol in SYMBOLS.items():
+        try:
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1d"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                import json as _json
+                data = _json.loads(resp.read())
+            price_toz = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
+            spot[metal] = round(price_toz / TROY_OZ_TO_G, 1)
+        except Exception as e:
+            errors.append(f"{metal}: {e}")
+
+    suggested: dict = {}
+    if "gold" in spot:
+        g = spot["gold"]
+        suggested["9K金"]  = round(g * 9  / 24)
+        suggested["14K金"] = round(g * 14 / 24)
+        suggested["18K金"] = round(g * 18 / 24)
+    if "silver" in spot:
+        suggested["925銀"] = round(spot["silver"] * 0.925)
+    if "platinum" in spot:
+        suggested["Pt950"] = round(spot["platinum"] * 0.95)
+
+    return {"spot": spot, "suggested": suggested, "errors": errors}
