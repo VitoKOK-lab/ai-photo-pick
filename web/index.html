@@ -4455,7 +4455,9 @@ function App() {
         {tab === 'favorites' && !isAgent && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
         {tab === 'favorites' && isAgent  && agentUser && <AgentFavsTab agentUser={agentUser} />}
         {tab === 'quote'     && isStaff  && <QuoteHistoryPage role={role} />}
-        {tab === 'settings'  && isAdmin  && <PricingSettingsTab />}
+        {tab === 'settings'  && isAdmin  && (
+          <iframe src="/estimator.html#settings" style={{width:'100%',height:'100%',border:'none',display:'block'}} />
+        )}
       </div>
       <nav className="tab-bar">
         <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>

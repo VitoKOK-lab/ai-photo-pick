@@ -3014,6 +3014,12 @@ $('inquiry_date').value = new Date().toISOString().slice(0, 10);
 $('stone').value = 'MORGANITE_C';
 updateStoneDependentOptions();
 calculate();
+
+// URL hash routing — allow parent app to open directly to a tab
+if (window.location.hash === '#settings') {
+  const btn = document.querySelector('[data-tab="settings"]');
+  if (btn) btn.click();
+}
 </script>
 </body>
 </html>
