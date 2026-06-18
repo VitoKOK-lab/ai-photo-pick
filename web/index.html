@@ -4271,15 +4271,19 @@ function PricingSettingsTab() {
 
 
   return (
-    <div className="pricing-settings-page">
-      <div className="pricing-section-selector">
+    <div style={{height:'100%',display:'flex',flexDirection:'column',overflow:'hidden',background:'#f4f4f4'}}>
+      <div style={{display:'flex',gap:'8px',padding:'12px 16px',background:'#fff',borderBottom:'2px solid #ddd',flexShrink:0,overflowX:'auto'}}>
         {SECTIONS.map(s => (
-          <button key={s} className={'pricing-sec-btn' + (sec === s ? ' on' : '')} onClick={() => setSec(s)}>
-            {s}
-          </button>
+          <button key={s} onClick={() => setSec(s)} style={{
+            padding:'8px 20px', borderRadius:'20px',
+            border: sec===s ? '2px solid #b8935a' : '2px solid #aaa',
+            background: sec===s ? '#b8935a' : '#e8e8e8',
+            color: sec===s ? '#fff' : '#333',
+            fontSize:'14px', fontWeight:'600', cursor:'pointer', whiteSpace:'nowrap',
+          }}>{s}</button>
         ))}
       </div>
-      <div className="pricing-settings-body">
+      <div style={{flex:1,overflowY:'auto',padding:'0 0 24px'}}>
         {sec === '金銀'    && renderMetals()}
         {sec === '金工'    && renderLabor()}
         {sec === '彩寶'    && renderCommercial()}
