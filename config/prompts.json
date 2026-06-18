@@ -14,13 +14,13 @@
     "彩": "a fine jewelry photo with multicolor rainbow iridescent black gray or brown gemstone such as opal tourmaline black diamond or labradorite"
   },
   "category": {
-    "戒指":  "a product photo of a finger ring with a circular band, the center opening is finger-sized (about 17-19mm diameter), shot from above or angled on a ring display cone, with or without a center gemstone",
-    "手鏈":  "a product photo of a wrist bracelet or chain bracelet, flexible with visible chain links and a lobster clasp or toggle clasp, laid flat or slightly curved, length approximately 15-18cm, worn on the wrist",
-    "墜子":"a product photo showing only an isolated pendant or charm, no chain attached, a decorative piece with a small bail loop at the top for hanging, displayed alone on a clean background",
-    "項鍊":  "a product photo of a complete necklace showing both the long chain and the decorative pendant together, laid out in a full U-shape or V-shape, total length 40-60cm, or draped around a neck stand",
-    "耳釘":  "a product photo showing exactly two matching earrings placed side by side or together, a pair of ear studs or drop earrings, always two identical pieces displayed at once",
-    "胸針":  "a product photo of a decorative brooch or lapel pin, an ornamental piece with a pointed pin clasp on the back, designed to be attached to clothing lapels or fabric",
-    "其他":  "a product photo of miscellaneous jewelry items that are clearly not a ring, bracelet, necklace, earring, or pendant, such as a hair pin, hair comb, ankle bracelet, or body jewelry"
+    "戒指":  "a product photo of a finger ring — the essential feature is a CIRCULAR BAND WITH A ROUND HOLE IN THE CENTER that a finger passes through. Includes plain bands, solitaire rings, halo rings, eternity rings, large cocktail rings, cluster rings, multi-stone rings, flower-shaped rings — anything with a ring band you wear on a finger. Shot from above, angled, or on a ring display cone. NOT a brooch, NOT a bracelet, NOT a pendant.",
+    "手鏈":  "a product photo of a bracelet worn on the WRIST — including tennis bracelets with a single row of stones, thin delicate chain bracelets, bangle bracelets, charm bracelets, or link bracelets. The piece is designed to encircle the wrist. Length 15-20cm. NOT a necklace, NOT a ring.",
+    "墜子":  "a product photo of a STANDALONE PENDANT CHARM displayed completely alone — a small decorative piece (typically 1-4cm) with a visible bail loop or hook at the very top for attaching to a chain, but NO chain is present in the photo at all. It is clearly a detachable component, not a complete necklace. NOT a ring, NOT a brooch.",
+    "項鍊":  "a product photo of a necklace — any piece designed to be worn around the neck and hang at chest or collarbone level. Includes: (1) full necklace showing the complete chain in a U or V shape, (2) necklace photos showing just the decorative pendant portion without the full chain visible, (3) necklace draped on a neck stand or bust. The defining feature is it hangs from the neck. Typically longer than 35cm total. NOT a short bracelet, NOT a ring.",
+    "耳釘":  "a product photo showing ONE OR TWO matching earrings — ear studs, drop earrings, hoop earrings, or ear climbers. May show a single earring or a matching pair side by side. Designed to be attached to an ear lobe or ear cartilage. NOT a brooch, NOT a pendant.",
+    "胸針":  "a product photo of a BROOCH or lapel pin — a flat decorative ornament designed to be pinned to clothing fabric using a pin-and-clasp mechanism on its back. It is FLAT (not a ring you put a finger through), and NEVER has a round hole in the center. Common shapes: flower, butterfly, leaf, abstract. It cannot be worn on a finger, wrist, neck, or ear. NOT a ring, NOT a pendant, NOT a bracelet.",
+    "其他":  "a product photo of jewelry that is clearly not a ring, bracelet, necklace, earring, or brooch — such as a hair pin, hair comb, anklet, toe ring, or body jewelry"
   },
   "stone_shape": {
     "橢圓形":  "a jewelry photo featuring an oval shaped gemstone with rounded edges, longer than it is wide",
