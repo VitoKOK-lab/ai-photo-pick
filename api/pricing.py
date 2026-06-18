@@ -550,14 +550,17 @@ def get_metals_spot():
     import urllib.request
 
     TROY_OZ_TO_G = 31.1035
-    SYMBOLS = {"gold": "XAUTWD=X", "silver": "XAGTWD=X", "platinum": "XPTTWD=X"}
+    SYMBOLS = {"gold": "XAUTWD%3DX", "silver": "XAGTWD%3DX", "platinum": "XPTTWD%3DX"}
     spot: dict = {}
     errors: list = []
 
     for metal, symbol in SYMBOLS.items():
         try:
-            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1d"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            url = f"https://query2.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1d"
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                "Accept": "application/json",
+            })
             with urllib.request.urlopen(req, timeout=10) as resp:
                 import json as _json
                 data = _json.loads(resp.read())
