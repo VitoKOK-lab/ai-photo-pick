@@ -123,7 +123,11 @@ def list_photos(
                 params.extend(items)
 
     add_in("color",          color)
-    add_in("category",       category)
+    # 查「其他」時同時包含「未定」，避免未定照片消失
+    if category == "其他":
+        wheres.append("(category IN ('其他','未定') OR category IS NULL)")
+    else:
+        add_in("category", category)
     add_in("material",       material)
     add_in("diamond_status", diamond_status)
     add_in("gemstone",       gemstone)
