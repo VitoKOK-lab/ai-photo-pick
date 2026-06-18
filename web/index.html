@@ -3760,16 +3760,15 @@ function StagingSection() {
 
 /* ── PricingSettingsTab ─────────────────────────────── */
 function PricingSettingsTab() {
-  const SECTIONS = ['待匯入', '金銀', '金工', '彩寶', '投資寶石', '代理商'];
+  const SECTIONS = ['金銀', '金工', '彩寶', '投資寶石', '代理商'];
   const LABOR_CATS = ['戒指', '墜子', '耳釘', '手鍊', '項鍊', '胸針', '手鐲'];
-  // Map display names to DB keys (labor table uses 吊墜 for 墜子)
   const LABOR_CAT_KEYS = { '戒指':'戒指', '墜子':'吊墜', '耳釘':'耳釘', '手鍊':'手鍊', '項鍊':'項鍊', '胸針':'胸針', '手鐲':'手鐲' };
   const COMPLEXITIES = ['極簡', '簡單', '中等', '複雜', '精工'];
   const METAL_NAMES = ['925銀', '9K金', '14K金', '18K金', 'Pt950'];
   const INVEST_STONES = ['RUBY', 'SAPPHIRE', 'EMERALD', 'DIAMOND', 'ALEXANDRITE', 'TANZANITE'];
   const BANDS = ['B1', 'B2', 'B3', 'B4', 'B5'];
 
-  const [sec, setSec] = React.useState('待匯入');
+  const [sec, setSec] = React.useState('金銀');
   const [laborCat, setLaborCat] = React.useState('戒指');
   const [laborSubTab, setLaborSubTab] = React.useState('品項費');
   const [investStone, setInvestStone] = React.useState('RUBY');
@@ -4270,31 +4269,17 @@ function PricingSettingsTab() {
     );
   }
 
-  const [stagingCount, setStagingCount] = useState(0);
-  useEffect(() => {
-    fetch('/api/staging').then(r => r.json()).then(d => setStagingCount(d.count || 0)).catch(() => {});
-  }, [sec]);
-
-  if (!pricing && sec !== '待匯入') return (
-    <div style={{ padding: 32, textAlign: 'center', color: 'var(--text2)' }}>載入中…</div>
-  );
 
   return (
     <div className="pricing-settings-page">
       <div className="pricing-section-selector">
         {SECTIONS.map(s => (
-          <button
-            key={s}
-            className={'pricing-sec-btn' + (sec === s ? ' on' : '')}
-            onClick={() => setSec(s)}
-          >
+          <button key={s} className={'pricing-sec-btn' + (sec === s ? ' on' : '')} onClick={() => setSec(s)}>
             {s}
-            {s === '待匯入' && stagingCount > 0 && <span className="staging-badge">{stagingCount}</span>}
           </button>
         ))}
       </div>
       <div className="pricing-settings-body">
-        {sec === '待匯入'  && <StagingSection />}
         {sec === '金銀'    && renderMetals()}
         {sec === '金工'    && renderLabor()}
         {sec === '彩寶'    && renderCommercial()}
