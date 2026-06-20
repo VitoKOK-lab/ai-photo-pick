@@ -1487,7 +1487,7 @@ const GEM_COLORS = {
 };
 
 /* ── Shareable quote card (screenshot for customer) ─── */
-function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, customer, itemSize,
+function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, customer, stoneOrderNo, itemSize,
   cat, stoneName, carat, origin, treatment, colorQ, stoneMode,
   materialType, weightKey, craft, style, sidestone, sourceChannel, inquiryDate, budget, onClose }) {
   const today = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
@@ -1505,7 +1505,7 @@ function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, 
 
         <div style={{textAlign:'center',marginBottom:10}}>
           <div style={{fontSize:9,letterSpacing:4,fontWeight:200,color:'#b8935a',textTransform:'uppercase',marginBottom:2}}>Tahir Zainab Selection</div>
-          <div style={{fontSize:11,color:'#999',letterSpacing:1}}>{isEstimate ? 'AI 預估報價' : '最終報價'}</div>
+          <div style={{fontSize:11,color:'#999',letterSpacing:1}}>{isEstimate ? '預估報價' : '最終報價'}</div>
         </div>
 
         <div style={{display:'flex',gap:10,borderTop:'1px solid #f0f0f0',padding:'10px 0 8px',alignItems:'stretch'}}>
@@ -1517,10 +1517,11 @@ function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, 
           <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',paddingLeft:2}}>
             {isEstimate ? (
               <>
-                <div style={{fontSize:8,color:'#b8935a',letterSpacing:1,textTransform:'uppercase',marginBottom:4}}>AI 預估區間</div>
+                <div style={{fontSize:8,color:'#b8935a',letterSpacing:1,textTransform:'uppercase',marginBottom:4}}>預估區間</div>
                 <div style={{fontSize:16,fontWeight:800,color:'#1a1a1a',lineHeight:1.2}}>{fmtNT(totalMin)}</div>
-                <div style={{fontSize:13,color:'#888',marginBottom:8}}>–&nbsp;{fmtNT(totalMax)}</div>
-                <div style={{fontSize:9,color:'#d32f2f',fontWeight:700,background:'#fff5f5',borderRadius:5,padding:'4px 6px',textAlign:'center',lineHeight:1.5}}>AI預估<br/>以最終報價為主</div>
+                <div style={{fontSize:13,color:'#888',marginBottom:6}}>–&nbsp;{fmtNT(totalMax)}</div>
+                {customer && <div style={{fontSize:12,color:'#666',fontWeight:600,marginBottom:4}}>{customer}</div>}
+                <div style={{fontSize:9,color:'#d32f2f',fontWeight:700,background:'#fff5f5',borderRadius:5,padding:'4px 6px',textAlign:'center',lineHeight:1.5}}>預估參考<br/>以最終報價為主</div>
               </>
             ) : (
               <>
@@ -1534,7 +1535,7 @@ function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, 
 
         <div style={{paddingBottom:6,borderBottom:'1px solid #f0f0f0',marginBottom:4}}>
           <div style={{fontSize:11,fontWeight:700,color:'#1a1a1a',lineHeight:1.5,marginBottom:1}}>{description||'—'}</div>
-          <div style={{fontSize:9,color:'#bbb'}}>{today}{!isEstimate && customer && ' · '+customer}{sourceChannel&&' ('+sourceChannel+')'}</div>
+          <div style={{fontSize:9,color:'#bbb'}}>{today}{customer && ' · '+customer}{sourceChannel&&' ('+sourceChannel+')'}</div>
         </div>
 
         <div style={{margin:'10px 0',borderTop:'1px solid #f0f0f0',paddingTop:8}}>
@@ -1549,6 +1550,7 @@ function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, 
           <R label="做工複雜度" value={craft||style} />
           <R label="配石" value={sidestone!=='無配石'?sidestone:null} />
           <R label="尺寸" value={itemSize} />
+          <R label="裸石單號" value={stoneOrderNo} />
           {inquiryDate && <R label="詢價日期" value={inquiryDate} />}
           {budget > 0 && <R label="客戶預算" value={fmtNT(budget)} />}
         </div>
@@ -1680,8 +1682,8 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
         customer_name:  customer || null,
         original_data:  JSON.stringify(orig),
         adjusted_data:  JSON.stringify(adj),
-        estimated_min:  totalMin > 0 ? Math.round(totalMin) : null,
-        estimated_max:  totalMax > 0 ? Math.round(totalMax) : null,
+        estimated_min:  manualNum > 0 ? Math.min(manualNum, Math.round(totalMax)) : (totalMin > 0 ? Math.round(totalMin) : null),
+        estimated_max:  manualNum > 0 ? Math.max(manualNum, Math.round(totalMax)) : (totalMax > 0 ? Math.round(totalMax) : null),
         budget:         budgetNum > 0 ? budgetNum : null,
         stone_order_no: stoneOrderNo || null,
         inquiry_time:   inquiryDate || null,
@@ -1730,7 +1732,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     <div className="det-ovl">
       {showEstimateCard && hasPrice && manualNum > 0 && (
         <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
-          totalMin={Math.min(manualNum, Math.round(totalMax))} totalMax={Math.max(manualNum, Math.round(totalMax))} customer={customer}
+          totalMin={Math.min(manualNum, Math.round(totalMax))} totalMax={Math.max(manualNum, Math.round(totalMax))} customer={customer} stoneOrderNo={stoneOrderNo}
           itemSize={itemSize} cat={cat} stoneName={stoneName}
           carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
           materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -1739,7 +1741,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
       )}
       {showCard && parseInt(finalInput) > 0 && (
         <QuoteCard mode="final" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
-          manualPrice={parseInt(String(finalInput).replace(/[^0-9]/g,''))||0} totalMin={Math.round(totalMin)} totalMax={Math.round(totalMax)} customer={customer}
+          manualPrice={parseInt(String(finalInput).replace(/[^0-9]/g,''))||0} totalMin={Math.round(totalMin)} totalMax={Math.round(totalMax)} customer={customer} stoneOrderNo={stoneOrderNo}
           itemSize={itemSize} cat={cat} stoneName={stoneName}
           carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
           materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -2138,10 +2140,16 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             <div key={i} style={{flex:1,height:3,borderRadius:2,background:i<step?'var(--gold)':'var(--border)',transition:'background .2s'}} />
           ))}
         </div>
+        {hasPrice && (
+          <div style={{padding:'4px 16px 6px',background:'var(--bg)',textAlign:'center',fontSize:11,borderBottom:'1px solid var(--border)'}}>
+            <span style={{color:'var(--text3)'}}>AI 累計估算：</span>
+            <span style={{color:'var(--gold)',fontWeight:700}}>{fmtNT(Math.round(totalMin))} – {fmtNT(Math.round(totalMax))}</span>
+          </div>
+        )}
 
         {showEstimateCard && hasPrice && manualNum > 0 && (
           <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
-            totalMin={Math.min(manualNum, Math.round(totalMax))} totalMax={Math.max(manualNum, Math.round(totalMax))} customer={customer}
+            totalMin={Math.min(manualNum, Math.round(totalMax))} totalMax={Math.max(manualNum, Math.round(totalMax))} customer={customer} stoneOrderNo={stoneOrderNo}
             itemSize={itemSize} cat={cat} stoneName={stoneName}
             carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
             materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -3486,11 +3494,14 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
       {/* QuoteCard preview — ai mode shows estimated range, final mode shows confirmed price */}
       {cardMode && (
         <QuoteCard
+          mode={cardMode === 'final' ? 'final' : 'estimate'}
           photo={thumbUrl ? {thumb_url: thumbUrl} : null}
           description={q.description}
-          estimatedMax={q.estimated_max || 0}
-          manualPrice={cardMode === 'final' ? (finalNum || q.final_price || 0) : (q.estimated_min || 0)}
+          totalMin={q.estimated_min || 0}
+          totalMax={q.estimated_max || 0}
+          manualPrice={cardMode === 'final' ? (finalNum || q.final_price || 0) : 0}
           customer={q.customer_name}
+          stoneOrderNo={adj.stone_order_no || q.stone_order_no || ''}
           cat={rCat}
           stoneName={rStone}
           carat={rCarat}
