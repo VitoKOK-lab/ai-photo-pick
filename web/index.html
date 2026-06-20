@@ -1490,7 +1490,7 @@ const GEM_COLORS = {
 };
 
 /* ── Shareable quote card (screenshot for customer) ─── */
-function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, customer, stoneOrderNo, itemSize,
+function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, customer, stoneOrderNo, commissionNote, orderType, itemSize,
   cat, stoneName, carat, origin, treatment, colorQ, stoneMode,
   materialType, weightKey, craft, style, sidestone, sourceChannel, inquiryDate, budget, onClose }) {
   const today = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
@@ -1513,6 +1513,22 @@ function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, 
         {customer && (
           <div style={{textAlign:'center',fontSize:16,fontWeight:800,color:'#1a1a1a',marginBottom:6,letterSpacing:0.5}}>
             {customer}
+          </div>
+        )}
+        {(stoneOrderNo || commissionNote) && (
+          <div style={{background:'#fffaf0',border:'1px solid #e8c97a',borderRadius:9,padding:'8px 12px',marginBottom:8}}>
+            {orderType==='半訂制' && stoneOrderNo && (
+              <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:commissionNote?4:0}}>
+                <span style={{fontSize:10,fontWeight:700,color:'#b8935a',flexShrink:0}}>裸石單號</span>
+                <span style={{fontSize:12,fontWeight:800,color:'#1a1a1a'}}>{stoneOrderNo}</span>
+              </div>
+            )}
+            {commissionNote && (
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:'#b8935a',marginBottom:2}}>委託石頭</div>
+                <div style={{fontSize:12,color:'#333',lineHeight:1.6}}>{commissionNote}</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1610,6 +1626,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [showCard,          setShowCard]          = useState(false);
   const [showEstimateCard,  setShowEstimateCard]  = useState(false);
   const [orderType,         setOrderType]         = useState('全訂制');
+  const [commissionNote,    setCommissionNote]    = useState('');
 
   useEffect(() => {
     if (stoneMode === 'invest' && stoneKey && STONES_INVEST[stoneKey]) {
@@ -1673,13 +1690,14 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   async function doSave() {
     setSaving(true);
     try {
-      const adj = {category:cat, style, setting_amount:chain, craft_complexity:craft, metal_color:metalColor, material:materialType, gemstone:stoneName, stoneKey, stoneMode, carat:ct, origin, treatment, colorQ, sidestone, size:itemSize, plating, stone_order_no:stoneOrderNo, notes:qNotes, inquiry_time:inquiryDate, source_channel:sourceChannel};
+      const adj = {category:cat, style, setting_amount:chain, craft_complexity:craft, metal_color:metalColor, material:materialType, gemstone:stoneName, stoneKey, stoneMode, carat:ct, origin, treatment, colorQ, sidestone, size:itemSize, plating, stone_order_no:stoneOrderNo, commission_note:commissionNote, order_type:orderType, notes:qNotes, inquiry_time:inquiryDate, source_channel:sourceChannel};
       const notesText = [
         inquiryDate && `詢價時間：${inquiryDate}${sourceChannel?' ('+sourceChannel+')':''}`,
         manualNum > 0 && `預估報價：NT$${manualNum.toLocaleString('zh-TW')}`,
         itemSize && `尺寸：${itemSize}`,
         plating && plating !== '無' && `鍍金：${plating}`,
         stoneOrderNo && `裸石單號：${stoneOrderNo}`,
+        commissionNote && `委託石頭：${commissionNote}`,
         qNotes && `備註：${qNotes}`,
       ].filter(Boolean).join('\n');
       const payload = {
@@ -1743,6 +1761,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
         <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
           totalMin={manualNum>0?Math.min(manualNum,Math.round(totalMax)):Math.round(totalMin)}
           totalMax={manualNum>0?Math.max(manualNum,Math.round(totalMax)):Math.round(totalMax)} customer={customer} stoneOrderNo={stoneOrderNo}
+          commissionNote={commissionNote} orderType={orderType}
           itemSize={itemSize} cat={cat} stoneName={stoneName}
           carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
           materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -1752,6 +1771,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
       {showCard && parseInt(finalInput) > 0 && (
         <QuoteCard mode="final" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
           manualPrice={parseInt(String(finalInput).replace(/[^0-9]/g,''))||0} totalMin={Math.round(totalMin)} totalMax={Math.round(totalMax)} customer={customer} stoneOrderNo={stoneOrderNo}
+          commissionNote={commissionNote} orderType={orderType}
           itemSize={itemSize} cat={cat} stoneName={stoneName}
           carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
           materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -1826,7 +1846,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     ? ['訂制類型','選寶石','金工材料','複雜度','配石','客戶資料']
     : orderType === '半訂制'
     ? ['訂制類型','裸石訂單','金工材料','複雜度','配石','客戶資料']
-    : ['訂制類型','金工材料','複雜度','配石','客戶資料'];
+    : ['訂制類型','委託石頭','金工材料','複雜度','配石','客戶資料'];
 
   // ── Step 0: 訂制類型 ─────────────────────────────────
   const renderStep0 = () => (
@@ -1865,6 +1885,29 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
       </div>
     </div>
   );
+
+  const renderCommissionStoneStep = () => {
+    const inp = {width:'100%',border:'1.5px solid var(--border)',borderRadius:8,padding:'11px 14px',fontSize:14,color:'var(--text)',background:'var(--surface)',outline:'none',fontFamily:'inherit',marginBottom:14,boxSizing:'border-box'};
+    const foc = e=>e.target.style.borderColor='var(--gold)';
+    const blr = e=>e.target.style.borderColor='var(--border)';
+    return (
+      <div style={{padding:'16px'}}>
+        <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.7,background:'#fffbf0',borderRadius:8,padding:'10px 14px',border:'1px solid rgba(184,147,90,.3)',marginBottom:16}}>
+          請記錄客戶自帶石頭的資訊，方便後續製作台子報價。
+        </div>
+        <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:4}}>石頭種類</div>
+        <input type="text" placeholder="例：天然藍寶石、莫桑石、客戶祖傳珍珠…" value={commissionNote}
+          onChange={e=>setCommissionNote(e.target.value)} style={inp} onFocus={foc} onBlur={blr} />
+        <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:4}}>大小／尺寸（選填）</div>
+        <input type="text" placeholder="例：橢圓形 10×8mm 約3克拉、直徑12mm" value={itemSize}
+          onChange={e=>setItemSize(e.target.value)} style={inp} onFocus={foc} onBlur={blr} />
+        <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:4}}>其他說明（選填）</div>
+        <textarea placeholder="例：石頭已開證書，需要配合石頭顏色做設計…" value={qNotes}
+          onChange={e=>setQNotes(e.target.value)} rows={3}
+          style={{...inp,resize:'vertical',lineHeight:1.6,marginBottom:0}} onFocus={foc} onBlur={blr} />
+      </div>
+    );
+  };
 
   // ── Step 1: 選寶石 ──────────────────────────────────
   const COLOR_DOT = {'紅':'#e53935','粉':'#f48fb1','橙':'#fb8c00','黃':'#fdd835','綠':'#43a047','藍':'#1e88e5','紫':'#8e24aa','白':'#bdbdbd','彩':'linear-gradient(135deg,#e53935,#fdd835,#43a047,#1e88e5)'};
@@ -2207,6 +2250,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
             totalMin={manualNum>0?Math.min(manualNum,Math.round(totalMax)):Math.round(totalMin)}
             totalMax={manualNum>0?Math.max(manualNum,Math.round(totalMax)):Math.round(totalMax)} customer={customer} stoneOrderNo={stoneOrderNo}
+            commissionNote={commissionNote} orderType={orderType}
             itemSize={itemSize} cat={cat} stoneName={stoneName}
             carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
             materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -2230,10 +2274,11 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               if (step === 5) return renderStep4();
               if (step === 6) return renderStep5();
             } else {
-              if (step === 2) return renderStep2();
-              if (step === 3) return renderStep3();
-              if (step === 4) return renderStep4();
-              if (step === 5) return renderStep5();
+              if (step === 2) return renderCommissionStoneStep();
+              if (step === 3) return renderStep2();
+              if (step === 4) return renderStep3();
+              if (step === 5) return renderStep4();
+              if (step === 6) return renderStep5();
             }
           })()}
         </div>
@@ -3492,7 +3537,9 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
   const rSidestone= adj.sidestone      || '';
   const rPlating  = adj.plating        || '';
   const rSize     = adj.size           || '';
-  const rWeightKey= adj.setting_amount ? (CHAIN_TO_WEIGHT_MAP[adj.setting_amount] || adj.setting_amount) : '';
+  const rWeightKey      = adj.setting_amount ? (CHAIN_TO_WEIGHT_MAP[adj.setting_amount] || adj.setting_amount) : '';
+  const rCommissionNote = adj.commission_note || '';
+  const rOrderType      = adj.order_type      || '';
   const thumbUrl  = q.photo_id ? `/api/thumb/${q.photo_id}` : null;
   const finalNum  = parseInt(String(finalInput).replace(/[^0-9]/g,'')) || 0;
 
@@ -3604,6 +3651,8 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
           manualPrice={cardMode === 'final' ? (finalNum || q.final_price || 0) : 0}
           customer={q.customer_name}
           stoneOrderNo={adj.stone_order_no || q.stone_order_no || ''}
+          commissionNote={rCommissionNote}
+          orderType={rOrderType}
           cat={rCat}
           stoneName={rStone}
           carat={rCarat}
