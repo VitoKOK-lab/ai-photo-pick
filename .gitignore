@@ -52,3 +52,4 @@ cloudflared/
 *.pem
 .claude/settings.local.json
 .claude/worktrees/
+node_modules/
