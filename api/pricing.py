@@ -481,6 +481,24 @@ def update_sidestone(label: str, body: SidestoneUpdate):
     return {"ok": True}
 
 
+class WeightUpdate(BaseModel):
+    weight_min: float
+    weight_max: float
+
+@router.put("/weights/{label}")
+def update_weight(label: str, body: WeightUpdate):
+    conn = _conn()
+    r = conn.execute("SELECT id FROM pricing_weights WHERE label=?", (label,)).fetchone()
+    if not r:
+        conn.close()
+        raise HTTPException(404, "Weight entry not found")
+    conn.execute("UPDATE pricing_weights SET weight_min=?, weight_max=? WHERE label=?",
+                 (body.weight_min, body.weight_max, label))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
 class PlatingUpdate(BaseModel):
     price_min: int
     price_max: int
