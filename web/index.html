@@ -1579,7 +1579,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [metalColor,   setMetalColor]   = useState(photo.metal_color     || '');
   const [materialType, setMaterialType] = useState(photo.metal_color==='銀'?'925銀':'18K金');
   const [stoneKey,     setStoneKey]     = useState(initGem?.key  || '');
-  const [stoneMode,    setStoneMode]    = useState(initGem?.mode || 'invest');
+  const [stoneMode,    setStoneMode]    = useState(initGem?.mode || 'commercial');
   const [carat,        setCarat]        = useState('1');
   const [origin,       setOrigin]       = useState('');
   const [treatment,    setTreatment]    = useState('');
@@ -1665,7 +1665,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
       const adj = {category:cat, style, setting_amount:chain, craft_complexity:craft, metal_color:metalColor, material:materialType, gemstone:stoneName, stoneKey, stoneMode, carat:ct, origin, treatment, colorQ, sidestone, size:itemSize, plating, stone_order_no:stoneOrderNo, notes:qNotes, inquiry_time:inquiryDate, source_channel:sourceChannel};
       const notesText = [
         inquiryDate && `詢價時間：${inquiryDate}${sourceChannel?' ('+sourceChannel+')':''}`,
-        manualNum > 0 && `初步報價：NT$${manualNum.toLocaleString('zh-TW')}`,
+        manualNum > 0 && `預估報價：NT$${manualNum.toLocaleString('zh-TW')}`,
         itemSize && `尺寸：${itemSize}`,
         plating && plating !== '無' && `鍍金：${plating}`,
         stoneOrderNo && `裸石單號：${stoneOrderNo}`,
@@ -1673,7 +1673,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
       ].filter(Boolean).join('\n');
       const payload = {
         description:    `${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`,
-        final_price:    manualNum,
+        final_price:    null,
         material:       materialType,
         gemstone:       stoneName || null,
         photo_id:       photo.id || null,
@@ -1728,9 +1728,9 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   // ── Saved view ──────────────────────────────────────
   if (savedId !== null) return (
     <div className="det-ovl">
-      {showEstimateCard && hasPrice && (
+      {showEstimateCard && hasPrice && manualNum > 0 && (
         <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
-          totalMin={Math.round(totalMin)} totalMax={Math.round(totalMax)} customer={customer}
+          totalMin={Math.min(manualNum, Math.round(totalMax))} totalMax={Math.max(manualNum, Math.round(totalMax))} customer={customer}
           itemSize={itemSize} cat={cat} stoneName={stoneName}
           carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
           materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -1836,7 +1836,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 
         {/* 商業 / 投資 toggle */}
         <div style={{display:'flex',gap:6,marginBottom:14}}>
-          {[['commercial','輕奢/商業'],['invest','投資級']].map(([m,l]) => {
+          {[['commercial','輕奢'],['invest','投資級']].map(([m,l]) => {
             const on = stoneMode===m;
             return (
               <button key={m} onClick={() => { setStoneMode(m); setStoneKey(''); }}
@@ -2025,12 +2025,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     const bsel = e=>e.target.style.borderColor='var(--border)';
 
     return (
-      <div style={{padding:'12px 16px',paddingBottom:200}}>
-        <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>鑽石鑲量</div>
-        <select value={style} onChange={e=>setStyle(e.target.value)} style={sel} onFocus={fsel} onBlur={bsel}>
-          {CFG.style.values.map(v=><option key={v} value={v}>{v}</option>)}
-        </select>
-
+      <div style={{padding:'12px 16px',paddingBottom:120}}>
         <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>配石材質</div>
         <select value={sideMat} onChange={e=>handleMatChange(e.target.value)} style={sel} onFocus={fsel} onBlur={bsel}>
           <option value="無配石">無配石</option>
@@ -2045,32 +2040,6 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               {availQtys.map(q=><option key={q} value={q}>{q}</option>)}
             </select>
           </>
-        )}
-
-        {hasPrice && (
-          <div style={{background:'var(--surface)',borderRadius:10,border:'1px solid var(--border)',padding:'12px 16px'}}>
-            <div style={{fontSize:11,fontWeight:700,letterSpacing:0.5,color:'var(--text3)',marginBottom:8}}>估價明細</div>
-            {stoneMin>0 && <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text)',marginBottom:4}}>
-              <span>💎 主石 ({stoneName}{ct>0?' '+ct+'ct':''})</span>
-              <span style={{fontWeight:600}}>{fmtNT(stoneMin)} – {fmtNT(stoneMax)}</span>
-            </div>}
-            {laborRange[1]>0 && <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text)',marginBottom:4}}>
-              <span>🔨 工費 ({cat} · {laborKey})</span>
-              <span style={{fontWeight:600}}>{fmtNT(laborRange[0])} – {fmtNT(laborRange[1])}</span>
-            </div>}
-            {metalCostMax>0 && <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text)',marginBottom:4}}>
-              <span>⚙️ 金屬 ({materialType} · {weightKey})</span>
-              <span style={{fontWeight:600}}>{fmtNT(metalCostMin)} – {fmtNT(metalCostMax)}</span>
-            </div>}
-            {sideRange[1]>0 && <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text)',marginBottom:4}}>
-              <span>✨ 配石 ({sidestone})</span>
-              <span style={{fontWeight:600}}>{fmtNT(sideRange[0])} – {fmtNT(sideRange[1])}</span>
-            </div>}
-            <div style={{borderTop:'2px solid var(--gold)',marginTop:8,padding:'10px 12px',background:'rgba(184,147,90,.08)',borderRadius:8}}>
-              <div style={{fontSize:10,color:'var(--text3)',marginBottom:3,letterSpacing:0.5}}>AI 預估區間</div>
-              <div style={{fontSize:16,fontWeight:800,color:'var(--gold)'}}>{fmtNT(totalMin)} – {fmtNT(totalMax)}</div>
-            </div>
-          </div>
         )}
       </div>
     );
@@ -2170,9 +2139,9 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           ))}
         </div>
 
-        {showEstimateCard && hasPrice && (
+        {showEstimateCard && hasPrice && manualNum > 0 && (
           <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
-            totalMin={Math.round(totalMin)} totalMax={Math.round(totalMax)} customer={customer}
+            totalMin={Math.min(manualNum, Math.round(totalMax))} totalMax={Math.max(manualNum, Math.round(totalMax))} customer={customer}
             itemSize={itemSize} cat={cat} stoneName={stoneName}
             carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
             materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -2196,24 +2165,11 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             </button>
           </div>
         ) : step === 4 ? (
-          <div style={{position:'absolute',bottom:0,left:0,right:0,background:'var(--surface)',borderTop:'1px solid var(--border)',padding:'12px 16px 20px'}}>
-            {hasPrice && (
-              <div style={{fontSize:11,color:'var(--text2)',marginBottom:8,textAlign:'center'}}>
-                AI 預估：<strong style={{color:'var(--gold)'}}>{fmtNT(totalMin)} – {fmtNT(totalMax)}</strong>
-              </div>
-            )}
-            <div style={{display:'flex',gap:8}}>
-              {hasPrice && (
-                <button onClick={() => setShowEstimateCard(true)}
-                  style={{flex:1,background:'var(--s3)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:10,padding:'13px',fontSize:14,fontWeight:600,cursor:'pointer'}}>
-                  📊 預覽AI預估
-                </button>
-              )}
-              <button onClick={() => setStep(5)}
-                style={{flex:1,background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'13px',fontSize:15,fontWeight:700,cursor:'pointer'}}>
-                下一步 →
-              </button>
-            </div>
+          <div style={{padding:'12px 16px 20px',borderTop:'1px solid var(--border)',background:'var(--surface)'}}>
+            <button onClick={() => setStep(5)}
+              style={{width:'100%',background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'13px',fontSize:15,fontWeight:700,cursor:'pointer'}}>
+              下一步 →
+            </button>
           </div>
         ) : (
           <div style={{position:'absolute',bottom:0,left:0,right:0,background:'var(--accent)',padding:'12px 16px 20px',boxShadow:'0 -4px 20px rgba(0,0,0,.2)'}}>
@@ -3398,7 +3354,7 @@ function QuoteHistoryPage({ role }) {
 
 /* ── Quote History Detail ────────────────────────────── */
 function QuoteHistoryDetail({ quote: q, onClose }) {
-  const [finalInput, setFinalInput] = useState(q.final_price > 0 ? String(q.final_price) : '');
+  const [finalInput, setFinalInput] = useState('');
   const [saving,     setSaving]     = useState(false);
   const [saved,      setSaved]      = useState(false);
   const [cardMode,   setCardMode]   = useState(null); // null | 'ai' | 'final'
