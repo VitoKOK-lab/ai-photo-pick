@@ -3193,7 +3193,8 @@ function PricingSettingsTab() {
   const [weights,        setWeights]        = useState({});
   const [invest,         setInvest]         = useState({});
   const [commercialCarat,setCommercialCarat]= useState({});
-  const [marketRef,      setMarketRef]      = useState({});
+  const [spotLoading,    setSpotLoading]    = useState(false);
+  const [spotErr,        setSpotErr]        = useState('');
   const [showWtEdit,     setShowWtEdit]     = useState(false);
   const [loaded,         setLoaded]         = useState(false);
   const [saving,         setSaving]         = useState(false);
@@ -3202,7 +3203,6 @@ function PricingSettingsTab() {
   useEffect(() => {
     fetch('/api/pricing/all').then(r => r.json()).then(d => {
       setMetals(d.metals ? { ...d.metals } : {});
-      setMarketRef(d.metals_market_ref || {});
       setLabor(d.labor ? JSON.parse(JSON.stringify(d.labor)) : {});
       setSidestones(d.sidestones ? { ...d.sidestones } : {});
       setWeights(d.weights ? { ...d.weights } : {});
@@ -3314,16 +3314,37 @@ function PricingSettingsTab() {
       <div style={{ flex:1, overflowY:'auto', padding:'4px 20px 40px' }}>
 
         {/* 貴金屬行情：金屬 × 重量 自動計算矩陣 */}
-        <div style={{...hdSt,display:'flex',alignItems:'baseline',gap:8,flexWrap:'wrap'}}>
-          貴金屬行情
-          <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>輸入NT$/克，其餘自動帶入</span>
-          {Object.keys(marketRef).length > 0 && (
-            <button onClick={() => setMetals(prev => ({...prev,...Object.fromEntries(Object.entries(marketRef).map(([k,v])=>[k,v]))}))}
-              style={{marginLeft:'auto',fontSize:11,padding:'2px 10px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text2)',cursor:'pointer'}}>
-              ↺ 按行情重置
-            </button>
-          )}
-        </div>
+        {(() => {
+          const fetchSpot = async () => {
+            setSpotLoading(true); setSpotErr('');
+            try {
+              const d = await fetch('/api/pricing/metals-spot').then(r => r.json());
+              if (d.errors && d.errors.length && !d.suggested) { setSpotErr('無法取得行情'); return; }
+              const s = d.suggested || {};
+              const MULT = 1.2;
+              const updated = {};
+              if (s['18K金']) updated['18K金'] = Math.round(s['18K金'] * MULT);
+              if (s['14K金']) updated['14K金'] = Math.round(s['14K金'] * MULT);
+              if (s['9K金'])  updated['9K金']  = Math.round(s['9K金']  * MULT);
+              if (s['925銀']) updated['925銀'] = Math.round(s['925銀'] * MULT);
+              if (s['Pt950']) updated['Pt950'] = Math.round(s['Pt950'] * MULT);
+              setMetals(prev => ({...prev, ...updated}));
+              setSpotErr('✓ 已帶入今日行情 ×1.2，按「儲存」生效');
+            } catch { setSpotErr('網路錯誤，請稍後再試'); }
+            finally { setSpotLoading(false); }
+          };
+          return (
+            <div style={{...hdSt,display:'flex',alignItems:'baseline',gap:8,flexWrap:'wrap'}}>
+              貴金屬行情
+              <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>輸入NT$/克，其餘自動帶入</span>
+              <button onClick={fetchSpot} disabled={spotLoading}
+                style={{marginLeft:'auto',fontSize:11,padding:'3px 12px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:spotLoading?'var(--text3)':'var(--text2)',cursor:spotLoading?'default':'pointer',flexShrink:0}}>
+                {spotLoading ? '抓取中…' : '↺ 同步今日行情'}
+              </button>
+              {spotErr && <div style={{width:'100%',fontSize:11,color:spotErr.startsWith('✓')?'#2e7d32':'#d32f2f',marginTop:2}}>{spotErr}</div>}
+            </div>
+          );
+        })()}
         {(() => {
           const metalKeys = Object.keys(metals);
           const weightEntries = Object.entries(weights);
