@@ -50,3 +50,5 @@ tests/classification_results.csv
 # Cloudflare Tunnel config (含密鑰)
 cloudflared/
 *.pem
+.claude/settings.local.json
+.claude/worktrees/
