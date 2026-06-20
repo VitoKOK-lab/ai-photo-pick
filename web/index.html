@@ -3193,6 +3193,8 @@ function PricingSettingsTab() {
   const [weights,        setWeights]        = useState({});
   const [invest,         setInvest]         = useState({});
   const [commercialCarat,setCommercialCarat]= useState({});
+  const [marketRef,      setMarketRef]      = useState({});
+  const [showWtEdit,     setShowWtEdit]     = useState(false);
   const [loaded,         setLoaded]         = useState(false);
   const [saving,         setSaving]         = useState(false);
   const [saved,          setSaved]          = useState(false);
@@ -3200,6 +3202,7 @@ function PricingSettingsTab() {
   useEffect(() => {
     fetch('/api/pricing/all').then(r => r.json()).then(d => {
       setMetals(d.metals ? { ...d.metals } : {});
+      setMarketRef(d.metals_market_ref || {});
       setLabor(d.labor ? JSON.parse(JSON.stringify(d.labor)) : {});
       setSidestones(d.sidestones ? { ...d.sidestones } : {});
       setWeights(d.weights ? { ...d.weights } : {});
@@ -3310,41 +3313,86 @@ function PricingSettingsTab() {
 
       <div style={{ flex:1, overflowY:'auto', padding:'4px 20px 40px' }}>
 
-        {/* 貴金屬行情 + 用料重量範圍（合併區塊） */}
-        <div style={hdSt}>貴金屬行情 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$/克 × 重量(g) = 金屬成本</span></div>
-        <div style={{display:'flex',gap:16,flexWrap:'wrap',marginBottom:28}}>
-          <table style={{flex:'1 1 140px',borderCollapse:'collapse',fontSize:13,minWidth:140}}>
-            <thead><tr>
-              <th style={{...thSt,textAlign:'left'}}>材質</th>
-              <th style={thSt}>NT$/克</th>
-            </tr></thead>
-            <tbody>
-              {Object.entries(metals).map(([mat, price]) => (
-                <tr key={mat} style={{borderTop:'1px solid var(--border)'}}>
-                  <td style={{padding:'8px 8px',color:'var(--text)'}}>{mat}</td>
-                  <td style={{padding:'6px 8px',width:110}}>
-                    <input type="number" style={iS} value={price || ''} onChange={e => setMetals(prev => ({ ...prev, [mat]: e.target.value }))} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {Object.keys(weights).length > 0 && (
-            <table style={{flex:'1 1 200px',borderCollapse:'collapse',fontSize:13,minWidth:200}}>
+        {/* 貴金屬行情：金屬 × 重量 自動計算矩陣 */}
+        <div style={{...hdSt,display:'flex',alignItems:'baseline',gap:8,flexWrap:'wrap'}}>
+          貴金屬行情
+          <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>輸入NT$/克，其餘自動帶入</span>
+          {Object.keys(marketRef).length > 0 && (
+            <button onClick={() => setMetals(prev => ({...prev,...Object.fromEntries(Object.entries(marketRef).map(([k,v])=>[k,v]))}))}
+              style={{marginLeft:'auto',fontSize:11,padding:'2px 10px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text2)',cursor:'pointer'}}>
+              ↺ 按行情重置
+            </button>
+          )}
+        </div>
+        {(() => {
+          const metalKeys = Object.keys(metals);
+          const weightEntries = Object.entries(weights);
+          return (
+            <div style={{overflowX:'auto',marginBottom:8}}>
+              <table style={{borderCollapse:'collapse',fontSize:12,width:'100%'}}>
+                <thead>
+                  <tr>
+                    <th style={{...thSt,textAlign:'left',minWidth:88,position:'sticky',left:0,background:'var(--surface)',fontSize:11}}>用料級別</th>
+                    {metalKeys.map(mat => (
+                      <th key={mat} style={{...thSt,textAlign:'center',minWidth:96,paddingBottom:4}}>
+                        <div style={{fontWeight:600,marginBottom:4}}>{mat}</div>
+                        <input type="number" style={{...iS,width:80,fontSize:12,textAlign:'center',padding:'4px 6px'}}
+                          value={metals[mat]||''} placeholder="NT$/克"
+                          onChange={e => setMetals(prev => ({...prev,[mat]:e.target.value}))} />
+                        <div style={{fontSize:10,color:'var(--text3)',marginTop:2}}>NT$/克</div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {weightEntries.map(([label, vals]) => {
+                    const [wMin, wMax] = Array.isArray(vals) ? [Number(vals[0]),Number(vals[1])] : [0,0];
+                    return (
+                      <tr key={label} style={{borderTop:'1px solid var(--border)'}}>
+                        <td style={{padding:'7px 8px',position:'sticky',left:0,background:'var(--bg)',whiteSpace:'nowrap'}}>
+                          <div style={{fontSize:11,fontWeight:600,color:'var(--text)'}}>{label.replace(/ \(.*\)/,'')}</div>
+                          <div style={{fontSize:10,color:'var(--text3)'}}>{wMin}–{wMax} g</div>
+                        </td>
+                        {metalKeys.map(mat => {
+                          const pg = Number(metals[mat])||0;
+                          if (!pg) return <td key={mat} style={{padding:'7px 8px',textAlign:'center',color:'var(--text3)',fontSize:11}}>—</td>;
+                          const lo = Math.round(pg*wMin).toLocaleString();
+                          const hi = Math.round(pg*wMax).toLocaleString();
+                          return (
+                            <td key={mat} style={{padding:'7px 8px',textAlign:'center',fontSize:11,color:'var(--text)',fontVariantNumeric:'tabular-nums'}}>
+                              {lo}<br/><span style={{color:'var(--text3)'}}>–{hi}</span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+        <div style={{marginBottom:24}}>
+          <button onClick={() => setShowWtEdit(v => !v)}
+            style={{fontSize:11,color:'var(--text3)',background:'none',border:'none',cursor:'pointer',padding:'4px 0',textDecoration:'underline'}}>
+            {showWtEdit ? '▲ 收起' : '▼ 調整克數範圍'}
+          </button>
+          {showWtEdit && (
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,marginTop:8}}>
               <thead><tr>
-                <th style={{...thSt,textAlign:'left'}}>重量級別</th>
+                <th style={{...thSt,textAlign:'left'}}>級別</th>
                 <th style={thSt}>最輕 (g)</th>
                 <th style={thSt}>最重 (g)</th>
               </tr></thead>
               <tbody>
                 {Object.entries(weights).map(([label, vals]) => (
                   <tr key={label} style={{borderTop:'1px solid var(--border)'}}>
-                    <td style={{padding:'8px 8px',color:'var(--text)',fontSize:12}}>{label}</td>
-                    <td style={{padding:'6px 8px',width:80}}>
-                      <input type="number" step="0.1" style={iS} value={Array.isArray(vals) ? vals[0] || '' : ''} onChange={e => setWeights(prev => ({ ...prev, [label]: [e.target.value, (prev[label]||[0,0])[1]] }))} />
+                    <td style={{padding:'6px 8px',color:'var(--text)',fontSize:11}}>{label}</td>
+                    <td style={{padding:'4px 6px',width:90}}>
+                      <input type="number" step="0.1" style={iS} value={Array.isArray(vals)?vals[0]||'':''} onChange={e => setWeights(prev=>({...prev,[label]:[e.target.value,(prev[label]||[0,0])[1]]}))} />
                     </td>
-                    <td style={{padding:'6px 8px',width:80}}>
-                      <input type="number" step="0.1" style={iS} value={Array.isArray(vals) ? vals[1] || '' : ''} onChange={e => setWeights(prev => ({ ...prev, [label]: [(prev[label]||[0,0])[0], e.target.value] }))} />
+                    <td style={{padding:'4px 6px',width:90}}>
+                      <input type="number" step="0.1" style={iS} value={Array.isArray(vals)?vals[1]||'':''} onChange={e => setWeights(prev=>({...prev,[label]:[(prev[label]||[0,0])[0],e.target.value]}))} />
                     </td>
                   </tr>
                 ))}

@@ -23,12 +23,18 @@ def _conn():
 
 # ─── Schema + Seed ────────────────────────────────────────────
 _SEED_METALS = [
-    ("925銀",   100),
-    ("9K金",   1800),
-    ("14K金",  2800),
-    ("18K金",  3800),
-    ("Pt950",  5500),
+    # Spot (Jun 2026): 24K=4781/g, 999Ag=83/g, Pt999=2213/g  ×karat×1.5 retail
+    ("925銀",  115),   # 83×0.925×1.5≈115
+    ("9K金",  2690),   # 4781×0.375×1.5≈2690
+    ("14K金", 4200),   # 4781×0.585×1.5≈4200
+    ("18K金", 5400),   # 4781×0.75×1.5≈5390→5400
+    ("Pt950", 3150),   # 2213×0.95×1.5≈3154→3150
 ]
+
+# Market reference for frontend "reset to market" button
+METALS_MARKET_REF = {
+    "925銀": 115, "9K金": 2690, "14K金": 4200, "18K金": 5400, "Pt950": 3150
+}
 
 _SEED_WEIGHTS = [
     ("極輕 (0.5–1.5g)", 0.5,  1.5),
@@ -454,6 +460,7 @@ def get_all_pricing():
     conn.close()
     return {
         "metals": metals,
+        "metals_market_ref": METALS_MARKET_REF,
         "weights": weights,
         "labor": labor,
         "stones_invest": stones_invest,
