@@ -74,11 +74,11 @@ button { font-family: inherit; cursor: pointer; }
 .badge { background: var(--gold); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
 
 /* ── Tab bar (mobile) ───────────────────────────────────── */
-.tab-bar { height: var(--tab-h); background: var(--surface); border-top: 1px solid var(--border); display: flex; flex-shrink: 0; }
-.tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: none; color: var(--text3); font-size: 10px; font-weight: 500; position: relative; }
-.tab-btn.on { color: var(--accent); }
-.tab-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.tab-badge { position: absolute; top: 6px; right: calc(50% - 18px); background: var(--gold); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; min-width: 16px; text-align: center; }
+.tab-bar { background: var(--surface); border-top: 1px solid var(--border); display: flex; flex-shrink: 0; }
+.tab-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; background: none; border: none; border-right: 1px solid var(--border); color: var(--text2); font-size: 13px; font-weight: 500; padding: 14px 4px; cursor: pointer; position: relative; }
+.tab-btn:last-child { border-right: none; }
+.tab-btn.on { color: var(--accent); font-weight: 700; }
+.tab-badge { background: var(--gold); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; min-width: 16px; text-align: center; line-height: 1.4; }
 
 /* ── Content ────────────────────────────────────────────── */
 .content { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
@@ -4523,19 +4523,13 @@ function App() {
         )}
       </div>
       <nav className="tab-bar">
-        <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>
-          <IcoGrid /><span>找款</span>
-        </button>
+        <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>找款</button>
         <button className={'tab-btn' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
-          <IcoHeart fill={tab === 'favorites'} /><span>收藏</span>
+          收藏{favCount > 0 && <span className="tab-badge">{favCount}</span>}
         </button>
         {isStaff && (
           <button className={'tab-btn' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>
-            <span style={{position:'relative',display:'inline-block'}}>
-              <span style={{fontSize:18}}>💎</span>
-              <QuotePendingBadge />
-            </span>
-            <span>估價</span>
+            估價<QuotePendingBadge />
           </button>
         )}
       </nav>
