@@ -3310,24 +3310,48 @@ function PricingSettingsTab() {
 
       <div style={{ flex:1, overflowY:'auto', padding:'4px 20px 40px' }}>
 
-        {/* 貴金屬行情 */}
-        <div style={hdSt}>貴金屬行情 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$/克，不含工費</span></div>
-        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:28}}>
-          <thead><tr>
-            <th style={{...thSt,textAlign:'left'}}>材質</th>
-            <th style={thSt}>NT$/克</th>
-          </tr></thead>
-          <tbody>
-            {Object.entries(metals).map(([mat, price]) => (
-              <tr key={mat} style={{borderTop:'1px solid var(--border)'}}>
-                <td style={{padding:'8px 8px',color:'var(--text)'}}>{mat}</td>
-                <td style={{padding:'6px 8px',width:130}}>
-                  <input type="number" style={iS} value={price || ''} onChange={e => setMetals(prev => ({ ...prev, [mat]: e.target.value }))} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* 貴金屬行情 + 用料重量範圍（合併區塊） */}
+        <div style={hdSt}>貴金屬行情 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$/克 × 重量(g) = 金屬成本</span></div>
+        <div style={{display:'flex',gap:16,flexWrap:'wrap',marginBottom:28}}>
+          <table style={{flex:'1 1 140px',borderCollapse:'collapse',fontSize:13,minWidth:140}}>
+            <thead><tr>
+              <th style={{...thSt,textAlign:'left'}}>材質</th>
+              <th style={thSt}>NT$/克</th>
+            </tr></thead>
+            <tbody>
+              {Object.entries(metals).map(([mat, price]) => (
+                <tr key={mat} style={{borderTop:'1px solid var(--border)'}}>
+                  <td style={{padding:'8px 8px',color:'var(--text)'}}>{mat}</td>
+                  <td style={{padding:'6px 8px',width:110}}>
+                    <input type="number" style={iS} value={price || ''} onChange={e => setMetals(prev => ({ ...prev, [mat]: e.target.value }))} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {Object.keys(weights).length > 0 && (
+            <table style={{flex:'1 1 200px',borderCollapse:'collapse',fontSize:13,minWidth:200}}>
+              <thead><tr>
+                <th style={{...thSt,textAlign:'left'}}>重量級別</th>
+                <th style={thSt}>最輕 (g)</th>
+                <th style={thSt}>最重 (g)</th>
+              </tr></thead>
+              <tbody>
+                {Object.entries(weights).map(([label, vals]) => (
+                  <tr key={label} style={{borderTop:'1px solid var(--border)'}}>
+                    <td style={{padding:'8px 8px',color:'var(--text)',fontSize:12}}>{label}</td>
+                    <td style={{padding:'6px 8px',width:80}}>
+                      <input type="number" step="0.1" style={iS} value={Array.isArray(vals) ? vals[0] || '' : ''} onChange={e => setWeights(prev => ({ ...prev, [label]: [e.target.value, (prev[label]||[0,0])[1]] }))} />
+                    </td>
+                    <td style={{padding:'6px 8px',width:80}}>
+                      <input type="number" step="0.1" style={iS} value={Array.isArray(vals) ? vals[1] || '' : ''} onChange={e => setWeights(prev => ({ ...prev, [label]: [(prev[label]||[0,0])[0], e.target.value] }))} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
 
         {/* 投資型寶石：矩陣 stones × B1-B5 */}
         {investKeys.length > 0 && <>
@@ -3440,32 +3464,6 @@ function PricingSettingsTab() {
           </tbody>
         </table>
 
-        {/* 用料重量範圍 */}
-        {Object.keys(weights).length > 0 && (
-          <>
-            <div style={hdSt}>用料重量範圍 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>克（g），下限／上限</span></div>
-            <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:28}}>
-              <thead><tr>
-                <th style={{...thSt,textAlign:'left'}}>重量級別</th>
-                <th style={thSt}>最輕 (g)</th>
-                <th style={thSt}>最重 (g)</th>
-              </tr></thead>
-              <tbody>
-                {Object.entries(weights).map(([label, vals]) => (
-                  <tr key={label} style={{borderTop:'1px solid var(--border)'}}>
-                    <td style={{padding:'8px 8px',color:'var(--text)',fontSize:12}}>{label}</td>
-                    <td style={{padding:'6px 8px',width:120}}>
-                      <input type="number" step="0.1" style={iS} value={Array.isArray(vals) ? vals[0] || '' : ''} onChange={e => setWeights(prev => ({ ...prev, [label]: [e.target.value, (prev[label]||[0,0])[1]] }))} />
-                    </td>
-                    <td style={{padding:'6px 8px',width:120}}>
-                      <input type="number" step="0.1" style={iS} value={Array.isArray(vals) ? vals[1] || '' : ''} onChange={e => setWeights(prev => ({ ...prev, [label]: [(prev[label]||[0,0])[0], e.target.value] }))} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        )}
 
       </div>
     </div>
