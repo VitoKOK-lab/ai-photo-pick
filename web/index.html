@@ -1637,21 +1637,21 @@ body{font-family:'Noto Sans TC',sans-serif;font-size:11pt;color:#1a1a1a;backgrou
           )}
         </div>
 
-        {/* signature */}
-        <div style={{display:'flex',justifyContent:'space-around',marginTop:28,marginBottom:20}}>
-          {['客戶確認簽名','服務專員確認'].map(t=>(
-            <div key={t} style={{textAlign:'center',width:130}}>
-              <div style={{height:36,borderBottom:'1px solid #999',marginBottom:5}}></div>
-              <div style={{fontSize:9,color:'#888'}}>{t}</div>
-            </div>
-          ))}
-        </div>
+        {/* service rep */}
+        {staffName && (
+          <div style={{textAlign:'right',marginTop:20,marginBottom:20,paddingTop:12,borderTop:'1px solid #eee'}}>
+            <span style={{fontSize:10,color:'#888'}}>服務專員：</span>
+            <span style={{fontSize:11,fontWeight:700,color:'#1a1a1a'}}>{staffName}</span>
+          </div>
+        )}
+        {!staffName && <div style={{marginTop:20}}></div>}
 
         {/* footer */}
         <div style={{borderTop:'1px solid #e0e0e0',paddingTop:10,marginTop:10}}>
           <div style={{fontSize:8,color:'#bbb',lineHeight:2}}>
             本公司為彩色裸礦石供應商，珠寶訂製為滿足客戶提供樣式、需求之金工服務，最終樣式以溝通內容詳載於訂單付款頁面為主，付款後視同確認無誤。
           </div>
+          <div style={{fontSize:8,color:'#bbb',marginTop:4}}>※ 圖片為參考圖，並非為本公司商品。</div>
           <div style={{textAlign:'center',marginTop:8,fontSize:8,letterSpacing:3,color:'#ccc'}}>TAHIR ZAINAB SELECTION</div>
         </div>
       </div>
