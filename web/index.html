@@ -217,26 +217,24 @@ button { font-family: inherit; cursor: pointer; }
 .darkbg-footer { padding: 12px 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-shrink: 0; }
 
 /* ── Login page ─────────────────────────────────────────── */
-.login-page { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; }
-.login-brand { font-size: 13px; letter-spacing: 6px; color: var(--gold); text-transform: uppercase; font-weight: 200; text-align: center; margin-bottom: 48px; }
-.login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 36px 28px 28px; width: 100%; max-width: 320px; box-shadow: 0 4px 24px rgba(0,0,0,.07); }
-.login-heading { font-size: 17px; font-weight: 600; color: var(--text); text-align: center; margin-bottom: 6px; }
-.login-sub { font-size: 13px; color: var(--text3); text-align: center; margin-bottom: 28px; }
-.login-pin-input { width: 100%; padding: 14px 16px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 22px; letter-spacing: 10px; text-align: center; background: var(--bg); color: var(--text); outline: none; transition: border-color .2s; font-weight: 500; box-sizing: border-box; }
+.login-page { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+.login-brand { font-size: 13px; letter-spacing: 5px; color: var(--gold); text-transform: uppercase; font-weight: 200; text-align: center; margin-bottom: 36px; }
+.login-card { background: var(--surface); border-radius: var(--r); padding: 24px 20px 20px; width: 100%; max-width: 280px; box-shadow: var(--shadow2); display: flex; flex-direction: column; gap: 14px; }
+.login-label { font-size: 13px; color: var(--text2); text-align: center; }
+.login-pin-input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--r); font-size: 22px; text-align: center; letter-spacing: 8px; outline: none; box-sizing: border-box; }
 .login-pin-input:focus { border-color: var(--gold); }
 .login-pin-input.shake { animation: pin-shake .4s ease; }
 @keyframes pin-shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)} 60%{transform:translateX(5px)} }
-.login-btn { width: 100%; padding: 13px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 14px; letter-spacing: 0.5px; }
-.login-btn:active { opacity: .85; }
-.login-err { font-size: 12px; color: #e74c3c; text-align: center; min-height: 18px; margin-top: 10px; }
-.login-agent-link { display: block; text-align: center; margin-top: 20px; font-size: 12px; color: var(--text3); cursor: pointer; letter-spacing: 0.5px; }
+.login-btn { background: var(--accent); color: #fff; border: none; border-radius: var(--r); padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.login-err { font-size: 12px; color: #e74c3c; text-align: center; min-height: 16px; }
+.login-agent-link { display: block; text-align: center; font-size: 12px; color: var(--text3); cursor: pointer; }
 .login-agent-link:hover { color: var(--text2); }
 
 /* ── Nav right-side logout ──────────────────────────────── */
 .nav-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .nav-role { font-size: 11px; color: var(--gold); font-weight: 600; letter-spacing: 0.5px; }
-.nav-logout { padding: 5px 14px; border: 1px solid var(--border); border-radius: 20px; background: none; font-size: 13px; color: var(--text2); cursor: pointer; font-weight: 500; white-space: nowrap; transition: border-color .15s, color .15s; }
-.nav-logout:hover { border-color: var(--text2); color: var(--text); }
+.nav-logout { padding: 6px 14px; border: none; border-radius: var(--r); background: var(--s3); font-size: 13px; color: var(--text2); cursor: pointer; font-weight: 500; white-space: nowrap; transition: background .15s, color .15s; }
+.nav-logout:hover { background: var(--border); color: var(--text); }
 
 /* ── Admin PIN modal (kept for agent login) ─────────────── */
 .pin-ovl { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 500; display: flex; align-items: center; justify-content: center; }
@@ -2841,8 +2839,7 @@ function LoginPage({ onAuth, onAgentLogin }) {
     <div className="login-page">
       <div className="login-brand">Tahir Zainab Selection</div>
       <div className="login-card">
-        <div className="login-heading">登入系統</div>
-        <div className="login-sub">請輸入 PIN 碼</div>
+        <div className="login-label">請輸入密碼</div>
         <input
           ref={inputRef}
           type="password"
@@ -2855,8 +2852,8 @@ function LoginPage({ onAuth, onAgentLogin }) {
           onChange={e => { setPin(e.target.value); setErr(false); }}
           onKeyDown={e => e.key === 'Enter' && submit()}
         />
-        <button className="login-btn" onClick={submit}>登入</button>
-        <div className="login-err">{err ? '密碼錯誤，請重試' : ''}</div>
+        <div className="login-err">{err ? '密碼錯誤' : ''}</div>
+        <button className="login-btn" onClick={submit}>確認</button>
         {onAgentLogin && (
           <span className="login-agent-link" onClick={onAgentLogin}>代理商入口</span>
         )}
