@@ -1,0 +1,24 @@
+{
+  "name": "ai-photo-pick",
+  "version": "1.0.0",
+  "description": "本機 AI 珠寶照片資料庫，自動分類兩萬張珠寶照片並支援向量相關性搜尋。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:38365/git/VitoKOK-lab/ai-photo-pick"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/plugin-transform-react-jsx": "^8.0.1"
+  }
+}
