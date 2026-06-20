@@ -1603,6 +1603,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [confirmed,         setConfirmed]         = useState(false);
   const [showCard,          setShowCard]          = useState(false);
   const [showEstimateCard,  setShowEstimateCard]  = useState(false);
+  const [orderType,         setOrderType]         = useState('全訂制');
 
   useEffect(() => {
     if (stoneMode === 'invest' && stoneKey && STONES_INVEST[stoneKey]) {
@@ -1729,9 +1730,10 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   // ── Saved view ──────────────────────────────────────
   if (savedId !== null) return (
     <div className="det-ovl">
-      {showEstimateCard && hasPrice && manualNum > 0 && (
+      {showEstimateCard && hasPrice && (
         <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
-          totalMin={Math.min(manualNum, Math.round(totalMax))} totalMax={Math.max(manualNum, Math.round(totalMax))} customer={customer} stoneOrderNo={stoneOrderNo}
+          totalMin={manualNum>0?Math.min(manualNum,Math.round(totalMax)):Math.round(totalMin)}
+          totalMax={manualNum>0?Math.max(manualNum,Math.round(totalMax)):Math.round(totalMax)} customer={customer} stoneOrderNo={stoneOrderNo}
           itemSize={itemSize} cat={cat} stoneName={stoneName}
           carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
           materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -1811,7 +1813,49 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     </div>
   );
 
-  const STEPS = ['選寶石','金工材料','複雜度','配石','客戶資料'];
+  const STEPS = orderType === '全訂制'
+    ? ['訂制類型','選寶石','金工材料','複雜度','配石','客戶資料']
+    : orderType === '半訂制'
+    ? ['訂制類型','裸石訂單','金工材料','複雜度','配石','客戶資料']
+    : ['訂制類型','金工材料','複雜度','配石','客戶資料'];
+
+  // ── Step 0: 訂制類型 ─────────────────────────────────
+  const renderStep0 = () => (
+    <div style={{padding:'16px'}}>
+      {[
+        ['全訂制','含裸石和台子','由我們提供裸石並設計製作台子，從頭到尾全包'],
+        ['半訂制','已有裸石訂單號','已向我們購買過裸石，需輸入裸石訂單編號，補做台子'],
+        ['委託訂制','純台子加工設計','石頭是客戶自己的或委託我們設計加工，不含裸石費用'],
+      ].map(([type, sub, desc]) => {
+        const on = orderType === type;
+        return (
+          <button key={type} onClick={() => setOrderType(type)}
+            style={{width:'100%',textAlign:'left',padding:'16px',borderRadius:12,marginBottom:10,
+              border:on?'2px solid var(--gold)':'1.5px solid var(--border)',
+              background:on?'rgba(184,147,90,.10)':'var(--surface)',cursor:'pointer'}}>
+            <div style={{fontSize:15,fontWeight:700,color:on?'var(--gold)':'var(--text)',marginBottom:2}}>{type}</div>
+            <div style={{fontSize:12,fontWeight:600,color:on?'rgba(184,147,90,.8)':'var(--text2)',marginBottom:4}}>{sub}</div>
+            <div style={{fontSize:11,color:'var(--text3)',lineHeight:1.6}}>{desc}</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // ── 半訂制 Step 2: 裸石訂單號 ────────────────────────
+  const renderStoneOrderStep = () => (
+    <div style={{padding:'16px'}}>
+      <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>裸石訂單編號</div>
+      <input type="text" placeholder="TZ-2024-001" value={stoneOrderNo}
+        onChange={e=>setStoneOrderNo(e.target.value)}
+        style={{width:'100%',border:'1.5px solid var(--border)',borderRadius:8,padding:'11px 14px',fontSize:15,fontWeight:600,color:'var(--text)',background:'var(--surface)',outline:'none',fontFamily:'inherit',marginBottom:12}}
+        onFocus={e=>e.target.style.borderColor='var(--gold)'}
+        onBlur={e=>e.target.style.borderColor='var(--border)'} />
+      <div style={{fontSize:11,color:'var(--text3)',lineHeight:1.7,background:'var(--s3)',borderRadius:8,padding:'10px 14px'}}>
+        請輸入您之前向我們購買裸石的訂單編號，我們將依此查詢石頭規格。加工費不含裸石費用。
+      </div>
+    </div>
+  );
 
   // ── Step 1: 選寶石 ──────────────────────────────────
   const COLOR_DOT = {'紅':'#e53935','粉':'#f48fb1','橙':'#fb8c00','黃':'#fdd835','綠':'#43a047','藍':'#1e88e5','紫':'#8e24aa','白':'#bdbdbd','彩':'linear-gradient(135deg,#e53935,#fdd835,#43a047,#1e88e5)'};
@@ -2140,16 +2184,17 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             <div key={i} style={{flex:1,height:3,borderRadius:2,background:i<step?'var(--gold)':'var(--border)',transition:'background .2s'}} />
           ))}
         </div>
-        {hasPrice && (
+        {step > 1 && hasPrice && (
           <div style={{padding:'4px 16px 6px',background:'var(--bg)',textAlign:'center',fontSize:11,borderBottom:'1px solid var(--border)'}}>
             <span style={{color:'var(--text3)'}}>AI 累計估算：</span>
             <span style={{color:'var(--gold)',fontWeight:700}}>{fmtNT(Math.round(totalMin))} – {fmtNT(Math.round(totalMax))}</span>
           </div>
         )}
 
-        {showEstimateCard && hasPrice && manualNum > 0 && (
+        {showEstimateCard && hasPrice && (
           <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
-            totalMin={Math.min(manualNum, Math.round(totalMax))} totalMax={Math.max(manualNum, Math.round(totalMax))} customer={customer} stoneOrderNo={stoneOrderNo}
+            totalMin={manualNum>0?Math.min(manualNum,Math.round(totalMax)):Math.round(totalMin)}
+            totalMax={manualNum>0?Math.max(manualNum,Math.round(totalMax)):Math.round(totalMax)} customer={customer} stoneOrderNo={stoneOrderNo}
             itemSize={itemSize} cat={cat} stoneName={stoneName}
             carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
             materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -2158,23 +2203,32 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
         )}
 
         <div className="det-scroll">
-          {step===1 && renderStep1()}
-          {step===2 && renderStep2()}
-          {step===3 && renderStep3()}
-          {step===4 && renderStep4()}
-          {step===5 && renderStep5()}
+          {(() => {
+            if (step === 1) return renderStep0();
+            if (orderType === '全訂制') {
+              if (step === 2) return renderStep1();
+              if (step === 3) return renderStep2();
+              if (step === 4) return renderStep3();
+              if (step === 5) return renderStep4();
+              if (step === 6) return renderStep5();
+            } else if (orderType === '半訂制') {
+              if (step === 2) return renderStoneOrderStep();
+              if (step === 3) return renderStep2();
+              if (step === 4) return renderStep3();
+              if (step === 5) return renderStep4();
+              if (step === 6) return renderStep5();
+            } else {
+              if (step === 2) return renderStep2();
+              if (step === 3) return renderStep3();
+              if (step === 4) return renderStep4();
+              if (step === 5) return renderStep5();
+            }
+          })()}
         </div>
 
-        {step < 4 ? (
+        {step < STEPS.length ? (
           <div style={{padding:'12px 16px 20px',borderTop:'1px solid var(--border)',background:'var(--surface)'}}>
             <button onClick={() => setStep(s=>s+1)}
-              style={{width:'100%',background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'13px',fontSize:15,fontWeight:700,cursor:'pointer'}}>
-              下一步 →
-            </button>
-          </div>
-        ) : step === 4 ? (
-          <div style={{padding:'12px 16px 20px',borderTop:'1px solid var(--border)',background:'var(--surface)'}}>
-            <button onClick={() => setStep(5)}
               style={{width:'100%',background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'13px',fontSize:15,fontWeight:700,cursor:'pointer'}}>
               下一步 →
             </button>
