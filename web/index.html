@@ -1632,11 +1632,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [showEstimateCard,  setShowEstimateCard]  = useState(false);
   const [orderType,         setOrderType]         = useState('全訂制');
   const [commissionNote,    setCommissionNote]    = useState('');
-  const [staffName,         setStaffName]         = useState('');
-  const [staffList,         setStaffList]         = useState([]);
-  useEffect(() => {
-    fetch('/api/staff').then(r=>r.json()).then(d=>setStaffList(Array.isArray(d)?d:[])).catch(()=>{});
-  }, []);
+  const staffName = getJwtUser()?.name || '';
 
   useEffect(() => {
     if (stoneMode === 'invest' && stoneKey && STONES_INVEST[stoneKey]) {
@@ -2185,17 +2181,9 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             </div>
           </div>
           <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>服務專員</div>
-          {staffList.length > 0 ? (
-            <select value={staffName} onChange={e=>setStaffName(e.target.value)}
-              style={{...inp,cursor:'pointer',appearance:'none',WebkitAppearance:'none',marginBottom:10}} onFocus={foc} onBlur={blr}>
-              <option value="">— 選擇 —</option>
-              {staffList.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
-            </select>
-          ) : (
-            <input type="text" placeholder="（可在設定頁新增同事名字）" value={staffName}
-              onChange={e=>setStaffName(e.target.value)}
-              style={{...inp,marginBottom:10}} onFocus={foc} onBlur={blr} />
-          )}
+          <div style={{...inp,color:staffName?'var(--text)':'var(--text3)',background:'var(--bg)',cursor:'default',lineHeight:'1.4',paddingTop:9,paddingBottom:9,marginBottom:10}}>
+            {staffName || '（登入後自動帶入）'}
+          </div>
           <div style={{display:'flex',gap:8,marginBottom:10}}>
             <div style={{flex:1}}>
               <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>客戶預算</div>
