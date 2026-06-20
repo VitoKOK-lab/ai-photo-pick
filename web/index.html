@@ -674,8 +674,7 @@ const { useState, useEffect, useRef } = React;
 const BANNERS = ['/banners/ｂ1.png','/banners/ｂ2.png','/banners/ｂ3.png','/banners/ｂ4.png','/banners/ｂ5.png','/banners/ｂ6.png','/banners/ｂ7.png','/banners/ｂ8.png','/banners/ｂ9.png','/banners/ｂ10.png'].sort(() => Math.random() - 0.5);
 
 /* ── Session & event tracking ───────────────────────── */
-const ADMIN_PIN  = '1234'; // ← 老闆在這裡修改密碼
-const STAFF_PIN  = '5678'; // ← 員工密碼
+const ADMIN_PIN  = '666'; // ← 修改這裡改密碼
 
 /* ── JWT auth toggle & utilities ────────────────────── */
 const USE_JWT_AUTH = false; // 切換到 true 即啟用新系統
@@ -1516,33 +1515,39 @@ function fmtNT(n) { return 'NT$ ' + Math.round(n).toLocaleString('zh-TW'); }
 
 /* ── Pricing DB hook – fetches from /api/pricing/all, falls back to hardcoded ── */
 const _pricingState = { data: null, promise: null };
+function _fetchPricing(setP) {
+  _pricingState.data = null; _pricingState.promise = null;
+  _pricingState.promise = fetch('/api/pricing/all')
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (!d) return;
+      const data = {
+        METAL_PER_G:       d.metals       || {},
+        LABOR:             d.labor        || {},
+        WEIGHTS:           d.weights      || {},
+        SIDESTONES:        d.sidestones   || {},
+        PLATING:           d.plating      || {},
+        STONES_COMMERCIAL: Object.fromEntries(
+          Object.entries(d.stones_commercial || {}).map(([k, v]) => [k, { name: v.name, range: v.range || [v.price_min||0, v.price_max||0] }])
+        ),
+      };
+      _pricingState.data = data;
+      if (setP) setP(data);
+    })
+    .catch(() => {});
+  return _pricingState.promise;
+}
 function usePricing() {
   const [p, setP] = React.useState(_pricingState.data);
   React.useEffect(() => {
     if (_pricingState.data) { setP(_pricingState.data); return; }
-    if (!_pricingState.promise) {
-      _pricingState.promise = fetch('/api/pricing/all')
-        .then(r => r.ok ? r.json() : null)
-        .then(d => {
-          if (!d) return;
-          // Map DB shapes → frontend constant shapes
-          const data = {
-            METAL_PER_G:       d.metals       || {},
-            LABOR:             d.labor        || {},
-            WEIGHTS:           d.weights      || {},
-            SIDESTONES:        d.sidestones   || {},
-            PLATING:           d.plating      || {},
-            STONES_COMMERCIAL: Object.fromEntries(
-              Object.entries(d.stones_commercial || {}).map(([k, v]) => [k, { name: v.name, range: v.range || [v.price_min||0, v.price_max||0] }])
-            ),
-          };
-          _pricingState.data = data;
-          setP(data);
-        })
-        .catch(() => {});
-    } else {
-      _pricingState.promise.then(() => { if (_pricingState.data) setP(_pricingState.data); });
-    }
+    if (!_pricingState.promise) { _fetchPricing(setP); }
+    else { _pricingState.promise.then(() => { if (_pricingState.data) setP(_pricingState.data); }); }
+  }, []);
+  React.useEffect(() => {
+    const handler = () => _fetchPricing(setP);
+    window.addEventListener('pricingUpdated', handler);
+    return () => window.removeEventListener('pricingUpdated', handler);
   }, []);
   return {
     METAL_PER_G:       p?.METAL_PER_G       || METAL_PER_G,
@@ -2821,16 +2826,15 @@ function PinModal({ onClose, onAuth, onAgentLogin }) {
   );
 }
 
-/* ── LoginPage (full-screen, replaces 🔑 key button) ── */
-function LoginPage({ onAuth, onAgentLogin }) {
+/* ── LoginPage (full-screen) ── */
+function LoginPage({ onAuth }) {
   const [pin,   setPin]   = useState('');
   const [err,   setErr]   = useState(false);
   const [shake, setShake] = useState(false);
   const inputRef = useRef(null);
 
   function submit() {
-    if (pin === ADMIN_PIN)      { localStorage.setItem('userRole', 'admin'); onAuth('admin'); }
-    else if (pin === STAFF_PIN) { localStorage.setItem('userRole', 'staff'); onAuth('staff'); }
+    if (pin === ADMIN_PIN) { localStorage.setItem('userRole', 'admin'); onAuth('admin'); }
     else {
       setErr(true); setPin('');
       setShake(true);
@@ -2858,9 +2862,6 @@ function LoginPage({ onAuth, onAgentLogin }) {
         />
         <div className="login-err">{err ? '密碼錯誤' : ''}</div>
         <button className="login-btn" onClick={submit}>確認</button>
-        {onAgentLogin && (
-          <span className="login-agent-link" onClick={onAgentLogin}>代理商入口</span>
-        )}
       </div>
     </div>
   );
@@ -3411,6 +3412,7 @@ function PricingSettingsTab() {
   const [metals,     setMetals]     = useState({});
   const [commercial, setCommercial] = useState({});
   const [labor,      setLabor]      = useState({});
+  const [sidestones, setSidestones] = useState({});
   const [loaded,     setLoaded]     = useState(false);
   const [saving,     setSaving]     = useState(false);
   const [saved,      setSaved]      = useState(false);
@@ -3420,6 +3422,7 @@ function PricingSettingsTab() {
       setMetals(d.metals ? { ...d.metals } : {});
       setCommercial(d.stones_commercial ? JSON.parse(JSON.stringify(d.stones_commercial)) : {});
       setLabor(d.labor ? JSON.parse(JSON.stringify(d.labor)) : {});
+      setSidestones(d.sidestones ? { ...d.sidestones } : {});
       setLoaded(true);
     }).catch(() => setLoaded(true));
   }, []);
@@ -3448,8 +3451,15 @@ function PricingSettingsTab() {
         }));
       }
     }
+    for (const [label, vals] of Object.entries(sidestones)) {
+      if (!Array.isArray(vals)) continue;
+      reqs.push(fetch('/api/pricing/sidestones/' + encodeURIComponent(label), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price_min: Math.round(Number(vals[0])), price_max: Math.round(Number(vals[1])) }),
+      }));
+    }
     await Promise.all(reqs).catch(() => {});
-    _pricingState.data = null; _pricingState.promise = null;
+    window.dispatchEvent(new Event('pricingUpdated'));
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -3463,15 +3473,7 @@ function PricingSettingsTab() {
   const iS = { padding:'5px 8px', border:'1px solid var(--border)', borderRadius:6, fontSize:13, background:'var(--bg)', color:'var(--text)', boxSizing:'border-box', textAlign:'right', width:'100%' };
   const hdSt = { fontSize:14, fontWeight:700, color:'var(--text)', padding:'14px 0 8px', borderBottom:'2px solid var(--border)', marginBottom:12 };
   const thSt = { padding:'4px 8px', textAlign:'right', fontWeight:500, fontSize:11, color:'var(--text3)' };
-
-  /* Build labor rows: one row per category × complexity */
-  const laborRows = [];
-  laborCats.forEach(cat => {
-    laborComps.forEach(comp => {
-      const vals = (labor[cat] || {})[comp];
-      if (vals) laborRows.push({ cat, comp, lo: vals[0], hi: vals[1] });
-    });
-  });
+  const cellSt = { padding:'3px 4px', width:86 };
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
@@ -3484,6 +3486,7 @@ function PricingSettingsTab() {
 
       <div style={{ flex:1, overflowY:'auto', padding:'4px 20px 40px' }}>
 
+        {/* 貴金屬行情 */}
         <div style={hdSt}>貴金屬行情 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$/克，不含工費</span></div>
         <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:28}}>
           <thead><tr>
@@ -3502,6 +3505,7 @@ function PricingSettingsTab() {
           </tbody>
         </table>
 
+        {/* 輕奢級寶石單價 */}
         <div style={hdSt}>輕奢級寶石單價 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$/克拉，請輸入終端售價</span></div>
         <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:28}}>
           <thead><tr>
@@ -3524,24 +3528,59 @@ function PricingSettingsTab() {
           </tbody>
         </table>
 
-        <div style={hdSt}>師傅工錢 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>品項 × 複雜度（下限 / 上限）</span></div>
+        {/* 師傅工錢：矩陣 */}
+        <div style={hdSt}>師傅工錢 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>品項 × 複雜度（下限／上限）</span></div>
+        <div style={{overflowX:'auto',marginBottom:28}}>
+          <table style={{borderCollapse:'collapse',fontSize:12}}>
+            <thead>
+              <tr>
+                <th style={{...thSt,textAlign:'left',minWidth:52}}>品項</th>
+                {laborComps.map(c => (
+                  <th key={c} style={{...thSt,textAlign:'center',minWidth:120,paddingBottom:2}}>{c}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {laborCats.map(cat => (
+                <tr key={cat} style={{borderTop:'1px solid var(--border)'}}>
+                  <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:12,whiteSpace:'nowrap'}}>{cat}</td>
+                  {laborComps.map(comp => {
+                    const vals = (labor[cat] || {})[comp] || [0, 0];
+                    return (
+                      <td key={comp} style={{padding:'3px 4px',textAlign:'center'}}>
+                        <div style={{display:'flex',gap:2,alignItems:'center',justifyContent:'center'}}>
+                          <input type="number" style={{...iS,width:52,fontSize:12,padding:'4px 4px'}} value={vals[0] || ''}
+                            onChange={e => setLabor(prev => ({ ...prev, [cat]: { ...prev[cat], [comp]: [e.target.value, ((prev[cat]||{})[comp]||[0,0])[1]] } }))} />
+                          <span style={{color:'var(--text3)',fontSize:11}}>/</span>
+                          <input type="number" style={{...iS,width:52,fontSize:12,padding:'4px 4px'}} value={vals[1] || ''}
+                            onChange={e => setLabor(prev => ({ ...prev, [cat]: { ...prev[cat], [comp]: [((prev[cat]||{})[comp]||[0,0])[0], e.target.value] } }))} />
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 配鑽/配石費 */}
+        <div style={hdSt}>配鑽／配石費 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$，下限／上限</span></div>
         <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:28}}>
           <thead><tr>
-            <th style={{...thSt,textAlign:'left'}}>品項</th>
-            <th style={{...thSt,textAlign:'left'}}>複雜度</th>
+            <th style={{...thSt,textAlign:'left'}}>配石類型</th>
             <th style={thSt}>下限</th>
             <th style={thSt}>上限</th>
           </tr></thead>
           <tbody>
-            {laborRows.map(({ cat, comp, lo, hi }) => (
-              <tr key={cat + '-' + comp} style={{borderTop:'1px solid var(--border)'}}>
-                <td style={{padding:'8px 8px',color:'var(--text)',fontWeight:600}}>{cat}</td>
-                <td style={{padding:'8px 8px',color:'var(--text2)'}}>{comp}</td>
+            {Object.entries(sidestones).map(([label, vals]) => (
+              <tr key={label} style={{borderTop:'1px solid var(--border)'}}>
+                <td style={{padding:'8px 8px',color:'var(--text)',fontSize:12}}>{label}</td>
                 <td style={{padding:'6px 8px',width:120}}>
-                  <input type="number" style={iS} value={lo || ''} onChange={e => setLabor(prev => ({ ...prev, [cat]: { ...prev[cat], [comp]: [e.target.value, (prev[cat][comp] || [0,0])[1]] } }))} />
+                  <input type="number" style={iS} value={Array.isArray(vals) ? vals[0] || '' : ''} onChange={e => setSidestones(prev => ({ ...prev, [label]: [e.target.value, (prev[label]||[0,0])[1]] }))} />
                 </td>
                 <td style={{padding:'6px 8px',width:120}}>
-                  <input type="number" style={iS} value={hi || ''} onChange={e => setLabor(prev => ({ ...prev, [cat]: { ...prev[cat], [comp]: [(prev[cat][comp] || [0,0])[0], e.target.value] } }))} />
+                  <input type="number" style={iS} value={Array.isArray(vals) ? vals[1] || '' : ''} onChange={e => setSidestones(prev => ({ ...prev, [label]: [(prev[label]||[0,0])[0], e.target.value] }))} />
                 </td>
               </tr>
             ))}
@@ -4032,24 +4071,16 @@ function App() {
   const [tab,            setTab]            = useState('browse');
   const [favs,           setFavs]           = useState(loadFavs);
   const [showDarkBg,     setShowDarkBg]     = useState(false);
-  const [role,           setRole]           = useState(() => {
-    const stored = localStorage.getItem('userRole') || 'guest';
-    // If agentUser exists in localStorage, role is agent
-    const agent = (() => { try { return JSON.parse(localStorage.getItem('agentUser') || 'null'); } catch { return null; } })();
-    return agent ? 'agent' : stored;
-  });
+  const [role,           setRole]           = useState(() => localStorage.getItem('userRole') || 'guest');
   const [showPin,        setShowPin]        = useState(false);
-  const [showAgentLogin, setShowAgentLogin] = useState(false);
   const [metalsLastUpd,  setMetalsLastUpd]  = useState(null);
-  const [agentUser,      setAgentUser]      = useState(() => {
-    try { return JSON.parse(localStorage.getItem('agentUser') || 'null'); } catch { return null; }
-  });
+  const agentUser = null;
   const [swipeMode,      setSwipeMode]      = useState(false);
   const [swipeFilters,   setSwipeFilters]   = useState({});
 
   const isAdmin = role === 'admin';
-  const isStaff = role === 'staff' || role === 'admin';
-  const isAgent = role === 'agent';
+  const isStaff = role === 'admin';
+  const isAgent = false;
 
   // Fetch metals_last_updated for banner
   useEffect(() => {
@@ -4075,13 +4106,8 @@ function App() {
   }, []);
 
   function handleLogout() {
-    if (isAgent) {
-      localStorage.removeItem('agentUser');
-      setAgentUser(null);
-    } else {
-      localStorage.removeItem('userRole');
-      if (USE_JWT_AUTH) clearJwtAuth();
-    }
+    localStorage.removeItem('userRole');
+    if (USE_JWT_AUTH) clearJwtAuth();
     setRole('guest');
   }
 
@@ -4095,23 +4121,12 @@ function App() {
   const clearFavs = () => { setFavs([]); saveFavs([]); };
   const isFav = id => favs.some(p => p.id === id);
 
-  const favCount  = isAgent ? null : favs.length;
-  const roleLabel = isAdmin ? '管理員' : isStaff ? '員工' : isAgent ? (agentUser?.name || '代理商') : '';
-  const logoutLabel = isAgent ? `登出（${agentUser?.name || ''}）` : '登出';
+  const favCount  = favs.length;
+  const roleLabel = '管理員';
+  const logoutLabel = '登出';
 
-  // Show login page when not authenticated
-  if (role === 'guest' && !isAgent) {
-    return (
-      <React.Fragment>
-        <LoginPage onAuth={setRole} onAgentLogin={() => setShowAgentLogin(true)} />
-        {showAgentLogin && (
-          <AgentLoginModal
-            onClose={() => setShowAgentLogin(false)}
-            onAuth={agent => { setAgentUser(agent); setRole('agent'); }}
-          />
-        )}
-      </React.Fragment>
-    );
+  if (role === 'guest') {
+    return <LoginPage onAuth={setRole} />;
   }
 
   return (
