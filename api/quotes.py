@@ -40,6 +40,7 @@ def _migrate():
         ('stone_order_no',  'TEXT'),
         ('inquiry_time',    'TEXT'),
         ('source_channel',  'TEXT'),
+        ('staff_name',      'TEXT'),
     ]:
         try:
             conn.execute(f"ALTER TABLE quotes ADD COLUMN {col} {typ}")
@@ -98,6 +99,7 @@ class QuoteCreate(BaseModel):
     stone_order_no: Optional[str] = None
     inquiry_time: Optional[str] = None
     source_channel: Optional[str] = None
+    staff_name: Optional[str] = None
 
 class QuoteUpdate(BaseModel):
     description: Optional[str] = None
@@ -161,13 +163,13 @@ def create_quote(body: QuoteCreate):
                                gemstone_origin, quote_date, notes, photo_id,
                                customer_name, original_data, adjusted_data,
                                estimated_min, estimated_max, budget,
-                               stone_order_no, inquiry_time, source_channel)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                               stone_order_no, inquiry_time, source_channel, staff_name)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (body.description, fp, body.material, body.gemstone,
          body.gemstone_origin, body.quote_date, body.notes, body.photo_id,
          body.customer_name, body.original_data, body.adjusted_data,
          body.estimated_min, body.estimated_max, body.budget,
-         body.stone_order_no, body.inquiry_time, body.source_channel)
+         body.stone_order_no, body.inquiry_time, body.source_channel, body.staff_name)
     )
     qid = cur.lastrowid
     conn.commit()
