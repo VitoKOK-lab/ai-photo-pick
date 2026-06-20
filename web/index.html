@@ -1487,7 +1487,7 @@ const GEM_COLORS = {
 };
 
 /* ── Shareable quote card (screenshot for customer) ─── */
-function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, itemSize, plating,
+function QuoteCard({ photo, description, manualPrice, customer, itemSize,
   cat, stoneName, carat, origin, treatment, colorQ, stoneMode,
   materialType, weightKey, craft, style, sidestone, sourceChannel, inquiryDate, budget, onClose }) {
   const today = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit'});
@@ -1505,10 +1505,10 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:10}}>
           <div style={{fontSize:9,letterSpacing:4,fontWeight:200,color:'#b8935a',textTransform:'uppercase',marginBottom:2}}>Tahir Zainab Selection</div>
-          <div style={{fontSize:11,color:'#999',letterSpacing:1}}>初步報價單</div>
+          <div style={{fontSize:11,color:'#999',letterSpacing:1}}>最終報價</div>
         </div>
 
-        {/* Photo (left) + Price estimate (right) — 2 columns */}
+        {/* Photo (left) + Final price (right) */}
         <div style={{display:'flex',gap:10,borderTop:'1px solid #f0f0f0',padding:'10px 0 8px',alignItems:'stretch'}}>
           {photo?.thumb_url && (
             <div style={{flex:'0 0 54%',height:134,background:'#f8f8f8',borderRadius:10,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -1516,18 +1516,15 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
             </div>
           )}
           <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',paddingLeft:2}}>
-            <div style={{fontSize:8,color:'#b8935a',letterSpacing:1,textTransform:'uppercase',marginBottom:6}}>AI 估價區間</div>
-            <div style={{fontSize:16,fontWeight:800,color:'#1a1a1a',lineHeight:1.2,marginBottom:2}}>{fmtNT(manualPrice)}</div>
-            <div style={{fontSize:12,color:'#888',marginBottom:8}}>–&nbsp;{fmtNT(estimatedMax)}</div>
-            <div style={{fontSize:9,color:'#d32f2f',fontWeight:700,background:'#fff5f5',borderRadius:5,padding:'4px 6px',textAlign:'center',lineHeight:1.5}}>
-              AI預估<br/>以最終報價為主
-            </div>
+            <div style={{fontSize:8,color:'#b8935a',letterSpacing:1,textTransform:'uppercase',marginBottom:6}}>最終報價</div>
+            <div style={{fontSize:22,fontWeight:800,color:'#1a1a1a',lineHeight:1.2,marginBottom:6}}>{fmtNT(manualPrice)}</div>
+            {customer && <div style={{fontSize:12,color:'#666',fontWeight:600}}>{customer}</div>}
           </div>
         </div>
 
         <div style={{paddingBottom:6,borderBottom:'1px solid #f0f0f0',marginBottom:4}}>
           <div style={{fontSize:11,fontWeight:700,color:'#1a1a1a',lineHeight:1.5,marginBottom:1}}>{description||'—'}</div>
-          <div style={{fontSize:9,color:'#bbb'}}>{today}{customer&&' · '+customer}{sourceChannel&&' ('+sourceChannel+')'}</div>
+          <div style={{fontSize:9,color:'#bbb'}}>{today}{sourceChannel&&' ('+sourceChannel+')'}</div>
         </div>
 
         {/* Details table */}
@@ -1542,14 +1539,18 @@ function QuoteCard({ photo, description, estimatedMax, manualPrice, customer, it
           <R label="用料重量" value={weightKey} />
           <R label="做工複雜度" value={craft||style} />
           <R label="配石" value={sidestone!=='無配石'?sidestone:null} />
-          <R label="鍍金" value={plating&&plating!=='無'?plating:null} />
           <R label="尺寸" value={itemSize} />
           {inquiryDate && <R label="詢價日期" value={inquiryDate} />}
           {budget > 0 && <R label="客戶預算" value={fmtNT(budget)} />}
         </div>
 
+        {/* Date footer */}
+        <div style={{textAlign:'center',fontSize:10,color:'#ccc',marginTop:10,paddingTop:8,borderTop:'1px solid #f0f0f0'}}>
+          {today}
+        </div>
+
         {/* Legal disclaimer */}
-        <div style={{fontSize:9,color:'#bbb',lineHeight:1.8,marginTop:10,paddingTop:8,borderTop:'1px solid #f0f0f0'}}>
+        <div style={{fontSize:9,color:'#bbb',lineHeight:1.8,marginTop:6}}>
           本公司為彩色裸礦石供應商，珠寶訂製為滿足客戶提供樣式、需求之金工服務，最終樣式以溝通內容詳載於訂單付款頁面為主，付款後視同確認無誤。
         </div>
       </div>
@@ -1722,10 +1723,10 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   // ── Saved view ──────────────────────────────────────
   if (savedId !== null) return (
     <div className="det-ovl">
-      {showCard && hasPrice && (
+      {showCard && manualNum > 0 && (
         <QuoteCard photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
-          estimatedMax={Math.round(totalMax)} manualPrice={manualNum} customer={customer}
-          itemSize={itemSize} plating={plating} cat={cat} stoneName={stoneName}
+          manualPrice={manualNum} customer={customer}
+          itemSize={itemSize} cat={cat} stoneName={stoneName}
           carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
           materialType={materialType} weightKey={weightKey} craft={craft} style={style}
           sidestone={sidestone} sourceChannel={sourceChannel} inquiryDate={inquiryDate}
@@ -1789,144 +1790,117 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const STEPS = ['選寶石','金工材料','複雜度','配石報價'];
 
   // ── Step 1: 選寶石 ──────────────────────────────────
-  const renderStep1 = () => (
-    <div style={{padding:'12px 16px',paddingBottom:16}}>
-      <div style={{display:'flex',gap:10,alignItems:'center',background:'var(--surface)',borderRadius:10,padding:'10px',border:'1px solid var(--border)',marginBottom:16}}>
-        <img src={photo.thumb_url} alt="" style={{width:52,height:52,objectFit:'cover',borderRadius:7,flexShrink:0}} />
-        <div style={{minWidth:0}}>
-          <div style={{fontSize:10,color:'var(--text3)',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>參考款</div>
-          <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
-            {[photo.category,photo.gemstone,photo.style,photo.stone_size].filter(v=>v&&v!=='未定').map((t,i)=>(
-              <span key={i} style={{background:'var(--s3)',borderRadius:5,padding:'2px 7px',fontSize:11}}>{t}</span>
-            ))}
+  const COLOR_DOT = {'紅':'#e53935','粉':'#f48fb1','橙':'#fb8c00','黃':'#fdd835','綠':'#43a047','藍':'#1e88e5','紫':'#8e24aa','白':'#bdbdbd','彩':'linear-gradient(135deg,#e53935,#fdd835,#43a047,#1e88e5)'};
+  const renderStep1 = () => {
+    const stoneList = stoneMode === 'invest'
+      ? Object.entries(STONES_INVEST)
+      : Object.entries(pricing.STONES_COMMERCIAL);
+    const filtered = colorPref
+      ? stoneList.filter(([k]) => GEM_COLORS[colorPref]?.has(k))
+      : stoneList;
+    return (
+      <div style={{padding:'12px 16px',paddingBottom:16}}>
+        <div style={{display:'flex',gap:10,alignItems:'center',background:'var(--surface)',borderRadius:10,padding:'10px',border:'1px solid var(--border)',marginBottom:14}}>
+          <img src={photo.thumb_url} alt="" style={{width:52,height:52,objectFit:'cover',borderRadius:7,flexShrink:0}} />
+          <div style={{minWidth:0}}>
+            <div style={{fontSize:10,color:'var(--text3)',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>參考款</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
+              {[photo.category,photo.gemstone,photo.style,photo.stone_size].filter(v=>v&&v!=='未定').map((t,i)=>(
+                <span key={i} style={{background:'var(--s3)',borderRadius:5,padding:'2px 7px',fontSize:11}}>{t}</span>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div style={{display:'flex',gap:6,marginBottom:16}}>
-        {[['commercial','輕奢/商業'],['invest','投資級'],['none','無主石']].map(([m,l]) => {
-          const on = m === 'none' ? !stoneKey : stoneMode===m&&stoneKey;
-          return (
-            <button key={m} onClick={() => { if(m==='none'){setStoneKey('');setStoneMode('invest');} else {setStoneMode(m); if(!stoneKey) setStoneKey('');} }}
-              style={{flex:1,padding:'10px 0',borderRadius:9,border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:13,fontWeight:on?700:400,cursor:'pointer'}}>
-              {l}
-            </button>
-          );
-        })}
-      </div>
+        {/* 商業 / 投資 toggle */}
+        <div style={{display:'flex',gap:6,marginBottom:14}}>
+          {[['commercial','輕奢/商業'],['invest','投資級']].map(([m,l]) => {
+            const on = stoneMode===m;
+            return (
+              <button key={m} onClick={() => { setStoneMode(m); setStoneKey(''); }}
+                style={{flex:1,padding:'10px 0',borderRadius:9,border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:13,fontWeight:on?700:400,cursor:'pointer'}}>
+                {l}
+              </button>
+            );
+          })}
+        </div>
 
-      {stoneKey==='' && stoneMode==='commercial' && (
-        <>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>選擇寶石</div>
-          <div style={{display:'flex',flexWrap:'wrap',marginBottom:12}}>
-            {Object.entries(pricing.STONES_COMMERCIAL).map(([k,s]) => {
-              const on = stoneKey===k;
-              return (
-                <button key={k} onClick={() => setStoneKey(k)}
-                  style={{padding:'7px 12px',borderRadius:8,margin:'3px 3px 3px 0',
-                    border:on?'1.5px solid var(--gold)':'1px solid var(--border)',
-                    background:on?'rgba(184,147,90,.14)':'var(--surface)',
-                    color:on?'var(--gold)':'var(--text)',fontSize:13,fontWeight:on?700:400,cursor:'pointer',flexShrink:0}}>
-                  {s.name}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
+        {/* Color filter */}
+        <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>依顏色篩選裸石</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:14}}>
+          {['','紅','粉','橙','黃','綠','藍','紫','白','彩'].map(c => {
+            const on = colorPref === c;
+            return (
+              <button key={c} onClick={() => setColorPref(c)}
+                style={{padding:'5px 10px',borderRadius:20,border:on?'1.5px solid var(--gold)':'1px solid var(--border)',background:on?'rgba(184,147,90,.14)':'var(--surface)',color:on?'var(--gold)':'var(--text)',fontSize:12,fontWeight:on?700:400,cursor:'pointer',display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+                {c === '' ? '全部' : (
+                  <><span style={{width:10,height:10,borderRadius:'50%',background:COLOR_DOT[c]||'#ccc',flexShrink:0,display:'inline-block',border:'1px solid rgba(0,0,0,.1)'}} />{c}</>
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-      {stoneKey!=='' && stoneMode==='commercial' && (
-        <>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>選擇寶石</div>
-          <div style={{display:'flex',flexWrap:'wrap',marginBottom:12}}>
-            {Object.entries(pricing.STONES_COMMERCIAL).map(([k,s]) => {
-              const on = stoneKey===k;
-              return (
-                <button key={k} onClick={() => setStoneKey(k)}
-                  style={{padding:'7px 12px',borderRadius:8,margin:'3px 3px 3px 0',
-                    border:on?'1.5px solid var(--gold)':'1px solid var(--border)',
-                    background:on?'rgba(184,147,90,.14)':'var(--surface)',
-                    color:on?'var(--gold)':'var(--text)',fontSize:13,fontWeight:on?700:400,cursor:'pointer',flexShrink:0}}>
-                  {s.name}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {stoneMode==='invest' && stoneKey==='' && (
-        <>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--gold)',marginBottom:6}}>選擇投資級寶石</div>
-          <div style={{display:'flex',flexWrap:'wrap',marginBottom:12}}>
-            {Object.entries(STONES_INVEST).map(([k,s]) => (
+        {/* Stone grid */}
+        <div style={{fontSize:11,fontWeight:700,color:stoneMode==='invest'?'var(--gold)':'var(--text3)',marginBottom:6}}>
+          {stoneMode==='invest' ? '投資級寶石' : '商業級寶石'}
+          {colorPref && <span style={{fontWeight:400,color:'var(--text3)',marginLeft:6}}>({filtered.length} 款)</span>}
+        </div>
+        <div style={{display:'flex',flexWrap:'wrap',marginBottom:12}}>
+          {filtered.map(([k,s]) => {
+            const on = stoneKey===k;
+            return (
               <button key={k} onClick={() => setStoneKey(k)}
                 style={{padding:'7px 12px',borderRadius:8,margin:'3px 3px 3px 0',
-                  border:'1px solid var(--border)',background:'var(--surface)',
-                  color:'var(--text)',fontSize:13,cursor:'pointer',flexShrink:0}}>
+                  border:on?'1.5px solid var(--gold)':'1px solid var(--border)',
+                  background:on?'rgba(184,147,90,.14)':'var(--surface)',
+                  color:on?'var(--gold)':'var(--text)',fontSize:13,fontWeight:on?700:400,cursor:'pointer',flexShrink:0}}>
                 {s.name}
               </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      {stoneMode==='invest' && stoneKey!=='' && (
-        <>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--gold)',marginBottom:6}}>選擇投資級寶石</div>
-          <div style={{display:'flex',flexWrap:'wrap',marginBottom:12}}>
-            {Object.entries(STONES_INVEST).map(([k,s]) => {
-              const on = stoneKey===k;
-              return (
-                <button key={k} onClick={() => setStoneKey(k)}
-                  style={{padding:'7px 12px',borderRadius:8,margin:'3px 3px 3px 0',
-                    border:on?'1.5px solid var(--gold)':'1px solid var(--border)',
-                    background:on?'rgba(184,147,90,.14)':'var(--surface)',
-                    color:on?'var(--gold)':'var(--text)',fontSize:13,fontWeight:on?700:400,cursor:'pointer',flexShrink:0}}>
-                  {s.name}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {stoneKey && (
-        <>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>克拉數 (ct)</div>
-          <input type="number" min="0.01" step="0.01" value={carat}
-            onChange={e => setCarat(e.target.value)}
-            style={{width:'100%',border:'1.5px solid var(--border)',borderRadius:8,padding:'10px 12px',fontSize:16,fontWeight:600,color:'var(--text)',background:'var(--surface)',outline:'none',fontFamily:'inherit',marginBottom:14}}
-            onFocus={e=>e.target.style.borderColor='var(--gold)'}
-            onBlur={e=>e.target.style.borderColor='var(--border)'} />
-        </>
-      )}
-
-      {currentStone && (
-        <>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:4}}>產地</div>
-          <div style={{display:'flex',flexWrap:'wrap',marginBottom:10}}>
-            {Object.keys(currentStone.origins).map(v => <Chip key={v} val={v} cur={origin} setCur={setOrigin} />)}
-          </div>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:4}}>處理方式</div>
-          <div style={{display:'flex',flexWrap:'wrap',marginBottom:10}}>
-            {Object.keys(currentStone.treatments).map(v => <Chip key={v} val={v} cur={treatment} setCur={setTreatment} />)}
-          </div>
-          <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:4}}>品色</div>
-          <div style={{display:'flex',flexWrap:'wrap',marginBottom:10}}>
-            {Object.keys(currentStone.colors).map(v => <Chip key={v} val={v} cur={colorQ} setCur={setColorQ} />)}
-          </div>
-        </>
-      )}
-
-      {stoneKey && stoneMin > 0 && (
-        <div style={{background:'rgba(184,147,90,.07)',borderRadius:10,border:'1px solid rgba(184,147,90,.25)',padding:'10px 14px',marginTop:4}}>
-          <div style={{fontSize:10,color:'var(--text3)',marginBottom:2}}>主石預估</div>
-          <div style={{fontSize:15,fontWeight:700,color:'var(--gold)'}}>{fmtNT(stoneMin)} – {fmtNT(stoneMax)}</div>
+            );
+          })}
+          {filtered.length === 0 && colorPref && (
+            <div style={{fontSize:12,color:'var(--text3)',padding:'8px 0'}}>此顏色無符合寶石，請選其他顏色</div>
+          )}
         </div>
-      )}
-    </div>
-  );
+
+        {stoneKey && (
+          <>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>克拉數 (ct)</div>
+            <input type="number" min="0.01" step="0.01" value={carat}
+              onChange={e => setCarat(e.target.value)}
+              style={{width:'100%',border:'1.5px solid var(--border)',borderRadius:8,padding:'10px 12px',fontSize:16,fontWeight:600,color:'var(--text)',background:'var(--surface)',outline:'none',fontFamily:'inherit',marginBottom:14}}
+              onFocus={e=>e.target.style.borderColor='var(--gold)'}
+              onBlur={e=>e.target.style.borderColor='var(--border)'} />
+          </>
+        )}
+
+        {currentStone && (
+          <>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:4}}>產地</div>
+            <div style={{display:'flex',flexWrap:'wrap',marginBottom:10}}>
+              {Object.keys(currentStone.origins).map(v => <Chip key={v} val={v} cur={origin} setCur={setOrigin} />)}
+            </div>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:4}}>處理方式</div>
+            <div style={{display:'flex',flexWrap:'wrap',marginBottom:10}}>
+              {Object.keys(currentStone.treatments).map(v => <Chip key={v} val={v} cur={treatment} setCur={setTreatment} />)}
+            </div>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:4}}>品色</div>
+            <div style={{display:'flex',flexWrap:'wrap',marginBottom:10}}>
+              {Object.keys(currentStone.colors).map(v => <Chip key={v} val={v} cur={colorQ} setCur={setColorQ} />)}
+            </div>
+          </>
+        )}
+
+        {stoneKey && stoneMin > 0 && (
+          <div style={{background:'rgba(184,147,90,.07)',borderRadius:10,border:'1px solid rgba(184,147,90,.25)',padding:'10px 14px',marginTop:4}}>
+            <div style={{fontSize:10,color:'var(--text3)',marginBottom:2}}>主石預估</div>
+            <div style={{fontSize:15,fontWeight:700,color:'var(--gold)'}}>{fmtNT(stoneMin)} – {fmtNT(stoneMax)}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // ── Step 2: 金工材料 ─────────────────────────────────
   const renderStep2 = () => (
@@ -1998,16 +1972,6 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
         })}
       </div>
 
-      <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>鑽石鑲量</div>
-      <div style={{display:'flex',flexWrap:'wrap',marginBottom:16}}>
-        {CFG.style.values.map(v => <Chip key={v} val={v} cur={style} setCur={setStyle} />)}
-      </div>
-
-      <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>鍍金</div>
-      <div style={{display:'flex',flexWrap:'wrap',marginBottom:8}}>
-        {['無','金色','玫瑰金','黑金'].map(v => <Chip key={v} val={v} cur={plating} setCur={setPlating} />)}
-      </div>
-
       {laborRange[1] > 0 && (
         <div style={{background:'rgba(184,147,90,.07)',borderRadius:10,border:'1px solid rgba(184,147,90,.25)',padding:'10px 14px',marginTop:8}}>
           <div style={{fontSize:10,color:'var(--text3)',marginBottom:2}}>師傅工費預估</div>
@@ -2021,6 +1985,14 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   // ── Step 4: 配石 + 詢單 ─────────────────────────────
   const renderStep4 = () => (
     <div style={{padding:'12px 16px',paddingBottom:160}}>
+      <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>鑽石鑲量</div>
+      <select value={style} onChange={e=>setStyle(e.target.value)}
+        style={{width:'100%',border:'1.5px solid var(--border)',borderRadius:8,padding:'10px 12px',fontSize:14,fontFamily:'inherit',outline:'none',background:'var(--surface)',color:'var(--text)',cursor:'pointer',appearance:'none',WebkitAppearance:'none',marginBottom:16}}
+        onFocus={e=>e.target.style.borderColor='var(--gold)'}
+        onBlur={e=>e.target.style.borderColor='var(--border)'}>
+        {CFG.style.values.map(v=><option key={v} value={v}>{v}</option>)}
+      </select>
+
       <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>配石（加鑽）</div>
       <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:16}}>
         {Object.entries(pricing.SIDESTONES).map(([v, range]) => {
@@ -2157,7 +2129,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           </div>
         ) : (
           <div style={{position:'absolute',bottom:0,left:0,right:0,background:'var(--accent)',padding:'12px 16px 20px',boxShadow:'0 -4px 20px rgba(0,0,0,.2)'}}>
-            <div style={{fontSize:11,color:'rgba(255,255,255,.65)',marginBottom:6}}>初步報價（給客人）</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,.65)',marginBottom:6}}>最終報價</div>
             <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:6}}>
               <div style={{display:'flex',alignItems:'center',flex:1,background:'rgba(255,255,255,.12)',border:'1.5px solid rgba(255,255,255,.3)',borderRadius:8,overflow:'hidden'}}>
                 <span style={{padding:'0 4px 0 10px',color:'rgba(255,255,255,.6)',fontSize:13,fontWeight:600,flexShrink:0,lineHeight:1}}>NT$</span>
@@ -2167,7 +2139,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               </div>
               <button onClick={doSave} disabled={saving||manualNum===0}
                 style={{background:(saving||manualNum===0)?'rgba(255,255,255,.25)':'var(--gold)',color:'#fff',border:'none',borderRadius:8,padding:'10px 16px',fontSize:14,fontWeight:700,cursor:(saving||manualNum===0)?'default':'pointer',flexShrink:0}}>
-                {saving?'儲存中…':'儲存報價'}
+                {saving?'儲存中…':'最終報價'}
               </button>
             </div>
             {hasPrice && <div style={{fontSize:11,color:'rgba(255,255,255,.5)'}}>系統估算：{fmtNT(totalMin)} – {fmtNT(totalMax)}</div>}
