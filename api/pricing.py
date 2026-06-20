@@ -37,6 +37,31 @@ _SEED_WEIGHTS = [
     ("偏重 (5–8g)",     5.0,  8.0),
     ("重 (8–13g)",      8.0, 13.0),
     ("很重 (13–20g)",  13.0, 20.0),
+    ("特重 (20–35g)",  20.0, 35.0),
+    ("超重 (35–50g)",  35.0, 50.0),
+]
+
+_CT_MULTS = [('1ct', 1.0), ('2ct', 2.2), ('3ct', 3.8), ('4ct', 5.5), ('5ct', 8.0)]
+_SEED_COMMERCIAL_CARAT = [
+    (key, ct, name, round(pmin * mult), round(pmax * mult))
+    for key, name, pmin, pmax in [
+        ("MORGANITE",  "摩根石",    1500,   8000),
+        ("AMETHYST",   "紫水晶",     300,   2000),
+        ("CITRINE",    "黃水晶",     300,   2000),
+        ("TOPAZ",      "托帕石",     500,   3000),
+        ("AQUAMARINE", "海藍寶石",  2000,  15000),
+        ("TOURMALINE", "碧璽",      2000,  30000),
+        ("MOONSTONE",  "月光石",    1000,   6000),
+        ("OPAL",       "歐泊",      2000,  20000),
+        ("PERIDOT",    "橄欖石",     500,   3000),
+        ("GARNET",     "石榴石",     500,   4000),
+        ("SPINEL",     "尖晶石",    3000,  30000),
+        ("ZIRCON",     "鋯石",       200,   1500),
+        ("LABRADORITE","拉長石",     500,   3000),
+        ("KUNZITE",    "紫鋰輝石",  1000,   8000),
+        ("SPHENE",     "榍石",      2000,  15000),
+    ]
+    for ct, mult in _CT_MULTS
 ]
 
 _SEED_LABOR = [
@@ -279,6 +304,15 @@ def _init_db():
             price_min INTEGER NOT NULL,
             price_max INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS pricing_commercial_carat (
+            id INTEGER PRIMARY KEY,
+            stone_key TEXT NOT NULL,
+            ct_label TEXT NOT NULL,
+            stone_name TEXT NOT NULL,
+            price_min INTEGER NOT NULL,
+            price_max INTEGER NOT NULL,
+            UNIQUE(stone_key, ct_label)
+        );
     """)
 
     # Seed only if tables are empty
@@ -311,6 +345,16 @@ def _init_db():
 
     if not c.execute("SELECT 1 FROM pricing_plating LIMIT 1").fetchone():
         c.executemany("INSERT OR IGNORE INTO pricing_plating (label, price_min, price_max) VALUES (?,?,?)", _SEED_PLATING)
+
+    if not c.execute("SELECT 1 FROM pricing_commercial_carat LIMIT 1").fetchone():
+        c.executemany(
+            "INSERT OR IGNORE INTO pricing_commercial_carat (stone_key, ct_label, stone_name, price_min, price_max) VALUES (?,?,?,?,?)",
+            _SEED_COMMERCIAL_CARAT
+        )
+
+    # Always ensure extended weight rows exist (safe to run every restart)
+    for lbl, wmin, wmax in [("特重 (20–35g)", 20.0, 35.0), ("超重 (35–50g)", 35.0, 50.0)]:
+        c.execute("INSERT OR IGNORE INTO pricing_weights (label, weight_min, weight_max) VALUES (?,?,?)", (lbl, wmin, wmax))
 
     conn.commit()
     conn.close()
@@ -392,6 +436,16 @@ def get_all_pricing():
     sidestone_rows = c.execute("SELECT label, price_min, price_max FROM pricing_sidestones ORDER BY price_min").fetchall()
     sidestones = {r["label"]: [r["price_min"], r["price_max"]] for r in sidestone_rows}
 
+    carat_rows = c.execute(
+        "SELECT stone_key, ct_label, stone_name, price_min, price_max FROM pricing_commercial_carat ORDER BY stone_key, ct_label"
+    ).fetchall()
+    commercial_carat: dict = {}
+    for r in carat_rows:
+        k = r["stone_key"]
+        if k not in commercial_carat:
+            commercial_carat[k] = {"name": r["stone_name"]}
+        commercial_carat[k][r["ct_label"]] = [r["price_min"], r["price_max"]]
+
     plating_rows = c.execute("SELECT label, price_min, price_max FROM pricing_plating ORDER BY price_min").fetchall()
     plating = {r["label"]: [r["price_min"], r["price_max"]] for r in plating_rows}
 
@@ -404,6 +458,7 @@ def get_all_pricing():
         "labor": labor,
         "stones_invest": stones_invest,
         "stones_commercial": stones_commercial,
+        "commercial_carat": commercial_carat,
         "sidestones": sidestones,
         "plating": plating,
         "metals_last_updated": metals_updated,
@@ -476,6 +531,20 @@ def update_sidestone(label: str, body: SidestoneUpdate):
         raise HTTPException(404, "Sidestone entry not found")
     conn.execute("UPDATE pricing_sidestones SET price_min=?, price_max=? WHERE label=?",
                  (body.price_min, body.price_max, label))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@router.put("/stones-commercial-carat/{stone_key}/{ct_label}")
+def update_commercial_carat(stone_key: str, ct_label: str, body: CommercialStoneUpdate):
+    conn = _conn()
+    r = conn.execute("SELECT id FROM pricing_commercial_carat WHERE stone_key=? AND ct_label=?", (stone_key, ct_label)).fetchone()
+    if not r:
+        conn.close()
+        raise HTTPException(404, "Commercial carat entry not found")
+    conn.execute("UPDATE pricing_commercial_carat SET price_min=?, price_max=? WHERE stone_key=? AND ct_label=?",
+                 (body.price_min, body.price_max, stone_key, ct_label))
     conn.commit()
     conn.close()
     return {"ok": True}

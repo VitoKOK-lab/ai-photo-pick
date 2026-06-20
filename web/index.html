@@ -1170,18 +1170,30 @@ function PhotoGrid({ isFav, toggleFav, filters, role }) {
     <>
       <div className="grid-wrap" ref={gridWrapRef}>
         <div className="grid">
-          {photos.map((p, i) => (
-            <div key={p.id} className="card" style={{animationDelay:`${(i % 9) * 0.19}s`}}>
-              <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
-              <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
-                onClick={e => { e.stopPropagation(); toggleFav(p); }}>
-                {isFav(p.id) ? '♥' : '♡'}
-              </button>
-              <div className="card-lbl" onClick={() => setDetail(p)}>
-                {[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}
+          {photos.reduce((acc, p, i) => {
+            if (i > 0 && i % 12 === 0) {
+              const bIdx = Math.floor(i / 12) - 1;
+              acc.push(
+                <div key={`banner-${i}`} className="grid-banner">
+                  <img src={BANNERS[bIdx % BANNERS.length]} alt="" loading="lazy" />
+                  <div className="grid-banner-lbl">Tahir Zainab Selection</div>
+                </div>
+              );
+            }
+            acc.push(
+              <div key={p.id} className="card" style={{animationDelay:`${(i % 9) * 0.19}s`}}>
+                <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
+                <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
+                  onClick={e => { e.stopPropagation(); toggleFav(p); }}>
+                  {isFav(p.id) ? '♥' : '♡'}
+                </button>
+                <div className="card-lbl" onClick={() => setDetail(p)}>
+                  {[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+            return acc;
+          }, [])}
         </div>
         {loading && <div className="loading-msg">載入中…</div>}
         {!loading && photos.length === 0 && !hasMoreRef.current && (
@@ -3175,22 +3187,32 @@ function DarkBgModal({ onClose, onDeleted }) {
 
 /* ── Pricing Settings Tab ────────────────────────────── */
 function PricingSettingsTab() {
-  const [metals,     setMetals]     = useState({});
-  const [commercial, setCommercial] = useState({});
-  const [labor,      setLabor]      = useState({});
-  const [sidestones, setSidestones] = useState({});
-  const [weights,    setWeights]    = useState({});
-  const [loaded,     setLoaded]     = useState(false);
-  const [saving,     setSaving]     = useState(false);
-  const [saved,      setSaved]      = useState(false);
+  const [metals,         setMetals]         = useState({});
+  const [labor,          setLabor]          = useState({});
+  const [sidestones,     setSidestones]     = useState({});
+  const [weights,        setWeights]        = useState({});
+  const [invest,         setInvest]         = useState({});
+  const [commercialCarat,setCommercialCarat]= useState({});
+  const [loaded,         setLoaded]         = useState(false);
+  const [saving,         setSaving]         = useState(false);
+  const [saved,          setSaved]          = useState(false);
 
   useEffect(() => {
     fetch('/api/pricing/all').then(r => r.json()).then(d => {
       setMetals(d.metals ? { ...d.metals } : {});
-      setCommercial(d.stones_commercial ? JSON.parse(JSON.stringify(d.stones_commercial)) : {});
       setLabor(d.labor ? JSON.parse(JSON.stringify(d.labor)) : {});
       setSidestones(d.sidestones ? { ...d.sidestones } : {});
       setWeights(d.weights ? { ...d.weights } : {});
+      if (d.stones_invest) {
+        const inv = {};
+        Object.entries(d.stones_invest).forEach(([k, v]) => {
+          inv[k] = { name: v.name, floor: { ...v.floor }, ceil: { ...v.ceil } };
+        });
+        setInvest(inv);
+      }
+      if (d.commercial_carat) {
+        setCommercialCarat(JSON.parse(JSON.stringify(d.commercial_carat)));
+      }
       setLoaded(true);
     }).catch(() => setLoaded(true));
   }, []);
@@ -3204,11 +3226,25 @@ function PricingSettingsTab() {
         body: JSON.stringify({ price_per_g: Math.round(Number(price)) }),
       }));
     }
-    for (const [key, s] of Object.entries(commercial)) {
-      reqs.push(fetch('/api/pricing/stones-commercial/' + encodeURIComponent(key), {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ price_min: Math.round(Number(s.range[0])), price_max: Math.round(Number(s.range[1])) }),
-      }));
+    for (const [skey, s] of Object.entries(invest)) {
+      for (const band of ['B1','B2','B3','B4','B5']) {
+        if ((s.floor||{})[band] !== undefined) {
+          reqs.push(fetch('/api/pricing/stones-invest/' + encodeURIComponent(skey) + '/' + band, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ price_floor: Math.round(Number(s.floor[band])), price_ceil: Math.round(Number(s.ceil[band])) }),
+          }));
+        }
+      }
+    }
+    for (const [skey, s] of Object.entries(commercialCarat)) {
+      for (const ct of ['1ct','2ct','3ct','4ct','5ct']) {
+        if (s[ct]) {
+          reqs.push(fetch('/api/pricing/stones-commercial-carat/' + encodeURIComponent(skey) + '/' + ct, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ price_min: Math.round(Number(s[ct][0])), price_max: Math.round(Number(s[ct][1])) }),
+          }));
+        }
+      }
     }
     for (const [cat, comps] of Object.entries(labor)) {
       for (const [comp, vals] of Object.entries(comps)) {
@@ -3244,11 +3280,24 @@ function PricingSettingsTab() {
   const COMPLEXITY_ORDER = ['極簡', '簡單', '中等', '複雜', '精工'];
   const laborCats = Object.keys(labor);
   const laborComps = COMPLEXITY_ORDER.filter(c => laborCats.some(cat => (labor[cat] || {})[c] !== undefined));
+  const CT_LABELS = ['1ct','2ct','3ct','4ct','5ct'];
+  const BANDS = ['B1','B2','B3','B4','B5'];
+  const BAND_LBL = {B1:'B1 (~1ct)',B2:'B2 (~2ct)',B3:'B3 (~3ct)',B4:'B4 (~4ct)',B5:'B5 (~5ct)'};
+  const investKeys = Object.keys(invest);
+  const commCaratKeys = Object.keys(commercialCarat);
 
   const iS = { padding:'5px 8px', border:'1px solid var(--border)', borderRadius:6, fontSize:13, background:'var(--bg)', color:'var(--text)', boxSizing:'border-box', textAlign:'right', width:'100%' };
   const hdSt = { fontSize:14, fontWeight:700, color:'var(--text)', padding:'14px 0 8px', borderBottom:'2px solid var(--border)', marginBottom:12 };
   const thSt = { padding:'4px 8px', textAlign:'right', fontWeight:500, fontSize:11, color:'var(--text3)' };
-  const cellSt = { padding:'3px 4px', width:86 };
+  const matrixCell = (minVal, maxVal, onMin, onMax) => (
+    <td style={{padding:'3px 4px',textAlign:'center'}}>
+      <div style={{display:'flex',gap:2,alignItems:'center',justifyContent:'center'}}>
+        <input type="number" style={{...iS,width:54,fontSize:12,padding:'4px 4px'}} value={minVal||''} onChange={onMin} />
+        <span style={{color:'var(--text3)',fontSize:11}}>/</span>
+        <input type="number" style={{...iS,width:54,fontSize:12,padding:'4px 4px'}} value={maxVal||''} onChange={onMax} />
+      </div>
+    </td>
+  );
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
@@ -3280,28 +3329,63 @@ function PricingSettingsTab() {
           </tbody>
         </table>
 
-        {/* 輕奢級寶石單價 */}
-        <div style={hdSt}>輕奢級寶石單價 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$/克拉，請輸入終端售價</span></div>
-        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:28}}>
-          <thead><tr>
-            <th style={{...thSt,textAlign:'left'}}>寶石名稱</th>
-            <th style={thSt}>下緣 NT$/CT</th>
-            <th style={thSt}>上緣 NT$/CT</th>
-          </tr></thead>
-          <tbody>
-            {Object.entries(commercial).map(([key, s]) => (
-              <tr key={key} style={{borderTop:'1px solid var(--border)'}}>
-                <td style={{padding:'8px 8px',color:'var(--text)'}}>{s.name}</td>
-                <td style={{padding:'6px 8px',width:130}}>
-                  <input type="number" style={iS} value={s.range[0] || ''} onChange={e => setCommercial(prev => ({ ...prev, [key]: { ...prev[key], range: [e.target.value, prev[key].range[1]] } }))} />
-                </td>
-                <td style={{padding:'6px 8px',width:130}}>
-                  <input type="number" style={iS} value={s.range[1] || ''} onChange={e => setCommercial(prev => ({ ...prev, [key]: { ...prev[key], range: [prev[key].range[0], e.target.value] } }))} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* 投資型寶石：矩陣 stones × B1-B5 */}
+        {investKeys.length > 0 && <>
+          <div style={hdSt}>投資型寶石單價 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>每顆總價 NT$（下限／上限）</span></div>
+          <div style={{overflowX:'auto',marginBottom:28}}>
+            <table style={{borderCollapse:'collapse',fontSize:12}}>
+              <thead><tr>
+                <th style={{...thSt,textAlign:'left',minWidth:60,position:'sticky',left:0,background:'var(--surface)'}}>寶石</th>
+                {BANDS.map(b => (
+                  <th key={b} style={{...thSt,textAlign:'center',minWidth:120,paddingBottom:2}}>{BAND_LBL[b]}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {investKeys.map(skey => (
+                  <tr key={skey} style={{borderTop:'1px solid var(--border)'}}>
+                    <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:12,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)'}}>{invest[skey].name}</td>
+                    {BANDS.map(band => matrixCell(
+                      (invest[skey].floor||{})[band],
+                      (invest[skey].ceil||{})[band],
+                      e => setInvest(prev => ({...prev,[skey]:{...prev[skey],floor:{...prev[skey].floor,[band]:e.target.value}}})),
+                      e => setInvest(prev => ({...prev,[skey]:{...prev[skey],ceil:{...prev[skey].ceil,[band]:e.target.value}}}))
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>}
+
+        {/* 輕奢級寶石：矩陣 stones × 1-5ct */}
+        {commCaratKeys.length > 0 && <>
+          <div style={hdSt}>輕奢級寶石單價 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$/克拉，依大小分級（下／上）</span></div>
+          <div style={{overflowX:'auto',marginBottom:28}}>
+            <table style={{borderCollapse:'collapse',fontSize:12}}>
+              <thead><tr>
+                <th style={{...thSt,textAlign:'left',minWidth:64,position:'sticky',left:0,background:'var(--surface)'}}>寶石</th>
+                {CT_LABELS.map(ct => (
+                  <th key={ct} style={{...thSt,textAlign:'center',minWidth:116,paddingBottom:2}}>{ct}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {commCaratKeys.map(skey => (
+                  <tr key={skey} style={{borderTop:'1px solid var(--border)'}}>
+                    <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:12,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)'}}>{commercialCarat[skey]?.name}</td>
+                    {CT_LABELS.map(ct => {
+                      const vals = (commercialCarat[skey]||{})[ct] || [0,0];
+                      return matrixCell(
+                        vals[0], vals[1],
+                        e => setCommercialCarat(prev => ({...prev,[skey]:{...prev[skey],[ct]:[e.target.value,(prev[skey]?.[ct]||[0,0])[1]]}})),
+                        e => setCommercialCarat(prev => ({...prev,[skey]:{...prev[skey],[ct]:[(prev[skey]?.[ct]||[0,0])[0],e.target.value]}}))
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>}
 
         {/* 師傅工錢：矩陣 */}
         <div style={hdSt}>師傅工錢 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>品項 × 複雜度（下限／上限）</span></div>
@@ -3309,7 +3393,7 @@ function PricingSettingsTab() {
           <table style={{borderCollapse:'collapse',fontSize:12}}>
             <thead>
               <tr>
-                <th style={{...thSt,textAlign:'left',minWidth:52}}>品項</th>
+                <th style={{...thSt,textAlign:'left',minWidth:52,position:'sticky',left:0,background:'var(--surface)'}}>品項</th>
                 {laborComps.map(c => (
                   <th key={c} style={{...thSt,textAlign:'center',minWidth:120,paddingBottom:2}}>{c}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
                 ))}
@@ -3318,19 +3402,13 @@ function PricingSettingsTab() {
             <tbody>
               {laborCats.map(cat => (
                 <tr key={cat} style={{borderTop:'1px solid var(--border)'}}>
-                  <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:12,whiteSpace:'nowrap'}}>{cat}</td>
+                  <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:12,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)'}}>{cat}</td>
                   {laborComps.map(comp => {
                     const vals = (labor[cat] || {})[comp] || [0, 0];
-                    return (
-                      <td key={comp} style={{padding:'3px 4px',textAlign:'center'}}>
-                        <div style={{display:'flex',gap:2,alignItems:'center',justifyContent:'center'}}>
-                          <input type="number" style={{...iS,width:52,fontSize:12,padding:'4px 4px'}} value={vals[0] || ''}
-                            onChange={e => setLabor(prev => ({ ...prev, [cat]: { ...prev[cat], [comp]: [e.target.value, ((prev[cat]||{})[comp]||[0,0])[1]] } }))} />
-                          <span style={{color:'var(--text3)',fontSize:11}}>/</span>
-                          <input type="number" style={{...iS,width:52,fontSize:12,padding:'4px 4px'}} value={vals[1] || ''}
-                            onChange={e => setLabor(prev => ({ ...prev, [cat]: { ...prev[cat], [comp]: [((prev[cat]||{})[comp]||[0,0])[0], e.target.value] } }))} />
-                        </div>
-                      </td>
+                    return matrixCell(
+                      vals[0], vals[1],
+                      e => setLabor(prev => ({ ...prev, [cat]: { ...prev[cat], [comp]: [e.target.value, ((prev[cat]||{})[comp]||[0,0])[1]] } })),
+                      e => setLabor(prev => ({ ...prev, [cat]: { ...prev[cat], [comp]: [((prev[cat]||{})[comp]||[0,0])[0], e.target.value] } }))
                     );
                   })}
                 </tr>
