@@ -1577,7 +1577,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [cat,          setCat]          = useState(photo.category        || CATS[0] || '戒指');
   const [style,        setStyle]        = useState(photo.style           || '');
   const [chain,        setChain]        = useState(photo.setting_amount  || '正常');
-  const [craft,        setCraft]        = useState(photo.craft_complexity|| '普通');
+  const [craft,        setCraft]        = useState(photo.craft_complexity || '中等');
   const [metalColor,   setMetalColor]   = useState(photo.metal_color     || '');
   const [materialType, setMaterialType] = useState(photo.metal_color==='銀'?'925銀':'18K金');
   const [stoneKey,     setStoneKey]     = useState(initGem?.key  || '');
@@ -1636,9 +1636,8 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     stoneMax = currentStoneC.range[1] * ct;
   }
 
-  const STYLE_TO_LABOR  = {'無鑽':'極簡','簡約(5顆鑽內)':'簡單','輕奢(20顆鑽內)':'中等','奢華滿鑲鑽':'複雜','簡約':'簡單','輕奢':'中等','奢華':'複雜'};
   const CHAIN_TO_WEIGHT = {'少':'輕 (1.5–3g)','正常':'中 (3–5g)','多':'偏重 (5–8g)'};
-  const laborKey    = STYLE_TO_LABOR[style] || craft || '中等';
+  const laborKey    = craft || '中等';
   const laborRange  = pricing.LABOR[cat]?.[laborKey] || [0,0];
   const weightKey   = CHAIN_TO_WEIGHT[chain] || '中 (3–5g)';
   const weightRange = (pricing.WEIGHTS[weightKey] || WEIGHTS[weightKey]) || [3,5];
@@ -1750,6 +1749,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
       )}
       <div className="det-panel" style={{flexDirection:'column'}}>
         <div className="det-hd-bar">
+          <button className="det-back" onClick={() => setSavedId(null)}>←</button>
           <span className="det-hd-title">報價已儲存</span>
           <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onBack}>×</button>
         </div>
