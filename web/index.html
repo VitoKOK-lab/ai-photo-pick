@@ -57,20 +57,24 @@ button { font-family: inherit; cursor: pointer; }
 }
 .browse-hdr { position: fixed; top: var(--nav-h); left: 0; right: 0; z-index: 150; background: var(--surface); transition: transform .4s cubic-bezier(.4,0,.2,1); }
 .nav-logo { font-size: 13px; font-weight: 200; letter-spacing: 5px; color: var(--gold); flex: 1; text-transform: uppercase; }
-.nav-tabs { display: none; gap: 4px; }
+.nav-tabs { display: none; gap: 0; }
 .nav-tab {
-  padding: 7px 18px;
-  border-radius: 20px;
+  padding: 0 20px;
+  height: 100%;
   background: none;
   border: none;
+  border-right: 1px solid var(--border);
   color: var(--text2);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  cursor: pointer;
+  white-space: nowrap;
 }
-.nav-tab.on { background: var(--s3); color: var(--text); font-weight: 600; }
+.nav-tab:first-child { border-left: 1px solid var(--border); }
+.nav-tab.on { color: var(--accent); font-weight: 700; }
 .badge { background: var(--gold); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
 
 /* ── Tab bar (mobile) ───────────────────────────────────── */
@@ -4481,12 +4485,12 @@ function App() {
           </button>
           {isStaff && (
             <button className={'nav-tab' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>
-              💎 估價紀錄 <QuotePendingBadge />
+              估價紀錄<QuotePendingBadge />
             </button>
           )}
           {isAdmin && (
             <button className={'nav-tab' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>
-              ⚙ 設定
+              設定
             </button>
           )}
         </div>
