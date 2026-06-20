@@ -3377,11 +3377,10 @@ function PricingSettingsTab() {
                         {metalKeys.map(mat => {
                           const pg = Number(metals[mat])||0;
                           if (!pg) return <td key={mat} style={{padding:'7px 8px',textAlign:'center',color:'var(--text3)',fontSize:11}}>—</td>;
-                          const lo = Math.round(pg*wMin).toLocaleString();
-                          const hi = Math.round(pg*wMax).toLocaleString();
+                          const price = Math.round(pg * wMax).toLocaleString();
                           return (
-                            <td key={mat} style={{padding:'7px 8px',textAlign:'center',fontSize:11,color:'var(--text)',fontVariantNumeric:'tabular-nums'}}>
-                              {lo}<br/><span style={{color:'var(--text3)'}}>–{hi}</span>
+                            <td key={mat} style={{padding:'7px 8px',textAlign:'center',fontSize:12,color:'var(--text)',fontWeight:600,fontVariantNumeric:'tabular-nums'}}>
+                              {price}
                             </td>
                           );
                         })}
