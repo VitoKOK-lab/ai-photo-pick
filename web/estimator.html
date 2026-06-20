@@ -1246,9 +1246,78 @@
       grid-template-columns: 1fr;
     }
   }
+
+  /* ── Login overlay ─────────────────────────────────── */
+  .login-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: var(--space-5);
+  }
+  .login-overlay.hidden { display: none; }
+  .login-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: var(--space-6) var(--space-7);
+    text-align: center;
+    min-width: 300px;
+  }
+  .login-title {
+    font-family: 'Cormorant', serif;
+    font-size: var(--text-xl);
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .login-sub {
+    font-size: 13px;
+    color: var(--ink-mute);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: var(--space-5);
+  }
+  .login-input {
+    width: 100%;
+    text-align: center;
+    font-size: 28px;
+    letter-spacing: 10px;
+    padding: 12px;
+    border: 2px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--bg);
+    font-family: 'Cormorant', serif;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: var(--space-4);
+  }
+  .login-input:focus { border-color: var(--coral); }
+  .login-input.error { border-color: var(--rose); animation: shake 0.4s ease; }
+  .login-err {
+    font-size: 13px;
+    color: var(--rose);
+    letter-spacing: 1px;
+    min-height: 18px;
+    margin-top: 8px;
+  }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 60%{transform:translateX(6px)}
+  }
 </style>
 </head>
 <body>
+  <!-- ── Login Overlay ── -->
+  <div class="login-overlay" id="login_overlay">
+    <div class="login-box">
+      <div class="login-title">珠寶估價系統</div>
+      <div class="login-sub">請輸入密碼</div>
+      <input type="password" class="login-input" id="login_pin" maxlength="8" autocomplete="off" placeholder="· · · ·">
+      <div class="login-err" id="login_err"></div>
+    </div>
+  </div>
   <header class="top-bar">
     <div class="top-bar-inner">
       <div class="brand">
@@ -1386,8 +1455,14 @@
                 <select id="weight"></select>
               </div>
               <div class="field">
-                <label class="field-label">複雜度 (工藝)</label>
+                <label class="field-label">師傅工錢 (複雜度)</label>
                 <select id="complexity"></select>
+              </div>
+            </div>
+            <div class="field-grid" style="margin-top:8px;">
+              <div class="field" style="grid-column:1/-1;">
+                <label class="field-label">手動輸入克重 <span style="font-size:11px;color:var(--ink-mute);letter-spacing:0;text-transform:none;font-family:inherit;">（填入則覆蓋上方選項，用最大值計算）</span></label>
+                <input type="number" id="custom_weight" min="0.1" step="0.1" placeholder="例如 12.5（公克）">
               </div>
             </div>
             <div class="field-grid cols-1" style="margin-top:12px;">
@@ -1657,31 +1732,21 @@ const DEFAULT_STONES = {
 // 金工費 (人工) — 與材質無關, 依品項 × 複雜度
 // ============================================================
 const DEFAULT_CRAFT_LABOR_FEES = {
-  '戒指-極簡': [1500, 2500],
-  '戒指-簡單': [2500, 4500],
-  '戒指-中等': [4500, 7000],
-  '戒指-複雜': [7000, 12000],
-  '戒指-精工': [12000, 25000],
-  '吊墜-極簡': [1000, 2000],
-  '吊墜-簡單': [2000, 3500],
-  '吊墜-中等': [3500, 6000],
-  '吊墜-複雜': [6000, 10000],
-  '吊墜-精工': [10000, 20000],
-  '耳釘-極簡': [1500, 2500],
-  '耳釘-簡單': [2500, 4500],
-  '耳釘-中等': [4500, 7000],
-  '耳釘-複雜': [7000, 12000],
-  '耳釘-精工': [12000, 22000],
-  '手鍊-極簡': [3000, 5000],
-  '手鍊-簡單': [5000, 8000],
-  '手鍊-中等': [8000, 13000],
-  '手鍊-複雜': [13000, 22000],
-  '手鍊-精工': [22000, 40000],
-  '項鍊-極簡': [4000, 7000],
-  '項鍊-簡單': [7000, 12000],
-  '項鍊-中等': [12000, 20000],
-  '項鍊-複雜': [20000, 35000],
-  '項鍊-精工': [35000, 60000]
+  '戒指-簡單': [1500, 4500],
+  '戒指-中等': [4500, 9000],
+  '戒指-複雜': [9000, 30000],
+  '吊墜-簡單': [1000, 3500],
+  '吊墜-中等': [3500, 7000],
+  '吊墜-複雜': [7000, 22000],
+  '耳釘-簡單': [1500, 4500],
+  '耳釘-中等': [4500, 8000],
+  '耳釘-複雜': [8000, 25000],
+  '手鍊-簡單': [3000, 8000],
+  '手鍊-中等': [8000, 16000],
+  '手鍊-複雜': [16000, 45000],
+  '項鍊-簡單': [4000, 10000],
+  '項鍊-中等': [10000, 22000],
+  '項鍊-複雜': [22000, 65000],
 };
 
 // ============================================================
@@ -1700,12 +1765,12 @@ const DEFAULT_METAL_PRICES_PER_G = {
 // 6 級克重區間 (適用各品項)
 // ============================================================
 const DEFAULT_WEIGHT_LEVELS = {
-  '極輕 (0.5–1.5g)': { min: 0.5, max: 1.5 },
-  '輕 (1.5–3g)':     { min: 1.5, max: 3 },
-  '中 (3–5g)':       { min: 3,   max: 5 },
-  '偏重 (5–8g)':     { min: 5,   max: 8 },
-  '重 (8–13g)':      { min: 8,   max: 13 },
-  '很重 (13–20g)':   { min: 13,  max: 20 }
+  '超輕 (0.5–2g)':  { min: 0.5, max: 2 },
+  '輕 (2–5g)':      { min: 2,   max: 5 },
+  '中 (5–10g)':     { min: 5,   max: 10 },
+  '偏重 (10–18g)':  { min: 10,  max: 18 },
+  '重 (18–30g)':    { min: 18,  max: 30 },
+  '很重 (30–50g)':  { min: 30,  max: 50 },
 };
 
 const DEFAULT_SIDESTONE_FEES = {
@@ -1731,7 +1796,7 @@ const SIDESTONE_LABELS = {
 
 const MATERIALS = ['925銀', '9K金', '14K金', '18K金', 'Pt950'];
 const ITEMS = ['戒指', '吊墜', '耳釘', '手鍊', '項鍊'];
-const COMPLEXITY = ['極簡', '簡單', '中等', '複雜', '精工'];
+const COMPLEXITY = ['簡單', '中等', '複雜'];
 
 // 各品項常見尺寸 preset (含「自行輸入」選項)
 const SIZE_PRESETS = {
@@ -2035,11 +2100,14 @@ function calculate() {
     const labor = CRAFT_LABOR_FEES[laborKey] || [0, 0];
 
     const wt = WEIGHT_LEVELS[weight] || { min: 0, max: 0 };
+    const customWtInput = parseFloat($('custom_weight').value);
+    const effectiveWt = (!isNaN(customWtInput) && customWtInput > 0) ? customWtInput : wt.max;
     const metalPrice = METAL_PRICES_PER_G[material] || 0;
-    const materialCost = [wt.min * metalPrice, wt.max * metalPrice];
+    const materialCost = effectiveWt * metalPrice;  // 只用上緣/實際克重
 
-    const side = SIDESTONE_FEES[sidestone] || [0, 0];
-    mounting = { material, item, complexity, weight, sidestone, labor, materialCost, side, wt, metalPrice };
+    const sideArr = SIDESTONE_FEES[sidestone] || [0, 0];
+    const sideCost = sideArr[1];  // 只用上緣
+    mounting = { material, item, complexity, weight, effectiveWt, sidestone, labor, materialCost, sideCost, wt, metalPrice };
   }
 
   // 證書費用 (適用所有 tier)
@@ -2113,16 +2181,16 @@ function renderResult(stone, stoneKey, carat, band, R, mounting, certInfo) {
   let mountingDetail = '';
   if (mounting) {
     const [lL, lH] = mounting.labor;
-    const [mL, mH] = mounting.materialCost;
-    const [sL, sH] = mounting.side;
-    mount_min = lL + mL + sL;
-    mount_max = lH + mH + sH;
+    const mCost = mounting.materialCost;
+    const sCost = mounting.sideCost;
+    mount_min = lL + mCost + sCost;
+    mount_max = lH + mCost + sCost;
     mount_target = (mount_min + mount_max) / 2;
 
     mountingDetail = `
-      <div class="calc-row"><span class="k">金工 ${mounting.item}·${mounting.complexity}</span><span class="v">${fmt(lL)} – ${fmt(lH)}</span></div>
-      <div class="calc-row"><span class="k">材料 ${mounting.material}·${mounting.weight} × ${mounting.metalPrice}/g</span><span class="v">${fmt(mL)} – ${fmt(mH)}</span></div>
-      <div class="calc-row"><span class="k">配石 ${SIDESTONE_LABELS[mounting.sidestone] || mounting.sidestone}</span><span class="v">${sL === 0 && sH === 0 ? '—' : fmt(sL) + ' – ' + fmt(sH)}</span></div>
+      <div class="calc-row"><span class="k">師傅工錢 ${mounting.item}·${mounting.complexity}</span><span class="v">${fmt(lL)} – ${fmt(lH)}</span></div>
+      <div class="calc-row"><span class="k">材料 ${mounting.material} ${mounting.effectiveWt}g × ${mounting.metalPrice}/g</span><span class="v">${fmt(mCost)}</span></div>
+      <div class="calc-row"><span class="k">配石 ${SIDESTONE_LABELS[mounting.sidestone] || mounting.sidestone}</span><span class="v">${sCost === 0 ? '—' : fmt(sCost)}</span></div>
     `;
   }
 
@@ -2684,7 +2752,7 @@ function renderSettings() {
   const commGroup = document.createElement('details');
   commGroup.className = 'settings-group';
   commGroup.open = true;
-  commGroup.innerHTML = `<summary><span>輕奢級寶石單價 <span class="group-meta">NT$/克拉，已含利潤之零售區間（你的真實成交價）</span></span></summary>`;
+  commGroup.innerHTML = `<summary><span>輕奢級寶石單價 <span class="group-meta">⚠ 請輸入終端售價（你的真實成交/零售價，已含利潤）</span></span></summary>`;
   const commBody = document.createElement('div');
   commBody.className = 'settings-body';
   const commTable = document.createElement('table');
@@ -2716,13 +2784,25 @@ function renderSettings() {
   });
   commTable.appendChild(commTbody);
   commBody.appendChild(commTable);
+  // 新增商業寶石按鈕
+  const addCommBtn = document.createElement('button');
+  addCommBtn.className = 'btn btn-ghost';
+  addCommBtn.style.cssText = 'margin-top:10px;font-size:12px;letter-spacing:1px;';
+  addCommBtn.textContent = '+ 新增寶石';
+  addCommBtn.addEventListener('click', () => {
+    const key = 'CUSTOM_' + Date.now();
+    STONES[key] = { name: '新寶石', tier: 'COMMERCIAL', commercial_range: [0, 0] };
+    markDirty();
+    renderSettings();
+  });
+  commBody.appendChild(addCommBtn);
   commGroup.appendChild(commBody);
   root.appendChild(commGroup);
 
   // === Craft labor fees ===
   const craftGroup = document.createElement('details');
   craftGroup.className = 'settings-group';
-  craftGroup.innerHTML = `<summary><span>金工費 (人工) <span class="group-meta">品項 × 複雜度, 與材質無關, 已含利潤</span></span></summary>`;
+  craftGroup.innerHTML = `<summary><span>師傅工錢 <span class="group-meta">品項 × 複雜度（簡單/中等/複雜）, 與材質無關</span></span></summary>`;
   const craftBody = document.createElement('div');
   craftBody.className = 'settings-body';
   const ct = document.createElement('table');
@@ -2757,7 +2837,7 @@ function renderSettings() {
   // === Metal prices per gram ===
   const metalGroup = document.createElement('details');
   metalGroup.className = 'settings-group';
-  metalGroup.innerHTML = `<summary><span>貴金屬 retail / 克 <span class="group-meta">2026/06 台灣零售價, 含工費利潤</span></span></summary>`;
+  metalGroup.innerHTML = `<summary><span>貴金屬行情 / 克 <span class="group-meta">不含工費，只含利潤 — 請按行情更新</span></span></summary>`;
   const metalBody = document.createElement('div');
   metalBody.className = 'settings-body';
   const mt = document.createElement('table');
@@ -3004,6 +3084,32 @@ function bindSettingsEvents() {
     e.target.value = '';
   });
 }
+
+// ── Login ──────────────────────────────────────────────
+const LOGIN_PIN = '666';
+(function initLogin() {
+  const overlay = document.getElementById('login_overlay');
+  const input   = document.getElementById('login_pin');
+  const errEl   = document.getElementById('login_err');
+  if (sessionStorage.getItem('tzg_auth') === '1') {
+    overlay.classList.add('hidden');
+    return;
+  }
+  input.focus();
+  input.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (input.value === LOGIN_PIN) {
+      sessionStorage.setItem('tzg_auth', '1');
+      overlay.classList.add('hidden');
+    } else {
+      errEl.textContent = '密碼錯誤，請重試';
+      input.classList.add('error');
+      input.value = '';
+      setTimeout(() => { input.classList.remove('error'); errEl.textContent = ''; }, 1200);
+      input.focus();
+    }
+  });
+})();
 
 populate();
 bindEvents();
