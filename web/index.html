@@ -1737,9 +1737,9 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           sidestone={sidestone} sourceChannel={sourceChannel} inquiryDate={inquiryDate}
           budget={budgetNum} onClose={() => setShowEstimateCard(false)} />
       )}
-      {showCard && manualNum > 0 && (
+      {showCard && parseInt(finalInput) > 0 && (
         <QuoteCard mode="final" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
-          manualPrice={manualNum} totalMin={Math.round(totalMin)} totalMax={Math.round(totalMax)} customer={customer}
+          manualPrice={parseInt(String(finalInput).replace(/[^0-9]/g,''))||0} totalMin={Math.round(totalMin)} totalMax={Math.round(totalMax)} customer={customer}
           itemSize={itemSize} cat={cat} stoneName={stoneName}
           carat={ct} origin={origin} treatment={treatment} colorQ={colorQ} stoneMode={stoneMode}
           materialType={materialType} weightKey={weightKey} craft={craft} style={style}
@@ -1762,24 +1762,18 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             ) : <div style={{fontSize:14,color:'var(--text3)'}}>未計算報價</div>}
             {customer && <div style={{fontSize:12,color:'var(--text2)',marginTop:8}}>客戶：{customer}</div>}
             {hasPrice && (
-              <div style={{display:'flex',gap:8,marginTop:14,justifyContent:'center'}}>
+              <div style={{marginTop:14}}>
                 <button onClick={() => setShowEstimateCard(true)}
-                  style={{flex:1,background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,color:'var(--text)',cursor:'pointer'}}>
-                  📊 AI預估單
+                  style={{width:'100%',background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,color:'var(--text)',cursor:'pointer'}}>
+                  📊 預覽AI預估單
                 </button>
-                {manualNum > 0 && (
-                  <button onClick={() => setShowCard(true)}
-                    style={{flex:1,background:'var(--gold)',border:'none',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,color:'#fff',cursor:'pointer'}}>
-                    📋 最終報價單
-                  </button>
-                )}
               </div>
             )}
           </div>
           {!confirmed ? (
             <div style={{background:'#fffbf0',borderRadius:12,border:'1px solid rgba(184,147,90,.35)',padding:'16px 18px'}}>
-              <div style={{fontSize:13,fontWeight:700,color:'var(--gold)',marginBottom:4}}>成交後回填實際成交價</div>
-              <div style={{fontSize:12,color:'var(--text2)',marginBottom:14,lineHeight:1.6}}>實際成交價會記入歷史資料庫，讓系統自動學習並校正未來的報價區間。</div>
+              <div style={{fontSize:13,fontWeight:700,color:'var(--gold)',marginBottom:4}}>最終報價</div>
+              <div style={{fontSize:12,color:'var(--text2)',marginBottom:14,lineHeight:1.6}}>輸入給客人的最終報價，記入歷史資料庫。</div>
               <div style={{position:'relative',marginBottom:12}}>
                 <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',fontSize:14,color:'var(--text2)',fontWeight:600,pointerEvents:'none'}}>NT$</span>
                 <input type="text" inputMode="numeric" placeholder="0" autoFocus
@@ -1789,9 +1783,15 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
                   onBlur={e=>e.target.style.borderColor='var(--border)'}
                   onKeyDown={e=>e.key==='Enter'&&doConfirmPrice()} />
               </div>
+              {parseInt(finalInput) > 0 && (
+                <button onClick={() => setShowCard(true)}
+                  style={{width:'100%',background:'var(--gold)',border:'none',borderRadius:8,padding:'11px',fontSize:14,fontWeight:700,color:'#fff',cursor:'pointer',marginBottom:8}}>
+                  📋 顯示最終報價單
+                </button>
+              )}
               <div style={{display:'flex',gap:8}}>
                 <button onClick={doConfirmPrice} disabled={!finalInput||confirming}
-                  style={{flex:1,background:(!finalInput||confirming)?'var(--s3)':'var(--gold)',color:(!finalInput||confirming)?'var(--text3)':'#fff',border:'none',borderRadius:8,padding:'11px',fontSize:14,fontWeight:700,cursor:(!finalInput||confirming)?'default':'pointer'}}>
+                  style={{flex:1,background:(!finalInput||confirming)?'var(--s3)':'var(--accent)',color:(!finalInput||confirming)?'var(--text3)':'#fff',border:'none',borderRadius:8,padding:'11px',fontSize:14,fontWeight:700,cursor:(!finalInput||confirming)?'default':'pointer'}}>
                   {confirming ? '確認中…' : '✓ 確認成交'}
                 </button>
                 <button onClick={onBack} style={{flex:1,background:'var(--surface)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:8,padding:'11px',fontSize:14,cursor:'pointer'}}>事後再填</button>
@@ -2217,17 +2217,17 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           </div>
         ) : (
           <div style={{position:'absolute',bottom:0,left:0,right:0,background:'var(--accent)',padding:'12px 16px 20px',boxShadow:'0 -4px 20px rgba(0,0,0,.2)'}}>
-            <div style={{fontSize:11,color:'rgba(255,255,255,.65)',marginBottom:6}}>最終報價</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,.65)',marginBottom:6}}>預估報價</div>
             <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:6}}>
               <div style={{display:'flex',alignItems:'center',flex:1,background:'rgba(255,255,255,.12)',border:'1.5px solid rgba(255,255,255,.3)',borderRadius:8,overflow:'hidden'}}>
                 <span style={{padding:'0 4px 0 10px',color:'rgba(255,255,255,.6)',fontSize:13,fontWeight:600,flexShrink:0,lineHeight:1}}>NT$</span>
-                <input type="text" inputMode="numeric" placeholder="輸入金額" value={manualQuote}
+                <input type="text" inputMode="numeric" placeholder="輸入預估金額" value={manualQuote}
                   onChange={e=>setManualQuote(e.target.value.replace(/[^0-9]/g,''))}
                   style={{flex:1,background:'none',border:'none',padding:'11px 10px 11px 2px',fontSize:18,fontWeight:700,color:'#fff',outline:'none',fontFamily:'inherit',minWidth:0}} />
               </div>
               <button onClick={doSave} disabled={saving||manualNum===0}
                 style={{background:(saving||manualNum===0)?'rgba(255,255,255,.25)':'var(--gold)',color:'#fff',border:'none',borderRadius:8,padding:'10px 16px',fontSize:14,fontWeight:700,cursor:(saving||manualNum===0)?'default':'pointer',flexShrink:0}}>
-                {saving?'儲存中…':'最終報價'}
+                {saving?'儲存中…':'儲存預估'}
               </button>
             </div>
             {hasPrice && <div style={{fontSize:11,color:'rgba(255,255,255,.5)'}}>AI預估：{fmtNT(totalMin)} – {fmtNT(totalMax)}</div>}
