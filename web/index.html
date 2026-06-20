@@ -1498,23 +1498,12 @@ function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, 
   const paperRef = React.useRef(null);
 
   const handlePrint = () => {
-    const el = paperRef.current;
-    if (!el) return;
-    const origin = window.location.origin;
-    let html = el.innerHTML.replace(/src="(\/[^"]+)"/g, `src="${origin}$1"`);
-    const w = window.open('', '_blank', 'width=900,height=750');
-    w.document.write(`<!DOCTYPE html><html><head>
-<meta charset="utf-8">
-<title>${isEstimate?'報價單（AI預估）':'報價單'}</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-@page{size:A4;margin:15mm}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Noto Sans TC',sans-serif;font-size:11pt;color:#1a1a1a;background:#fff}
-</style>
-</head><body>${html}</body></html>`);
-    w.document.close();
-    w.onload = () => { w.focus(); w.print(); };
+    const style = document.createElement('style');
+    style.id = 'qr-print-style';
+    style.textContent = `@media print{body>*{display:none!important}.qr-print-root{display:block!important;position:fixed;inset:0;background:#fff;z-index:99999;overflow:visible}.qr-toolbar{display:none!important}@page{size:A4;margin:15mm}}`;
+    document.head.appendChild(style);
+    window.print();
+    setTimeout(() => { const s = document.getElementById('qr-print-style'); if(s) s.remove(); }, 1000);
   };
 
   const Section = ({title, children}) => (
@@ -1531,9 +1520,9 @@ body{font-family:'Noto Sans TC',sans-serif;font-size:11pt;color:#1a1a1a;backgrou
   ) : null;
 
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.78)',zIndex:9999,overflowY:'auto'}}>
+    <div className="qr-print-root" style={{position:'fixed',inset:0,background:'rgba(0,0,0,.78)',zIndex:9999,overflowY:'auto'}}>
       {/* toolbar */}
-      <div style={{position:'sticky',top:0,zIndex:1,display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',background:'rgba(0,0,0,.78)',backdropFilter:'blur(4px)'}}>
+      <div className="qr-toolbar" style={{position:'sticky',top:0,zIndex:1,display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',background:'rgba(0,0,0,.78)',backdropFilter:'blur(4px)'}}>
         <button onClick={onClose} style={{background:'rgba(255,255,255,.15)',color:'#fff',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,cursor:'pointer'}}>← 關閉</button>
         <span style={{fontSize:12,color:'rgba(255,255,255,.6)',fontWeight:600}}>{isEstimate?'報價單（AI預估）':'報價單'}</span>
         <button onClick={handlePrint} style={{background:'#b8935a',color:'#fff',border:'none',borderRadius:8,padding:'8px 18px',fontSize:13,fontWeight:700,cursor:'pointer'}}>🖨️ 列印 / PDF</button>
@@ -1582,8 +1571,8 @@ body{font-family:'Noto Sans TC',sans-serif;font-size:11pt;color:#1a1a1a;backgrou
           </div>
         </Section>
 
-        {/* stone order / commission */}
-        {(stoneOrderNo || commissionNote) && (
+        {/* stone order / commission — only for 半訂制 / 委託訂制 */}
+        {orderType !== '全訂制' && (stoneOrderNo || commissionNote) && (
           <Section title={orderType==='半訂制'?'裸石訂單':'委託石頭資料'}>
             <div style={{background:'#fffbf0',border:'1px solid #e8d5a8',borderRadius:6,padding:'8px 12px'}}>
               {orderType==='半訂制' && stoneOrderNo && <Row label="裸石單號" value={stoneOrderNo} />}
@@ -1676,7 +1665,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [metalColor,   setMetalColor]   = useState(photo.metal_color     || '');
   const [materialType, setMaterialType] = useState(photo.metal_color==='銀'?'925銀':'18K金');
   const [stoneKey,     setStoneKey]     = useState(initGem?.key  || '');
-  const [stoneMode,    setStoneMode]    = useState(initGem?.mode || 'commercial');
+  const [stoneMode,    setStoneMode]    = useState('commercial');
   const [carat,        setCarat]        = useState('1');
   const [origin,       setOrigin]       = useState('');
   const [treatment,    setTreatment]    = useState('');
@@ -2318,13 +2307,6 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
             <div key={i} style={{flex:1,height:3,borderRadius:2,background:i<step?'var(--gold)':'var(--border)',transition:'background .2s'}} />
           ))}
         </div>
-        {step > 1 && hasPrice && (
-          <div style={{padding:'4px 16px 6px',background:'var(--bg)',textAlign:'center',fontSize:11,borderBottom:'1px solid var(--border)'}}>
-            <span style={{color:'var(--text3)'}}>AI 累計估算：</span>
-            <span style={{color:'var(--gold)',fontWeight:700}}>{fmtNT(Math.round(totalMin))} – {fmtNT(Math.round(totalMax))}</span>
-          </div>
-        )}
-
         {showEstimateCard && hasPrice && (
           <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
             totalMin={manualNum>0?Math.min(manualNum,Math.round(totalMax)):Math.round(totalMin)}
