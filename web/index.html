@@ -1171,8 +1171,8 @@ function PhotoGrid({ isFav, toggleFav, filters, role }) {
       <div className="grid-wrap" ref={gridWrapRef}>
         <div className="grid">
           {photos.reduce((acc, p, i) => {
-            if (i > 0 && i % 12 === 0) {
-              const bIdx = Math.floor(i / 12) - 1;
+            if (i > 0 && i % 36 === 0) {
+              const bIdx = Math.floor(i / 36) - 1;
               acc.push(
                 <div key={`banner-${i}`} className="grid-banner">
                   <img src={BANNERS[bIdx % BANNERS.length]} alt="" loading="lazy" />
