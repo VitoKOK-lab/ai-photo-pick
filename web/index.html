@@ -4553,6 +4553,302 @@ function StagingSection() {
 }
 
 /* ── App ────────────────────────────────────────────── */
+/* ── 客人瀏覽模式（臨時連結） ───────────────────────── */
+function GuestBrowseView({ token }) {
+  const [info,    setInfo]    = useState(null);
+  const [photos,  setPhotos]  = useState([]);
+  const [favIds,  setFavIds]  = useState(new Set());
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState('');
+  const [toggling,setToggling]= useState(new Set());
+  const [remain,  setRemain]  = useState(0);
+
+  useEffect(() => {
+    fetch(`/api/guest-links/info/${token}`)
+      .then(r => { if (!r.ok) throw r.status; return r.json(); })
+      .then(d => { setInfo(d); setRemain(d.remaining_min); })
+      .catch(s => setError(s === 410 ? '連結已過期或停用' : '連結不存在'));
+  }, [token]);
+
+  useEffect(() => {
+    if (!info) return;
+    // 載入所有去背照片
+    fetch('/api/photos?photo_type=去背&limit=500')
+      .then(r => r.json()).then(d => setPhotos(d.photos || []));
+    // 載入已收藏
+    fetch(`/api/guest-links/favorites/${token}`)
+      .then(r => r.json()).then(d => {
+        setFavIds(new Set((d.favorites||[]).map(f=>f.photo_id)));
+        setLoading(false);
+      });
+  }, [info]);
+
+  // 倒數計時
+  useEffect(() => {
+    if (!info) return;
+    const t = setInterval(() => setRemain(m => Math.max(0, m - 1)), 60000);
+    return () => clearInterval(t);
+  }, [info]);
+
+  async function toggleFav(photoId) {
+    if (toggling.has(photoId)) return;
+    setToggling(prev => new Set(prev).add(photoId));
+    try {
+      const r = await fetch(`/api/guest-links/favorite/${token}/${photoId}`, { method:'POST' });
+      const d = await r.json();
+      setFavIds(prev => {
+        const next = new Set(prev);
+        d.favorited ? next.add(photoId) : next.delete(photoId);
+        return next;
+      });
+    } finally {
+      setToggling(prev => { const n = new Set(prev); n.delete(photoId); return n; });
+    }
+  }
+
+  if (error) return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100vh',gap:12,padding:24,textAlign:'center'}}>
+      <div style={{fontSize:48}}>⏰</div>
+      <div style={{fontSize:18,fontWeight:700}}>{error}</div>
+      <div style={{fontSize:13,color:'#888'}}>請聯繫服務人員取得新連結</div>
+    </div>
+  );
+
+  if (!info || loading) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',fontSize:14,color:'#888'}}>
+      載入中…
+    </div>
+  );
+
+  const hrs  = Math.floor(remain / 60);
+  const mins = remain % 60;
+  const timeStr = hrs > 0 ? `${hrs}小時${mins}分` : `${mins}分`;
+
+  return (
+    <div style={{minHeight:'100vh',background:'#f8f8f8',fontFamily:'var(--font)'}}>
+      {/* Header */}
+      <div style={{background:'#fff',borderBottom:'1px solid #eee',padding:'12px 16px',position:'sticky',top:0,zIndex:100}}>
+        <div style={{maxWidth:600,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div>
+            <div style={{fontSize:15,fontWeight:700}}>
+              {info.customer_name} 的挑選
+            </div>
+            <div style={{fontSize:11,color:'#888',marginTop:2}}>
+              按愛心❤️加入收藏 · 連結剩餘 {timeStr}
+            </div>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <div style={{fontSize:22,fontWeight:800,color:'#e53935'}}>❤️ {favIds.size}</div>
+            <div style={{fontSize:10,color:'#888'}}>已收藏</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Photo grid */}
+      <div style={{maxWidth:600,margin:'0 auto',padding:'12px 10px 80px'}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+          {photos.map((p, idx) => {
+            const isFav = favIds.has(p.id);
+            const busy  = toggling.has(p.id);
+            return (
+              <div key={p.id} style={{position:'relative',borderRadius:10,overflow:'hidden',
+                background:'#fff',boxShadow: isFav ? '0 0 0 3px #e53935' : '0 1px 4px rgba(0,0,0,.08)',
+                transition:'box-shadow .2s'}}>
+                {/* 編號 */}
+                <div style={{position:'absolute',top:5,left:5,background:'rgba(0,0,0,.55)',
+                  color:'#fff',fontSize:10,fontWeight:700,borderRadius:4,padding:'2px 6px',zIndex:2}}>
+                  #{idx + 1}
+                </div>
+                {/* 照片 */}
+                <img src={`/api/thumb/${p.id}`} alt="" loading="lazy"
+                  style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}} />
+                {/* 愛心按鈕 */}
+                <button onClick={() => toggleFav(p.id)} disabled={busy}
+                  style={{position:'absolute',bottom:6,right:6,
+                    width:34,height:34,borderRadius:'50%',border:'none',
+                    background: isFav ? '#e53935' : 'rgba(255,255,255,.9)',
+                    color: isFav ? '#fff' : '#888',
+                    fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
+                    boxShadow:'0 2px 6px rgba(0,0,0,.2)',transition:'all .15s',
+                    opacity: busy ? 0.5 : 1}}>
+                  {isFav ? '❤️' : '🤍'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        {photos.length === 0 && !loading && (
+          <div style={{textAlign:'center',padding:60,color:'#888',fontSize:14}}>暫無照片</div>
+        )}
+      </div>
+
+      {/* 底部收藏提示 */}
+      {favIds.size > 0 && (
+        <div style={{position:'fixed',bottom:0,left:0,right:0,background:'#e53935',color:'#fff',
+          padding:'12px 16px',textAlign:'center',fontSize:14,fontWeight:600,zIndex:200}}>
+          已收藏 {favIds.size} 張 · 通知員工後他們即可查看您的收藏 ❤️
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── 員工：客人連結管理 ──────────────────────────────── */
+function GuestLinksPanel() {
+  const [links,    setLinks]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [name,     setName]     = useState('');
+  const [staffName,setStaffName]= useState('');
+  const [msg,      setMsg]      = useState('');
+  const [newLink,  setNewLink]  = useState(null);
+
+  const baseUrl = window.location.origin;
+
+  function flash(t) { setMsg(t); setTimeout(()=>setMsg(''), 3000); }
+
+  async function load() {
+    setLoading(true);
+    try { const r = await fetch('/api/guest-links'); setLinks(await r.json()); }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function create() {
+    if (!name.trim()) { flash('請輸入客人名字'); return; }
+    setCreating(true);
+    const r = await fetch('/api/guest-links', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ customer_name: name.trim(), staff_name: staffName.trim() }),
+    });
+    setCreating(false);
+    if (r.ok) {
+      const d = await r.json();
+      setNewLink({ url: `${baseUrl}/?g=${d.token}`, ...d });
+      setName(''); setStaffName('');
+      load();
+    } else { flash('建立失敗'); }
+  }
+
+  async function deactivate(token) {
+    await fetch(`/api/guest-links/${token}`, { method:'DELETE' });
+    flash('已停用'); load();
+  }
+
+  async function copyLink(url) {
+    try { await navigator.clipboard.writeText(url); flash('連結已複製！'); }
+    catch { flash(url); }
+  }
+
+  const iS = { padding:'8px 12px', border:'2px solid #c8b89a', borderRadius:8, fontSize:14,
+               background:'#fdf8ef', color:'var(--text)', fontWeight:600, width:'100%', boxSizing:'border-box' };
+
+  return (
+    <div style={{flex:1,overflowY:'auto',padding:'14px 16px 80px'}}>
+      <div style={{fontSize:16,fontWeight:800,marginBottom:14}}>建立客人連結</div>
+      {msg && <div style={{fontSize:13,color:'var(--gold)',fontWeight:600,marginBottom:10}}>{msg}</div>}
+
+      {/* 建立表單 */}
+      <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:'14px',marginBottom:20}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>客人名字 *</div>
+            <input style={iS} placeholder="例：Amy、小美" value={name}
+              onChange={e=>setName(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&create()} />
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>服務員工</div>
+            <input style={iS} placeholder="你的名字（選填）" value={staffName}
+              onChange={e=>setStaffName(e.target.value)} />
+          </div>
+        </div>
+        <div style={{fontSize:11,color:'var(--text3)',marginBottom:10}}>
+          ⏱ 連結有效 4 小時，客人可在時限內瀏覽所有去背照片並收藏
+        </div>
+        <button onClick={create} disabled={creating}
+          style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,
+            padding:'10px 24px',fontSize:14,fontWeight:700,cursor:'pointer',width:'100%'}}>
+          {creating ? '建立中…' : '🔗 建立連結'}
+        </button>
+      </div>
+
+      {/* 剛建立的連結 */}
+      {newLink && (
+        <div style={{background:'#e8f5e9',border:'2px solid #4caf77',borderRadius:12,padding:'14px',marginBottom:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:'#2e7d32',marginBottom:6}}>
+            ✅ 連結已建立 — {newLink.customer_name}
+          </div>
+          <div style={{fontSize:11,color:'#555',marginBottom:10,wordBreak:'break-all',fontFamily:'monospace',background:'rgba(0,0,0,.05)',borderRadius:6,padding:'6px 8px'}}>
+            {newLink.url}
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={()=>copyLink(newLink.url)}
+              style={{flex:1,background:'#4caf77',color:'#fff',border:'none',borderRadius:8,padding:'9px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+              📋 複製連結
+            </button>
+            {navigator.share && (
+              <button onClick={()=>navigator.share({title:`${newLink.customer_name}的挑選`,url:newLink.url})}
+                style={{flex:1,background:'#1976d2',color:'#fff',border:'none',borderRadius:8,padding:'9px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+                📤 分享（LINE）
+              </button>
+            )}
+          </div>
+          <div style={{fontSize:11,color:'#888',marginTop:8,textAlign:'center'}}>
+            有效至 {newLink.expires_at?.slice(0,16).replace('T',' ')} UTC
+          </div>
+        </div>
+      )}
+
+      {/* 歷史連結 */}
+      <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>連結紀錄</div>
+      {loading ? <div style={{color:'var(--text3)',fontSize:13}}>載入中…</div> : (
+        links.length === 0 ? <div style={{color:'var(--text3)',fontSize:13}}>尚無連結</div> :
+        links.map(l => {
+          const url = `${baseUrl}/?g=${l.token}`;
+          return (
+            <div key={l.id} style={{background:'var(--surface)',border:'1px solid var(--border)',
+              borderRadius:10,padding:'10px 14px',marginBottom:8,
+              opacity: l.active ? 1 : 0.5}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                <span style={{fontWeight:700,fontSize:14}}>{l.customer_name}</span>
+                <span style={{fontSize:11,padding:'2px 8px',borderRadius:6,fontWeight:700,
+                  background: l.active?'#e8f5e9':'#f5f5f5',
+                  color: l.active?'#2e7d32':'#888'}}>
+                  {l.active ? '有效' : l.expired ? '已過期' : '已停用'}
+                </span>
+                {l.fav_count > 0 && <span style={{fontSize:11,color:'#e53935',fontWeight:700}}>❤️ {l.fav_count}</span>}
+              </div>
+              <div style={{fontSize:11,color:'var(--text3)',marginBottom:8}}>
+                {l.created_by && `員工：${l.created_by} · `}建立：{l.created_at?.slice(0,16).replace('T',' ')}
+              </div>
+              {l.active && (
+                <div style={{display:'flex',gap:6}}>
+                  <button onClick={()=>copyLink(url)}
+                    style={{flex:1,padding:'6px',fontSize:12,fontWeight:600,border:'1px solid var(--border)',borderRadius:6,background:'var(--s2)',cursor:'pointer'}}>
+                    📋 複製
+                  </button>
+                  {navigator.share && (
+                    <button onClick={()=>navigator.share({title:`${l.customer_name}的挑選`,url})}
+                      style={{flex:1,padding:'6px',fontSize:12,fontWeight:600,border:'1px solid var(--border)',borderRadius:6,background:'var(--s2)',cursor:'pointer'}}>
+                      📤 分享
+                    </button>
+                  )}
+                  <button onClick={()=>deactivate(l.token)}
+                    style={{padding:'6px 10px',fontSize:12,fontWeight:600,border:'none',borderRadius:6,background:'#ffebee',color:'#c62828',cursor:'pointer'}}>
+                    停用
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────── */
 function App() {
   const [splash,         setSplash]         = useState(true);
   const [tab,            setTab]            = useState('browse');
@@ -4562,7 +4858,7 @@ function App() {
   const [metalsLastUpd,  setMetalsLastUpd]  = useState(null);
 
   const isAdmin = role === 'admin';
-  const isStaff = role === 'admin';
+  const isStaff = role === 'admin' || role === 'editor';
 
   // Fetch metals_last_updated for banner
   useEffect(() => {
@@ -4640,6 +4936,11 @@ function App() {
               估價紀錄<QuotePendingBadge />
             </button>
           )}
+          {isStaff && (
+            <button className={'nav-tab' + (tab === 'guest' ? ' on' : '')} onClick={() => setTab('guest')}>
+              客人連結
+            </button>
+          )}
           {isAdmin && (
             <button className={'nav-tab' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>
               設定
@@ -4661,6 +4962,7 @@ function App() {
         {tab === 'browse'    && <BrowseTab isFav={isFav} toggleFav={toggleFav} role={role} />}
         {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
         {tab === 'quote'     && isStaff  && <QuoteHistoryPage role={role} />}
+        {tab === 'guest'     && isStaff  && <GuestLinksPanel />}
         {tab === 'settings'  && isAdmin  && <PricingSettingsTab />}
       </div>
       <nav className="tab-bar">
@@ -4673,6 +4975,11 @@ function App() {
             估價<QuotePendingBadge />
           </button>
         )}
+        {isStaff && (
+          <button className={'tab-btn' + (tab === 'guest' ? ' on' : '')} onClick={() => setTab('guest')}>
+            客人
+          </button>
+        )}
         {isAdmin && (
           <button className={'tab-btn' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>
             設定
@@ -4683,6 +4990,11 @@ function App() {
   );
 }
 
-ReactDOM.render(React.createElement(App), document.getElementById('root'));
+function Root() {
+  const guestToken = React.useMemo(() => new URLSearchParams(window.location.search).get('g'), []);
+  if (guestToken) return React.createElement(GuestBrowseView, { token: guestToken });
+  return React.createElement(App);
+}
+ReactDOM.render(React.createElement(Root), document.getElementById('root'));
 </script>
 </body>

@@ -175,4 +175,15 @@ CREATE TABLE IF NOT EXISTS users (
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS guest_links (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    token         TEXT NOT NULL UNIQUE,
+    customer_id   INTEGER NOT NULL,
+    customer_name TEXT NOT NULL,
+    created_by    TEXT,
+    expires_at    TIMESTAMP NOT NULL,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active     INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
 """
