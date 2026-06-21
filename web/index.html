@@ -1549,7 +1549,7 @@ function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, 
         <div style={{display:'flex',gap:10,borderTop:'1px solid #f0f0f0',padding:'10px 0 8px',alignItems:'stretch'}}>
           {photo?.thumb_url && (
             <div style={{flex:'0 0 50%',height:130,background:'#f8f8f8',borderRadius:10,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <img src={photo.thumb_url} alt="" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',display:'block'}} />
+              <ImgZoom src={photo.thumb_url} fullSrc={photo.full_url || photo.thumb_url} alt="" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',display:'block'}} />
             </div>
           )}
           <div style={{flex:1,display:'flex',flexDirection:'column',justifyContent:'center',paddingLeft:2}}>
@@ -1599,6 +1599,31 @@ function QuoteCard({ mode, photo, description, totalMin, totalMax, manualPrice, 
 }
 
 /* ── Photo-triggered estimator (4-step wizard) ──────── */
+
+/* 點擊放大圖 lightbox */
+function ImgZoom({ src, fullSrc, style, className, ...props }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <>
+      <img src={src} style={{...style, cursor:'zoom-in'}} className={className}
+        onClick={e => { e.stopPropagation(); setOpen(true); }} {...props} />
+      {open && ReactDOM.createPortal(
+        <div onClick={() => setOpen(false)}
+          style={{position:'fixed',inset:0,background:'rgba(0,0,0,.88)',zIndex:99999,
+            display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <img src={fullSrc || src} alt=""
+            style={{maxWidth:'95vw',maxHeight:'92vh',objectFit:'contain',borderRadius:8,
+              boxShadow:'0 8px 48px rgba(0,0,0,.6)'}} />
+          <button onClick={() => setOpen(false)}
+            style={{position:'fixed',top:16,right:20,background:'none',border:'none',
+              color:'#fff',fontSize:32,lineHeight:1,cursor:'pointer',padding:4}}>×</button>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
 function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const pricing = usePricing();
   const GEM_MAP = {};
@@ -1967,7 +1992,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     return (
       <div style={{padding:'12px 16px',paddingBottom:16}}>
         <div style={{display:'flex',gap:10,alignItems:'center',background:'var(--surface)',borderRadius:10,padding:'10px',border:'1px solid var(--border)',marginBottom:14}}>
-          <img src={photo.thumb_url} alt="" style={{width:52,height:52,objectFit:'cover',borderRadius:7,flexShrink:0}} />
+          <ImgZoom src={photo.thumb_url} fullSrc={photo.full_url || photo.thumb_url} alt="" style={{width:52,height:52,objectFit:'cover',borderRadius:7,flexShrink:0}} />
           <div style={{minWidth:0}}>
             <div style={{fontSize:10,color:'var(--text3)',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>參考款</div>
             <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
@@ -4299,7 +4324,7 @@ function QuoteHistoryPage({ role }) {
               {/* Thumbnail */}
               <div style={{width:54,height:54,borderRadius:8,background:'var(--s3)',flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
                 {thumbUrl
-                  ? <img src={thumbUrl} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                  ? <ImgZoom src={thumbUrl} fullSrc={`${thumbUrl}?size=1200`} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} />
                   : <span style={{fontSize:20}}>💎</span>}
               </div>
               {/* Info */}
@@ -4420,7 +4445,7 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
           <div style={{display:'flex',gap:12,marginBottom:16}}>
             {thumbUrl && (
               <div style={{width:80,height:80,borderRadius:10,background:'var(--s3)',flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <img src={thumbUrl} alt="" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}} />
+                <ImgZoom src={thumbUrl} fullSrc={`${thumbUrl}?size=1200`} alt="" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}} />
               </div>
             )}
             <div style={{flex:1}}>
