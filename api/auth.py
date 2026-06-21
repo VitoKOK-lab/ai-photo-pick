@@ -14,7 +14,7 @@ from pathlib import Path
 
 # ── 登入速率限制（防暴力破解）──────────────────────────
 _attempts: dict = defaultdict(int)   # ip -> 失敗累計次數
-_MAX_FAILS = 5                        # 超過即永久封鎖
+_MAX_FAILS = 3                        # 超過即永久封鎖
 
 def _get_db():
     import sqlite3 as _sq
