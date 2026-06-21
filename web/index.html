@@ -1632,6 +1632,23 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   Object.entries(pricing.STONES_COMMERCIAL).forEach(([k,s]) => { GEM_MAP[s.name] = {key:k,mode:'commercial'}; });
   const initGem = GEM_MAP[photo.gemstone] || null;
 
+  const [uploadedUrl, setUploadedUrl] = useState(null);
+  // dispPhoto merges server photo with any client-uploaded image
+  const dispPhoto = React.useMemo(() => ({
+    ...photo,
+    thumb_url: photo.thumb_url || uploadedUrl || null,
+    full_url:  photo.full_url  || uploadedUrl || null,
+  }), [photo, uploadedUrl]);
+
+  function handlePhotoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setUploadedUrl(ev.target.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
   const [step,         setStep]         = useState(1);
   const [budget,       setBudget]       = useState('');
   const [cat,          setCat]          = useState(photo.category        || CATS[0] || '戒指');
@@ -1807,7 +1824,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   if (savedId !== null) return (
     <div className="det-ovl">
       {showEstimateCard && hasPrice && (
-        <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
+        <QuoteCard mode="estimate" photo={dispPhoto} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
           totalMin={manualNum>0?Math.min(manualNum,Math.round(totalMax)):Math.round(totalMin)}
           totalMax={manualNum>0?Math.max(manualNum,Math.round(totalMax)):Math.round(totalMax)} customer={customer} staffName={staffName} stoneOrderNo={stoneOrderNo}
           commissionNote={commissionNote} orderType={orderType}
@@ -1818,7 +1835,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           budget={budgetNum} onClose={() => setShowEstimateCard(false)} />
       )}
       {showCard && parseInt(finalInput) > 0 && (
-        <QuoteCard mode="final" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
+        <QuoteCard mode="final" photo={dispPhoto} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
           manualPrice={parseInt(String(finalInput).replace(/[^0-9]/g,''))||0} totalMin={Math.round(totalMin)} totalMax={Math.round(totalMax)} customer={customer} staffName={staffName} stoneOrderNo={stoneOrderNo}
           commissionNote={commissionNote} orderType={orderType}
           itemSize={itemSize} cat={cat} stoneName={stoneName}
@@ -1993,7 +2010,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     return (
       <div style={{padding:'12px 16px',paddingBottom:16}}>
         <div style={{display:'flex',gap:10,alignItems:'center',background:'var(--surface)',borderRadius:10,padding:'10px',border:'1px solid var(--border)',marginBottom:14}}>
-          <ImgZoom src={photo.thumb_url} fullSrc={photo.full_url || photo.thumb_url} alt="" style={{width:52,height:52,objectFit:'cover',borderRadius:7,flexShrink:0}} />
+          {dispPhoto.thumb_url && <ImgZoom src={dispPhoto.thumb_url} fullSrc={dispPhoto.full_url || dispPhoto.thumb_url} alt="" style={{width:52,height:52,objectFit:'cover',borderRadius:7,flexShrink:0}} />}
           <div style={{minWidth:0}}>
             <div style={{fontSize:10,color:'var(--text3)',letterSpacing:1,textTransform:'uppercase',marginBottom:3}}>參考款</div>
             <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
@@ -2341,6 +2358,32 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           </div>
         </div>
 
+        {/* 上傳客人參考照片（選填）*/}
+        <div style={{width:'100%',maxWidth:320,marginBottom:20}}>
+          {uploadedUrl ? (
+            <div style={{position:'relative',borderRadius:10,overflow:'hidden',border:'1.5px solid var(--gold)',background:'#eee'}}>
+              <ImgZoom src={uploadedUrl} fullSrc={uploadedUrl} alt=""
+                style={{width:'100%',maxHeight:160,objectFit:'contain',display:'block',background:'#f8f8f8'}} />
+              <button onClick={() => setUploadedUrl(null)}
+                style={{position:'absolute',top:6,right:6,background:'rgba(0,0,0,0.55)',color:'#fff',
+                  border:'none',borderRadius:20,fontSize:11,fontWeight:700,padding:'3px 10px',cursor:'pointer'}}>
+                移除
+              </button>
+              <div style={{padding:'6px 10px',fontSize:11,color:'var(--text3)',background:'var(--surface)'}}>
+                ✅ 客人參考照片已上傳 · 點擊可放大
+              </div>
+            </div>
+          ) : (
+            <label style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,
+              border:'1.5px dashed var(--border)',borderRadius:10,padding:'14px',cursor:'pointer',
+              background:'var(--surface)',color:'var(--text2)',fontSize:13,fontWeight:600}}>
+              <span style={{fontSize:18}}>📷</span>
+              上傳客人參考照片（選填）
+              <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{display:'none'}} />
+            </label>
+          )}
+        </div>
+
         {/* 確認按鈕 */}
         <button onClick={() => setShowIntro(false)}
           style={{width:'100%',maxWidth:320,padding:'14px 0',borderRadius:12,border:'none',
@@ -2371,7 +2414,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           ))}
         </div>
         {showEstimateCard && hasPrice && (
-          <QuoteCard mode="estimate" photo={photo} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
+          <QuoteCard mode="estimate" photo={dispPhoto} description={`${cat}・${stoneName||'無主石'}${ct>0?' '+ct+'ct':''}・${style||craft}`}
             totalMin={manualNum>0?Math.min(manualNum,Math.round(totalMax)):Math.round(totalMin)}
             totalMax={manualNum>0?Math.max(manualNum,Math.round(totalMax)):Math.round(totalMax)} customer={customer} staffName={staffName} stoneOrderNo={stoneOrderNo}
             commissionNote={commissionNote} orderType={orderType}
@@ -4214,13 +4257,11 @@ function QuoteHistoryPage({ role }) {
   useEffect(() => { load(1); }, []);
 
   if (subView === 'newquote') return (
-    <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',paddingTop:'var(--nav-h)'}}>
-      <div style={{padding:'10px 16px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:10,background:'var(--surface)',flexShrink:0,zIndex:20,position:'relative'}}>
-        <button onClick={() => setSubView('list')} style={{background:'var(--s3)',border:'none',borderRadius:8,padding:'6px 12px',fontSize:13,cursor:'pointer',color:'var(--text)'}}>← 返回</button>
-        <span style={{fontSize:14,fontWeight:600}}>新估價</span>
-      </div>
-      <QuoteTab />
-    </div>
+    <PhotoQuoteFlow
+      photo={{}}
+      onBack={() => setSubView('list')}
+      onClose={() => setSubView('list')}
+    />
   );
 
   return (
