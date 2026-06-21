@@ -1,14 +1,32 @@
 """auth.py - JWT authentication"""
 import os
+import time
+from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import sqlite3
 import sys
 from pathlib import Path
+
+# ── 登入速率限制（防暴力破解）──────────────────────────
+_attempts: dict = defaultdict(list)   # ip -> [timestamp, ...]
+_WINDOW   = 60    # 秒：計算視窗
+_MAX      = 5     # 視窗內最多嘗試次數
+_LOCKOUT  = 300   # 超過後鎖定秒數
+
+def _check_rate_limit(request: Request):
+    ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    recent = [t for t in _attempts[ip] if now - t < _WINDOW]
+    if len(recent) >= _MAX:
+        wait = int(_LOCKOUT - (now - recent[0]))
+        raise HTTPException(429, f"嘗試次數過多，請 {max(1, wait//60)} 分鐘後再試")
+    recent.append(now)
+    _attempts[ip] = recent
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH
@@ -77,7 +95,8 @@ def require_admin(user=Depends(require_auth)):
     return user
 
 @router.post("/login")
-def login(body: dict):
+def login(body: dict, request: Request):
+    _check_rate_limit(request)
     username = body.get("username", "").strip()
     password = body.get("password", "")
     conn = get_db()
@@ -157,8 +176,9 @@ def delete_user(user_id: int, user=Depends(require_admin)):
 
 
 @router.post("/pin-login")
-def pin_login(body: dict):
+def pin_login(body: dict, request: Request):
     """PIN 碼登入（前端用）：驗證成功回傳 JWT token"""
+    _check_rate_limit(request)
     pin = str(body.get("pin", "")).strip()
     admin_pin = os.environ.get("ADMIN_PIN", "666")
     staff_pin = os.environ.get("STAFF_PIN", "")
