@@ -2983,95 +2983,72 @@ function QuoteTab() {
 
 /* ── LoginPage (full-screen) ── */
 function LoginPage({ onAuth }) {
-  const [mode,     setMode]     = useState('pin');   // 'pin' | 'account'
-  const [pin,      setPin]      = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [err,      setErr]      = useState(false);
+  const [err,      setErr]      = useState('');
   const [shake,    setShake]    = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [userList, setUserList] = useState([]);
-  const inputRef = useRef(null);
+  const pwRef = useRef(null);
 
   useEffect(() => {
     fetch('/api/auth/user-list').then(r => r.json()).then(setUserList).catch(() => {});
   }, []);
 
-  function triggerError() {
-    setErr(true); setPin(''); setPassword('');
+  function triggerError(msg) {
+    setErr(msg || '帳號或密碼錯誤'); setPassword('');
     setShake(true);
     setTimeout(() => setShake(false), 500);
-    inputRef.current?.focus();
   }
 
   function storeAndAuth(data) {
+    // PIN login: {token, role}  |  Account login: {token, user:{id,name,username,role}}
+    const role = data.role || data.user?.role;
+    const u    = data.user  || {};
     localStorage.setItem('jwt_token', data.token);
-    localStorage.setItem('jwt_user', JSON.stringify({ role: data.role }));
-    localStorage.setItem('userRole', data.role);
-    onAuth(data.role);
+    localStorage.setItem('jwt_user', JSON.stringify({ role, name: u.name || '', username: u.username || '' }));
+    localStorage.setItem('userRole', role);
+    onAuth(role);
   }
 
   async function submit() {
-    setLoading(true);
+    if (!username.trim() || !password.trim()) { setErr('請選擇帳號並輸入密碼'); return; }
+    setLoading(true); setErr('');
     try {
-      let res;
-      if (mode === 'pin') {
-        if (!pin.trim()) { setLoading(false); return; }
-        res = await fetch('/api/auth/pin-login', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin }),
-        });
-      } else {
-        if (!username.trim() || !password.trim()) { setLoading(false); return; }
-        res = await fetch('/api/auth/login', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
-        });
-      }
+      const res = await fetch('/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
       if (res.ok) { storeAndAuth(await res.json()); }
-      else { triggerError(); }
-    } catch { triggerError(); }
+      else { triggerError('帳號或密碼錯誤'); }
+    } catch { triggerError('網路錯誤，請重試'); }
     finally { setLoading(false); }
   }
+
+  const inputSt = {
+    width:'100%', padding:'11px 14px', border:'1.5px solid var(--border)', borderRadius:'var(--r)',
+    fontSize:15, outline:'none', boxSizing:'border-box', fontFamily:'inherit',
+    background:'var(--surface)', color:'var(--text)',
+  };
 
   return (
     <div className="login-page">
       <div className="login-brand">Tahir Zainab Selection</div>
       <div className="login-card">
         <div className={'login-card-inner' + (shake ? ' shake' : '')}>
-          {mode === 'pin' ? (
-            <>
-              <div className="login-label">請輸入密碼</div>
-              <input ref={inputRef} type="password" inputMode="numeric" maxLength={6}
-                className="login-pin-input" placeholder="••••" value={pin} autoFocus
-                onChange={e => { setPin(e.target.value); setErr(false); }}
-                onKeyDown={e => e.key === 'Enter' && submit()} />
-            </>
-          ) : (
-            <>
-              <div className="login-label">帳號登入</div>
-              {/* 選帳號 */}
-              <select className="login-pin-input" value={username} autoFocus
-                style={{marginBottom:8,textAlign:'left',paddingLeft:14,cursor:'pointer',appearance:'auto'}}
-                onChange={e => { setUsername(e.target.value); setErr(false); inputRef.current?.focus(); }}>
-                <option value="">— 請選擇帳號 —</option>
-                {userList.map(u => (
-                  <option key={u.username} value={u.username}>{u.name}</option>
-                ))}
-              </select>
-              {/* 輸密碼 */}
-              <input ref={inputRef} type="password" className="login-pin-input"
-                placeholder="密碼" value={password}
-                style={{textAlign:'left',paddingLeft:14}}
-                onChange={e => { setPassword(e.target.value); setErr(false); }}
-                onKeyDown={e => e.key === 'Enter' && submit()} />
-            </>
-          )}
-          <div className="login-err">{err ? (mode==='pin'?'密碼錯誤':'帳號或密碼錯誤') : ''}</div>
-          <button className="login-btn" onClick={submit} disabled={loading}>{loading ? '驗證中…' : '確認'}</button>
-          <button onClick={() => { setMode(m => m==='pin'?'account':'pin'); setErr(false); setPin(''); setUsername(''); setPassword(''); }}
-            style={{background:'none',border:'none',color:'var(--text3)',fontSize:12,cursor:'pointer',marginTop:8,textDecoration:'underline'}}>
-            {mode === 'pin' ? '使用帳號密碼登入' : '使用 PIN 碼登入'}
+          <div className="login-label">登入</div>
+          <select style={{...inputSt, cursor:'pointer'}} value={username} autoFocus
+            onChange={e => { setUsername(e.target.value); setErr(''); pwRef.current?.focus(); }}>
+            <option value="">— 請選擇帳號 —</option>
+            {userList.map(u => <option key={u.username} value={u.username}>{u.name}</option>)}
+          </select>
+          <input ref={pwRef} type="password" style={inputSt} placeholder="密碼"
+            value={password}
+            onChange={e => { setPassword(e.target.value); setErr(''); }}
+            onKeyDown={e => e.key === 'Enter' && submit()} />
+          <div className="login-err">{err}</div>
+          <button className="login-btn" onClick={submit} disabled={loading}>
+            {loading ? '驗證中…' : '確認'}
           </button>
         </div>
       </div>
