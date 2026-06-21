@@ -3374,7 +3374,7 @@ function PricingSettingsTab() {
   });
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
       {/* 分頁選擇列 */}
       <div style={{ display:'flex', borderBottom:'1px solid var(--border)', background:'var(--surface)', flexShrink:0 }}>
         <button style={tabBtnSt(settingsTab==='pricing')}  onClick={()=>setSettingsTab('pricing')}>📊 估價參數</button>
@@ -4058,7 +4058,9 @@ function UserMgmtSection() {
     try {
       const r = await fetch('/api/auth/users');
       if (r.ok) setUsers(await r.json());
-    } finally { setLoading(false); }
+      else flash('載入失敗（' + r.status + '）');
+    } catch(e) { flash('網路錯誤：' + e.message); }
+    finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
 
