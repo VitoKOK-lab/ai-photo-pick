@@ -1452,8 +1452,10 @@ function _fetchPricing(setP) {
       const data = {
         METAL_PER_G:       d.metals       || {},
         LABOR:             d.labor        || {},
+        LABOR_CONFIG:      d.labor_config || {daily_rate:2000,'極簡':0.5,'簡單':1,'中等':2,'複雜':4,'精工':8},
         WEIGHTS:           d.weights      || {},
         SIDESTONES:        d.sidestones   || {},
+        SIDESTONES_V2:     d.sidestones_v2 || {},
         PLATING:           d.plating      || {},
         STONES_COMMERCIAL: Object.fromEntries(
           Object.entries(d.stones_commercial || {}).map(([k, v]) => [k, { name: v.name, range: v.range || [v.price_min||0, v.price_max||0] }])
@@ -1480,8 +1482,10 @@ function usePricing() {
   return {
     METAL_PER_G:       p?.METAL_PER_G       || METAL_PER_G,
     LABOR:             p?.LABOR             || LABOR,
+    LABOR_CONFIG:      p?.LABOR_CONFIG      || {daily_rate:2000,'極簡':0.5,'簡單':1,'中等':2,'複雜':4,'精工':8},
     WEIGHTS:           p?.WEIGHTS           || WEIGHTS,
     SIDESTONES:        p?.SIDESTONES        || SIDESTONES,
+    SIDESTONES_V2:     p?.SIDESTONES_V2     || {},
     STONES_COMMERCIAL: p?.STONES_COMMERCIAL || STONES_COMMERCIAL,
     PLATING:           p?.PLATING           || {'無':[0,0],'金色':[500,1500],'玫瑰金':[500,1500],'黑金':[800,2000]},
   };
@@ -1617,7 +1621,8 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [origin,       setOrigin]       = useState('');
   const [treatment,    setTreatment]    = useState('');
   const [colorQ,       setColorQ]       = useState('');
-  const [sidestone,    setSidestone]    = useState('無配石');
+  const [sideType,     setSideType]     = useState('無配石');
+  const [sideBand,     setSideBand]     = useState('1–5顆');
   const [manualQuote,  setManualQuote]  = useState('');
   const [customer,     setCustomer]     = useState('');
   const [inquiryDate,  setInquiryDate]  = useState(`${new Date().getMonth()+1}/${new Date().getDate()}`);
@@ -1675,11 +1680,18 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 
   const CHAIN_TO_WEIGHT = {'少':'輕 (1.5–3g)','正常':'中 (3–5g)','多':'偏重 (5–8g)'};
   const laborKey    = craft || '中等';
-  const laborRange  = pricing.LABOR[cat]?.[laborKey] || [0,0];
+  const LC          = pricing.LABOR_CONFIG || {};
+  const dailyRate   = Number(LC.daily_rate) || 2000;
+  const craftDays   = Number(LC[laborKey]) || 0;
+  const laborExact  = Math.round(dailyRate * craftDays);
+  const laborRange  = craftDays > 0 ? [Math.round(laborExact * 0.9), Math.round(laborExact * 1.1)] : [0, 0];
   const weightKey   = CHAIN_TO_WEIGHT[chain] || '中 (3–5g)';
   const weightRange = (pricing.WEIGHTS[weightKey] || WEIGHTS[weightKey]) || [3,5];
   const metalPg     = pricing.METAL_PER_G[materialType] || METAL_PER_G[materialType] || 3800;
-  const sideRange   = pricing.SIDESTONES[sidestone] || [0,0];
+  const sidestone    = sideType === '無配石' ? '無配石' : `${sideType} ${sideBand}`;
+  const sideRange    = sideType !== '無配石' && pricing.SIDESTONES_V2[sideType]
+    ? (pricing.SIDESTONES_V2[sideType][sideBand] || [0,0])
+    : [0,0];
   const metalCostMin = metalPg * weightRange[0];
   const metalCostMax = metalPg * weightRange[1];
   const plateRange  = pricing.PLATING[plating] || [0,0];
@@ -1795,59 +1807,63 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           <span className="det-hd-title">報價已儲存</span>
           <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onBack}>×</button>
         </div>
-        <div className="det-scroll" style={{padding:'24px 20px'}}>
-          <div style={{background:'var(--surface)',borderRadius:14,border:'1px solid var(--border)',padding:'18px 20px',marginBottom:20,textAlign:'center'}}>
-            <div style={{fontSize:11,color:'var(--text3)',letterSpacing:1.5,textTransform:'uppercase',marginBottom:8}}>預估報價</div>
-            {hasPrice ? (
-              <>
-                <div style={{fontSize:32,fontWeight:700,color:'var(--text)',marginBottom:4}}>{fmtNT(manualNum || Math.round(totalMin))}</div>
-                <div style={{fontSize:13,color:'var(--text2)'}}>{fmtNT(totalMin)} – {fmtNT(totalMax)}</div>
-              </>
-            ) : <div style={{fontSize:14,color:'var(--text3)'}}>未計算報價</div>}
-            {customer && <div style={{fontSize:12,color:'var(--text2)',marginTop:8}}>客戶：{customer}</div>}
-            {hasPrice && (
-              <div style={{marginTop:14}}>
-                <button onClick={() => setShowEstimateCard(true)}
-                  style={{width:'100%',background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 12px',fontSize:12,fontWeight:600,color:'var(--text)',cursor:'pointer'}}>
-                  📊 預覽AI預估單
-                </button>
-              </div>
-            )}
-          </div>
-          {!confirmed ? (
-            <div style={{background:'#fffbf0',borderRadius:12,border:'1px solid rgba(184,147,90,.35)',padding:'16px 18px'}}>
-              <div style={{fontSize:13,fontWeight:700,color:'var(--gold)',marginBottom:4}}>最終報價</div>
-              <div style={{fontSize:12,color:'var(--text2)',marginBottom:14,lineHeight:1.6}}>輸入給客人的最終報價，記入歷史資料庫。</div>
-              <div style={{position:'relative',marginBottom:12}}>
-                <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',fontSize:14,color:'var(--text2)',fontWeight:600,pointerEvents:'none'}}>NT$</span>
-                <input type="text" inputMode="numeric" placeholder="0" autoFocus
-                  value={finalInput} onChange={e=>setFinalInput(e.target.value.replace(/[^0-9]/g,''))}
-                  style={{width:'100%',border:'1.5px solid var(--border)',borderRadius:8,padding:'11px 12px 11px 44px',fontSize:18,fontWeight:700,color:'var(--text)',background:'var(--surface)',outline:'none',fontFamily:'inherit'}}
-                  onFocus={e=>e.target.style.borderColor='var(--gold)'}
-                  onBlur={e=>e.target.style.borderColor='var(--border)'}
-                  onKeyDown={e=>e.key==='Enter'&&doConfirmPrice()} />
-              </div>
-              {parseInt(finalInput) > 0 && (
-                <button onClick={() => setShowCard(true)}
-                  style={{width:'100%',background:'var(--gold)',border:'none',borderRadius:8,padding:'11px',fontSize:14,fontWeight:700,color:'#fff',cursor:'pointer',marginBottom:8}}>
-                  📋 顯示最終報價單
-                </button>
+        <div className="det-scroll" style={{padding:'14px'}}>
+          <div style={{display:'flex',gap:10,alignItems:'flex-start'}}>
+            {/* 左：預估報價 */}
+            <div style={{flex:1,background:'var(--surface)',borderRadius:14,border:'1px solid var(--border)',padding:'14px',textAlign:'center'}}>
+              <div style={{fontSize:10,color:'var(--text3)',letterSpacing:1.2,textTransform:'uppercase',marginBottom:6}}>預估報價</div>
+              {hasPrice ? (
+                <>
+                  <div style={{fontSize:20,fontWeight:700,color:'var(--text)',marginBottom:2}}>{fmtNT(manualNum || Math.round(totalMin))}</div>
+                  <div style={{fontSize:10,color:'var(--text2)'}}>{fmtNT(totalMin)} – {fmtNT(totalMax)}</div>
+                </>
+              ) : <div style={{fontSize:12,color:'var(--text3)'}}>未計算</div>}
+              {customer && <div style={{fontSize:10,color:'var(--text2)',marginTop:4}}>客戶：{customer}</div>}
+              {hasPrice && (
+                <>
+                  <div style={{fontSize:10,color:'var(--text3)',marginTop:8,marginBottom:6,lineHeight:1.5}}>先把資訊跟參考照片傳給估價專員</div>
+                  <button onClick={() => setShowEstimateCard(true)}
+                    style={{width:'100%',background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'7px',fontSize:11,fontWeight:600,color:'var(--text)',cursor:'pointer'}}>
+                    📊 預覽截圖
+                  </button>
+                </>
               )}
-              <div style={{display:'flex',gap:8}}>
-                <button onClick={doConfirmPrice} disabled={!finalInput||confirming}
-                  style={{flex:1,background:(!finalInput||confirming)?'var(--s3)':'var(--accent)',color:(!finalInput||confirming)?'var(--text3)':'#fff',border:'none',borderRadius:8,padding:'11px',fontSize:14,fontWeight:700,cursor:(!finalInput||confirming)?'default':'pointer'}}>
-                  {confirming ? '確認中…' : '✓ 確認成交'}
-                </button>
-                <button onClick={onBack} style={{flex:1,background:'var(--surface)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:8,padding:'11px',fontSize:14,cursor:'pointer'}}>事後再填</button>
-              </div>
             </div>
-          ) : (
-            <div style={{textAlign:'center',padding:'32px 0'}}>
-              <div style={{fontSize:48}}>✓</div>
-              <div style={{fontSize:18,fontWeight:700,marginTop:12}}>成交價已記錄</div>
-              <div style={{fontSize:13,color:'var(--text2)',marginTop:4}}>返回中…</div>
+            {/* 右：最終報價 */}
+            <div style={{flex:1,background:'#fffbf0',borderRadius:14,border:'1px solid rgba(184,147,90,.35)',padding:'14px'}}>
+              <div style={{fontSize:10,letterSpacing:1.2,textTransform:'uppercase',color:'var(--gold)',fontWeight:700,marginBottom:6}}>最終報價</div>
+              {!confirmed ? (
+                <>
+                  <div style={{fontSize:10,color:'var(--text2)',marginBottom:8,lineHeight:1.5}}>輸入給客人的最終報價</div>
+                  <div style={{position:'relative',marginBottom:6}}>
+                    <span style={{position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',fontSize:11,color:'var(--text2)',fontWeight:600,pointerEvents:'none'}}>NT$</span>
+                    <input type="text" inputMode="numeric" placeholder="0" autoFocus
+                      value={finalInput} onChange={e=>setFinalInput(e.target.value.replace(/[^0-9]/g,''))}
+                      style={{width:'100%',border:'1.5px solid var(--border)',borderRadius:8,padding:'8px 6px 8px 30px',fontSize:15,fontWeight:700,color:'var(--text)',background:'var(--surface)',outline:'none',fontFamily:'inherit'}}
+                      onFocus={e=>e.target.style.borderColor='var(--gold)'}
+                      onBlur={e=>e.target.style.borderColor='var(--border)'}
+                      onKeyDown={e=>e.key==='Enter'&&doConfirmPrice()} />
+                  </div>
+                  {parseInt(finalInput) > 0 && (
+                    <button onClick={() => setShowCard(true)}
+                      style={{width:'100%',background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'7px',fontSize:11,fontWeight:600,color:'var(--text)',cursor:'pointer',marginBottom:6}}>
+                      📋 預覽截圖
+                    </button>
+                  )}
+                  <button onClick={doConfirmPrice} disabled={!finalInput||confirming}
+                    style={{width:'100%',background:(!finalInput||confirming)?'var(--s3)':'var(--accent)',color:(!finalInput||confirming)?'var(--text3)':'#fff',border:'none',borderRadius:8,padding:'9px',fontSize:12,fontWeight:700,cursor:(!finalInput||confirming)?'default':'pointer',marginBottom:4}}>
+                    {confirming ? '確認中…' : '✓ 確認成交'}
+                  </button>
+                  <button onClick={onBack} style={{width:'100%',background:'var(--surface)',color:'var(--text2)',border:'1px solid var(--border)',borderRadius:8,padding:'8px',fontSize:11,cursor:'pointer'}}>事後再填</button>
+                </>
+              ) : (
+                <div style={{textAlign:'center',padding:'20px 0'}}>
+                  <div style={{fontSize:36}}>✓</div>
+                  <div style={{fontSize:14,fontWeight:700,marginTop:8}}>成交已記錄</div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
@@ -1857,7 +1873,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     ? ['訂制類型','選寶石','金工材料','複雜度','配石','客戶資料']
     : orderType === '半訂制'
     ? ['訂制類型','裸石訂單','金工材料','複雜度','配石','客戶資料']
-    : ['訂制類型','委託石頭','金工材料','複雜度','配石','客戶資料'];
+    : ['訂制類型','委託石頭','裸石單號','金工材料','複雜度','配石','客戶資料'];
 
   // ── Step 0: 訂制類型 ─────────────────────────────────
   const renderStep0 = () => (
@@ -1893,6 +1909,25 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
         onBlur={e=>e.target.style.borderColor='var(--border)'} />
       <div style={{fontSize:11,color:'var(--text3)',lineHeight:1.7,background:'var(--s3)',borderRadius:8,padding:'10px 14px'}}>
         請輸入您之前向我們購買裸石的訂單編號，我們將依此查詢石頭規格。加工費不含裸石費用。
+      </div>
+    </div>
+  );
+
+  // ── 委託訂制 裸石單號 ─────────────────────────────────
+  const renderCommissionOrderNoStep = () => (
+    <div style={{padding:'16px'}}>
+      <div style={{fontSize:14,fontWeight:600,color:'var(--text)',marginBottom:4}}>裸石單號（選填）</div>
+      <div style={{fontSize:12,color:'var(--text3)',marginBottom:12,lineHeight:1.6}}>
+        客戶自帶石頭，若無單號保持「無」即可。加工費不含裸石費用。
+      </div>
+      <input type="text" placeholder="無"
+        value={stoneOrderNo || ''}
+        onChange={e=>setStoneOrderNo(e.target.value)}
+        style={{width:'100%',border:'1.5px solid var(--border)',borderRadius:8,padding:'11px 14px',fontSize:15,fontWeight:600,color:'var(--text)',background:'var(--surface)',outline:'none',fontFamily:'inherit',marginBottom:12}}
+        onFocus={e=>e.target.style.borderColor='var(--gold)'}
+        onBlur={e=>{ e.target.style.borderColor='var(--border)'; if(!stoneOrderNo) setStoneOrderNo('無'); }} />
+      <div style={{fontSize:11,color:'var(--text3)',lineHeight:1.7,background:'var(--s3)',borderRadius:8,padding:'10px 14px'}}>
+        如客戶無提供單號，系統將記錄為「無」。
       </div>
     </div>
   );
@@ -2119,39 +2154,47 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 
   // ── Step 4: 配石 ────────────────────────────────────
   const renderStep4 = () => {
-    const sideMat = sidestone === '無配石' ? '無配石'
-      : sidestone.startsWith('配石/鋯石') ? '鋯石' : '碎鑽/莫桑';
-    const sidePrefix = sideMat === '鋯石' ? '配石/鋯石 ' : '碎鑽/莫桑 ';
-    const sideQty = sideMat === '無配石' ? '' : sidestone.replace(sidePrefix, '');
-    const availQtys = sideMat === '無配石' ? []
-      : Object.keys(pricing.SIDESTONES).filter(k => k.startsWith(sidePrefix)).map(k => k.replace(sidePrefix, ''));
-
-    const handleMatChange = (mat) => {
-      if (mat === '無配石') { setSidestone('無配石'); return; }
-      const prefix = mat === '鋯石' ? '配石/鋯石 ' : '碎鑽/莫桑 ';
-      const qtys = Object.keys(pricing.SIDESTONES).filter(k=>k.startsWith(prefix)).map(k=>k.replace(prefix,''));
-      if (qtys.length) setSidestone(prefix + qtys[0]);
-    };
-
-    const sel = {width:'100%',border:'1.5px solid var(--border)',borderRadius:8,padding:'10px 12px',fontSize:14,fontFamily:'inherit',outline:'none',background:'var(--surface)',color:'var(--text)',cursor:'pointer',appearance:'none',WebkitAppearance:'none',marginBottom:16};
-    const fsel = e=>e.target.style.borderColor='var(--gold)';
-    const bsel = e=>e.target.style.borderColor='var(--border)';
-
+    const SIDE_TYPES = ['無配石','天然碎鑽','莫桑鑽','彩色配石','合成培育鑽'];
+    const QTY_BANDS  = ['1–5顆','6–15顆','16–30顆','31–50顆','50顆以上'];
     return (
       <div style={{padding:'12px 16px',paddingBottom:120}}>
-        <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>配石材質</div>
-        <select value={sideMat} onChange={e=>handleMatChange(e.target.value)} style={sel} onFocus={fsel} onBlur={bsel}>
-          <option value="無配石">無配石</option>
-          <option value="鋯石">鋯石</option>
-          <option value="碎鑽/莫桑">碎鑽/莫桑</option>
-        </select>
-
-        {sideMat !== '無配石' && (
+        <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:8}}>配石種類</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:16}}>
+          {SIDE_TYPES.map(t => {
+            const on = sideType === t;
+            return (
+              <button key={t} onClick={()=>setSideType(t)}
+                style={{padding:'8px 14px',borderRadius:8,
+                  border:on?'1.5px solid var(--gold)':'1px solid var(--border)',
+                  background:on?'rgba(184,147,90,.14)':'var(--surface)',
+                  color:on?'var(--gold)':'var(--text)',
+                  fontSize:13,fontWeight:on?700:400,cursor:'pointer'}}>
+                {t}
+              </button>
+            );
+          })}
+        </div>
+        {sideType !== '無配石' && (
           <>
-            <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:6}}>配石數量</div>
-            <select value={sideQty} onChange={e=>setSidestone(sidePrefix+e.target.value)} style={sel} onFocus={fsel} onBlur={bsel}>
-              {availQtys.map(q=><option key={q} value={q}>{q}</option>)}
-            </select>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:8}}>配石數量</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+              {QTY_BANDS.map(b => {
+                const on = sideBand === b;
+                const range = (pricing.SIDESTONES_V2[sideType] || {})[b] || [0,0];
+                return (
+                  <button key={b} onClick={()=>setSideBand(b)}
+                    style={{padding:'10px 14px',borderRadius:8,
+                      border:on?'1.5px solid var(--gold)':'1px solid var(--border)',
+                      background:on?'rgba(184,147,90,.14)':'var(--surface)',
+                      cursor:'pointer',textAlign:'left',minWidth:120}}>
+                    <div style={{fontSize:13,fontWeight:on?700:500,color:on?'var(--gold)':'var(--text)'}}>{b}</div>
+                    {range[1]>0 && <div style={{fontSize:11,color:on?'rgba(184,147,90,.7)':'var(--text3)',marginTop:2}}>
+                      {fmtNT(range[0])}–{fmtNT(range[1])}
+                    </div>}
+                  </button>
+                );
+              })}
+            </div>
           </>
         )}
       </div>
@@ -2231,7 +2274,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               <span style={{fontWeight:600}}>{fmtNT(sideRange[0])} – {fmtNT(sideRange[1])}</span>
             </div>}
             <div style={{borderTop:'2px solid var(--gold)',marginTop:8,padding:'10px 12px',background:'rgba(184,147,90,.08)',borderRadius:8}}>
-              <div style={{fontSize:10,color:'var(--text3)',marginBottom:3,letterSpacing:0.5}}>AI 預估區間</div>
+              <div style={{fontSize:10,color:'var(--text3)',marginBottom:3,letterSpacing:0.5}}>建議報價區間，請自行輸入預估金額</div>
               <div style={{fontSize:16,fontWeight:800,color:'var(--gold)'}}>{fmtNT(totalMin)} – {fmtNT(totalMax)}</div>
             </div>
           </div>
@@ -2283,10 +2326,11 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               if (step === 6) return renderStep5();
             } else {
               if (step === 2) return renderCommissionStoneStep();
-              if (step === 3) return renderStep2();
-              if (step === 4) return renderStep3();
-              if (step === 5) return renderStep4();
-              if (step === 6) return renderStep5();
+              if (step === 3) return renderCommissionOrderNoStep();
+              if (step === 4) return renderStep2();
+              if (step === 5) return renderStep3();
+              if (step === 6) return renderStep4();
+              if (step === 7) return renderStep5();
             }
           })()}
         </div>
@@ -2421,10 +2465,19 @@ function QuoteTab() {
 
   let mountMin = 0, mountMax = 0;
   if (hasMounting) {
-    const laborRange  = (pricing.LABOR[item] && pricing.LABOR[item][complexity]) ? pricing.LABOR[item][complexity] : [0,0];
+    const LC2 = pricing.LABOR_CONFIG || {};
+    const laborExact2 = Math.round((Number(LC2.daily_rate)||2000) * (Number(LC2[complexity])||0));
+    const laborRange  = LC2[complexity] ? [Math.round(laborExact2*0.9), Math.round(laborExact2*1.1)] : [0,0];
     const weightRange = pricing.WEIGHTS[weight] || WEIGHTS[weight] || [0,0];
     const metalPg     = pricing.METAL_PER_G[metal] || METAL_PER_G[metal] || 0;
-    const sideRange   = pricing.SIDESTONES[sidestone] || [0,0];
+    const sideRange   = (() => {
+      if (sidestone === '無配石') return [0,0];
+      const spaceIdx = sidestone.indexOf(' ');
+      if (spaceIdx < 0) return [0,0];
+      const tp = sidestone.slice(0, spaceIdx);
+      const bd = sidestone.slice(spaceIdx + 1);
+      return (pricing.SIDESTONES_V2[tp] || {})[bd] || [0,0];
+    })();
     mountMin = laborRange[0] + metalPg * weightRange[0] + sideRange[0];
     mountMax = laborRange[1] + metalPg * weightRange[1] + sideRange[1];
   }
@@ -2764,7 +2817,12 @@ function QuoteTab() {
                 onFocus: e => e.target.style.borderColor = 'var(--gold)',
                 onBlur:  e => e.target.style.borderColor = 'var(--border)',
               },
-                Object.keys(pricing.SIDESTONES).map(s => React.createElement('option', { key: s, value: s }, s))
+                ['無配石',
+                  '天然碎鑽 1–5顆','天然碎鑽 6–15顆','天然碎鑽 16–30顆','天然碎鑽 31–50顆','天然碎鑽 50顆以上',
+                  '莫桑鑽 1–5顆','莫桑鑽 6–15顆','莫桑鑽 16–30顆','莫桑鑽 31–50顆','莫桑鑽 50顆以上',
+                  '彩色配石 1–5顆','彩色配石 6–15顆','彩色配石 16–30顆','彩色配石 31–50顆','彩色配石 50顆以上',
+                  '合成培育鑽 1–5顆','合成培育鑽 6–15顆','合成培育鑽 16–30顆','合成培育鑽 31–50顆','合成培育鑽 50顆以上',
+                ].map(s => React.createElement('option', { key: s, value: s }, s))
               )
             ),
             /* Size */
@@ -3189,7 +3247,9 @@ function DarkBgModal({ onClose, onDeleted }) {
 function PricingSettingsTab() {
   const [metals,         setMetals]         = useState({});
   const [labor,          setLabor]          = useState({});
+  const [laborConfig,    setLaborConfig]    = useState({daily_rate:2000,'極簡':0.5,'簡單':1,'中等':2,'複雜':4,'精工':8});
   const [sidestones,     setSidestones]     = useState({});
+  const [sidestonesV2,   setSidestonesV2]   = useState({});
   const [weights,        setWeights]        = useState({});
   const [invest,         setInvest]         = useState({});
   const [commercialCarat,setCommercialCarat]= useState({});
@@ -3204,7 +3264,9 @@ function PricingSettingsTab() {
     fetch('/api/pricing/all').then(r => r.json()).then(d => {
       setMetals(d.metals ? { ...d.metals } : {});
       setLabor(d.labor ? JSON.parse(JSON.stringify(d.labor)) : {});
+      if (d.labor_config) setLaborConfig({ ...d.labor_config });
       setSidestones(d.sidestones ? { ...d.sidestones } : {});
+      if (d.sidestones_v2) setSidestonesV2(JSON.parse(JSON.stringify(d.sidestones_v2)));
       setWeights(d.weights ? { ...d.weights } : {});
       if (d.stones_invest) {
         const inv = {};
@@ -3249,21 +3311,20 @@ function PricingSettingsTab() {
         }
       }
     }
-    for (const [cat, comps] of Object.entries(labor)) {
-      for (const [comp, vals] of Object.entries(comps)) {
+    for (const [key, val] of Object.entries(laborConfig)) {
+      reqs.push(fetch('/api/pricing/labor-config/' + encodeURIComponent(key), {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: Number(val) }),
+      }));
+    }
+    for (const [stype, bands] of Object.entries(sidestonesV2)) {
+      for (const [band, vals] of Object.entries(bands)) {
         if (!Array.isArray(vals)) continue;
-        reqs.push(fetch('/api/pricing/labor/' + encodeURIComponent(cat) + '/' + encodeURIComponent(comp), {
+        reqs.push(fetch('/api/pricing/sidestones-v2/' + encodeURIComponent(stype) + '/' + encodeURIComponent(band), {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ price_min: Math.round(Number(vals[0])), price_max: Math.round(Number(vals[1])) }),
         }));
       }
-    }
-    for (const [label, vals] of Object.entries(sidestones)) {
-      if (!Array.isArray(vals)) continue;
-      reqs.push(fetch('/api/pricing/sidestones/' + encodeURIComponent(label), {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ price_min: Math.round(Number(vals[0])), price_max: Math.round(Number(vals[1])) }),
-      }));
     }
     for (const [label, vals] of Object.entries(weights)) {
       if (!Array.isArray(vals)) continue;
@@ -3479,28 +3540,67 @@ function PricingSettingsTab() {
           </div>
         </>}
 
-        {/* 師傅工錢：矩陣 */}
-        <div style={hdSt}>師傅工錢 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>品項 × 複雜度（下限／上限）</span></div>
+        {/* 師傅工錢：日薪 × 天數 */}
+        <div style={hdSt}>師傅工錢 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>深圳珠寶廠行情 · 日薪 × 天數</span></div>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,background:'var(--s3)',borderRadius:10,padding:'12px 14px'}}>
+          <div style={{fontSize:12,color:'var(--text3)',flexShrink:0}}>日薪（NT$/天）</div>
+          <input type="number" style={{...iS,width:100,fontWeight:700}}
+            value={laborConfig.daily_rate||''}
+            onChange={e=>setLaborConfig(prev=>({...prev,daily_rate:e.target.value}))} />
+          <div style={{fontSize:11,color:'var(--text3)'}}>× 天數 = 工費</div>
+        </div>
         <div style={{overflowX:'auto',marginBottom:28}}>
-          <table style={{borderCollapse:'collapse',fontSize:12}}>
-            <thead>
-              <tr>
-                <th style={{...thSt,textAlign:'left',minWidth:52,position:'sticky',left:0,background:'var(--surface)'}}>品項</th>
-                {laborComps.map(c => (
-                  <th key={c} style={{...thSt,textAlign:'center',minWidth:120,paddingBottom:2}}>{c}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
-                ))}
-              </tr>
-            </thead>
+          <table style={{borderCollapse:'collapse',fontSize:12,width:'100%'}}>
+            <thead><tr>
+              <th style={{...thSt,textAlign:'left',minWidth:60}}>複雜度</th>
+              <th style={{...thSt,textAlign:'center',minWidth:80}}>天數</th>
+              <th style={{...thSt,textAlign:'center',minWidth:130}}>工費預估</th>
+            </tr></thead>
             <tbody>
-              {laborCats.map(cat => (
-                <tr key={cat} style={{borderTop:'1px solid var(--border)'}}>
-                  <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:12,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)'}}>{cat}</td>
-                  {laborComps.map(comp => {
-                    const vals = (labor[cat] || {})[comp] || [0, 0];
+              {['極簡','簡單','中等','複雜','精工'].map(comp => {
+                const days = Number(laborConfig[comp] || 0);
+                const dr   = Number(laborConfig.daily_rate || 2000);
+                const cost = Math.round(dr * days);
+                const lo   = Math.round(cost * 0.9);
+                const hi   = Math.round(cost * 1.1);
+                return (
+                  <tr key={comp} style={{borderTop:'1px solid var(--border)'}}>
+                    <td style={{padding:'8px 8px',fontWeight:600,color:'var(--text)',fontSize:12}}>{comp}</td>
+                    <td style={{padding:'6px 8px',width:90}}>
+                      <input type="number" step="0.5" style={iS}
+                        value={laborConfig[comp]||''}
+                        onChange={e=>setLaborConfig(prev=>({...prev,[comp]:e.target.value}))} />
+                    </td>
+                    <td style={{padding:'6px 8px',textAlign:'center',fontSize:11,color:'var(--text2)'}}>
+                      {cost>0 ? `${lo.toLocaleString()}–${hi.toLocaleString()}` : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 配石費：種類 × 數量帶 */}
+        <div style={hdSt}>配石費 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$，下限／上限</span></div>
+        <div style={{overflowX:'auto',marginBottom:28}}>
+          <table style={{borderCollapse:'collapse',fontSize:11}}>
+            <thead><tr>
+              <th style={{...thSt,textAlign:'left',minWidth:70,position:'sticky',left:0,background:'var(--surface)'}}>數量</th>
+              {['天然碎鑽','莫桑鑽','彩色配石','合成培育鑽'].map(t=>(
+                <th key={t} style={{...thSt,textAlign:'center',minWidth:130}}>{t}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {['1–5顆','6–15顆','16–30顆','31–50顆','50顆以上'].map(band=>(
+                <tr key={band} style={{borderTop:'1px solid var(--border)'}}>
+                  <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:11,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)'}}>{band}</td>
+                  {['天然碎鑽','莫桑鑽','彩色配石','合成培育鑽'].map(t=>{
+                    const vals = (sidestonesV2[t]||{})[band] || [0,0];
                     return matrixCell(
                       vals[0], vals[1],
-                      e => setLabor(prev => ({ ...prev, [cat]: { ...prev[cat], [comp]: [e.target.value, ((prev[cat]||{})[comp]||[0,0])[1]] } })),
-                      e => setLabor(prev => ({ ...prev, [cat]: { ...prev[cat], [comp]: [((prev[cat]||{})[comp]||[0,0])[0], e.target.value] } }))
+                      e=>setSidestonesV2(prev=>({...prev,[t]:{...(prev[t]||{}),[band]:[e.target.value,((prev[t]||{})[band]||[0,0])[1]]}})),
+                      e=>setSidestonesV2(prev=>({...prev,[t]:{...(prev[t]||{}),[band]:[((prev[t]||{})[band]||[0,0])[0],e.target.value]}}))
                     );
                   })}
                 </tr>
@@ -3508,29 +3608,6 @@ function PricingSettingsTab() {
             </tbody>
           </table>
         </div>
-
-        {/* 配鑽/配石費 */}
-        <div style={hdSt}>配鑽／配石費 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$，下限／上限</span></div>
-        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,marginBottom:28}}>
-          <thead><tr>
-            <th style={{...thSt,textAlign:'left'}}>配石類型</th>
-            <th style={thSt}>下限</th>
-            <th style={thSt}>上限</th>
-          </tr></thead>
-          <tbody>
-            {Object.entries(sidestones).map(([label, vals]) => (
-              <tr key={label} style={{borderTop:'1px solid var(--border)'}}>
-                <td style={{padding:'8px 8px',color:'var(--text)',fontSize:12}}>{label}</td>
-                <td style={{padding:'6px 8px',width:120}}>
-                  <input type="number" style={iS} value={Array.isArray(vals) ? vals[0] || '' : ''} onChange={e => setSidestones(prev => ({ ...prev, [label]: [e.target.value, (prev[label]||[0,0])[1]] }))} />
-                </td>
-                <td style={{padding:'6px 8px',width:120}}>
-                  <input type="number" style={iS} value={Array.isArray(vals) ? vals[1] || '' : ''} onChange={e => setSidestones(prev => ({ ...prev, [label]: [(prev[label]||[0,0])[0], e.target.value] }))} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
 
 
       </div>

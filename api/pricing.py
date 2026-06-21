@@ -230,6 +230,40 @@ _SEED_PLATING = [
     ("黑金",  800,  2000),
 ]
 
+# 師傅工錢：日薪 × 天數 (深圳珠寶廠行情 ~¥400/天 ≈ NT$2000)
+_SEED_LABOR_CONFIG = [
+    ('daily_rate', 2000.0),
+    ('極簡', 0.5),
+    ('簡單', 1.0),
+    ('中等', 2.0),
+    ('複雜', 4.0),
+    ('精工', 8.0),
+]
+
+# 配石費：種類 × 數量帶
+_SEED_SIDESTONES_V2 = [
+    ('天然碎鑽', '1–5顆',      500,   1500),
+    ('天然碎鑽', '6–15顆',    2000,   5000),
+    ('天然碎鑽', '16–30顆',   5000,  12000),
+    ('天然碎鑽', '31–50顆',  12000,  25000),
+    ('天然碎鑽', '50顆以上',  25000,  80000),
+    ('莫桑鑽',   '1–5顆',      300,    800),
+    ('莫桑鑽',   '6–15顆',    1000,   3000),
+    ('莫桑鑽',   '16–30顆',   2500,   7000),
+    ('莫桑鑽',   '31–50顆',   7000,  18000),
+    ('莫桑鑽',   '50顆以上',  18000,  50000),
+    ('彩色配石', '1–5顆',       200,    600),
+    ('彩色配石', '6–15顆',      600,   2000),
+    ('彩色配石', '16–30顆',    2000,   5000),
+    ('彩色配石', '31–50顆',    5000,  12000),
+    ('彩色配石', '50顆以上',  12000,  35000),
+    ('合成培育鑽', '1–5顆',     400,   1000),
+    ('合成培育鑽', '6–15顆',   1500,   4000),
+    ('合成培育鑽', '16–30顆',  4000,   9000),
+    ('合成培育鑽', '31–50顆',  9000,  20000),
+    ('合成培育鑽', '50顆以上', 20000,  60000),
+]
+
 
 def _init_db():
     conn = sqlite3.connect(PRICING_DB_PATH)
@@ -314,6 +348,18 @@ def _init_db():
             price_max INTEGER NOT NULL,
             UNIQUE(stone_key, ct_label)
         );
+        CREATE TABLE IF NOT EXISTS pricing_labor_config (
+            key TEXT PRIMARY KEY,
+            value REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS pricing_sidestones_v2 (
+            id INTEGER PRIMARY KEY,
+            stone_type TEXT NOT NULL,
+            qty_band TEXT NOT NULL,
+            price_min INTEGER NOT NULL,
+            price_max INTEGER NOT NULL,
+            UNIQUE(stone_type, qty_band)
+        );
     """)
 
     # Seed only if tables are empty
@@ -351,6 +397,15 @@ def _init_db():
         c.executemany(
             "INSERT OR IGNORE INTO pricing_commercial_carat (stone_key, ct_label, stone_name, price_min, price_max) VALUES (?,?,?,?,?)",
             _SEED_COMMERCIAL_CARAT
+        )
+
+    if not c.execute("SELECT 1 FROM pricing_labor_config LIMIT 1").fetchone():
+        c.executemany("INSERT OR IGNORE INTO pricing_labor_config (key, value) VALUES (?,?)", _SEED_LABOR_CONFIG)
+
+    if not c.execute("SELECT 1 FROM pricing_sidestones_v2 LIMIT 1").fetchone():
+        c.executemany(
+            "INSERT OR IGNORE INTO pricing_sidestones_v2 (stone_type, qty_band, price_min, price_max) VALUES (?,?,?,?)",
+            _SEED_SIDESTONES_V2
         )
 
     # Always ensure extended weight rows exist (safe to run every restart)
@@ -450,6 +505,16 @@ def get_all_pricing():
     plating_rows = c.execute("SELECT label, price_min, price_max FROM pricing_plating ORDER BY price_min").fetchall()
     plating = {r["label"]: [r["price_min"], r["price_max"]] for r in plating_rows}
 
+    lc_rows = c.execute("SELECT key, value FROM pricing_labor_config").fetchall()
+    labor_config = {r["key"]: r["value"] for r in lc_rows}
+
+    sv2_rows = c.execute(
+        "SELECT stone_type, qty_band, price_min, price_max FROM pricing_sidestones_v2"
+    ).fetchall()
+    sidestones_v2: dict = {}
+    for r in sv2_rows:
+        sidestones_v2.setdefault(r["stone_type"], {})[r["qty_band"]] = [r["price_min"], r["price_max"]]
+
     metals_updated = c.execute("SELECT MIN(updated_at) FROM pricing_metals").fetchone()[0]
 
     conn.close()
@@ -457,10 +522,12 @@ def get_all_pricing():
         "metals": metals,
         "weights": weights,
         "labor": labor,
+        "labor_config": labor_config,
         "stones_invest": stones_invest,
         "stones_commercial": stones_commercial,
         "commercial_carat": commercial_carat,
         "sidestones": sidestones,
+        "sidestones_v2": sidestones_v2,
         "plating": plating,
         "metals_last_updated": metals_updated,
     }
@@ -627,6 +694,33 @@ def update_stone_color(stone_key: str, color_quality: str, body: MultiplierUpdat
         raise HTTPException(404, "Color quality not found")
     conn.execute("UPDATE pricing_stone_colors SET multiplier=? WHERE stone_key=? AND color_quality=?",
                  (body.multiplier, stone_key, color_quality))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+class LaborConfigUpdate(BaseModel):
+    value: float
+
+class SidestonesV2Update(BaseModel):
+    price_min: int
+    price_max: int
+
+@router.put("/labor-config/{key}")
+def update_labor_config(key: str, body: LaborConfigUpdate):
+    conn = _conn()
+    conn.execute("INSERT OR REPLACE INTO pricing_labor_config (key, value) VALUES (?,?)", (key, body.value))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+@router.put("/sidestones-v2/{stone_type}/{qty_band}")
+def update_sidestone_v2(stone_type: str, qty_band: str, body: SidestonesV2Update):
+    conn = _conn()
+    conn.execute(
+        "INSERT OR REPLACE INTO pricing_sidestones_v2 (stone_type, qty_band, price_min, price_max) VALUES (?,?,?,?)",
+        (stone_type, qty_band, body.price_min, body.price_max)
+    )
     conn.commit()
     conn.close()
     return {"ok": True}
