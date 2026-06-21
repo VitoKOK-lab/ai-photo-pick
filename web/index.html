@@ -1632,7 +1632,8 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   Object.entries(pricing.STONES_COMMERCIAL).forEach(([k,s]) => { GEM_MAP[s.name] = {key:k,mode:'commercial'}; });
   const initGem = GEM_MAP[photo.gemstone] || null;
 
-  const [uploadedUrl, setUploadedUrl] = useState(null);
+  const [uploadedUrl,      setUploadedUrl]      = useState(null);
+  const [uploadingPhoto,   setUploadingPhoto]   = useState(false);
   // dispPhoto merges server photo with any client-uploaded image
   const dispPhoto = React.useMemo(() => ({
     ...photo,
@@ -1640,13 +1641,26 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
     full_url:  photo.full_url  || uploadedUrl || null,
   }), [photo, uploadedUrl]);
 
-  function handlePhotoUpload(e) {
+  async function handlePhotoUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
+    // 先用 data URL 顯示預覽
     const reader = new FileReader();
     reader.onload = ev => setUploadedUrl(ev.target.result);
     reader.readAsDataURL(file);
-    e.target.value = '';
+    // 同時上傳到 server
+    setUploadingPhoto(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch('/api/quotes/upload-ref-photo', { method: 'POST', body: fd });
+      if (r.ok) {
+        const d = await r.json();
+        setUploadedUrl(d.url); // 換成 server URL（永久保存）
+      }
+    } catch {}
+    setUploadingPhoto(false);
   }
 
   const [step,         setStep]         = useState(1);
@@ -1782,6 +1796,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
         source_channel: sourceChannel || null,
         staff_name:     staffName || null,
         notes:          notesText || null,
+        ref_photo_url:  uploadedUrl && !uploadedUrl.startsWith('data:') ? uploadedUrl : null,
       };
       const res = await fetch('/api/quotes', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
       if (res.ok) { const d = await res.json(); setSavedId(d.id); }
@@ -2370,7 +2385,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
                 移除
               </button>
               <div style={{padding:'6px 10px',fontSize:11,color:'var(--text3)',background:'var(--surface)'}}>
-                ✅ 客人參考照片已上傳 · 點擊可放大
+                {uploadingPhoto ? '⏳ 上傳中…' : '✅ 照片已儲存 · 點擊可放大'}
               </div>
             </div>
           ) : (

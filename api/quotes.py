@@ -1,14 +1,18 @@
 """quotes.py - 報價管理 + 價格推估"""
 import sqlite3
 import sys
+import uuid
 from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, UploadFile, File
 from pydantic import BaseModel
 from api.auth import require_editor
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config.settings import SQLITE_PATH
+from config.settings import SQLITE_PATH, BASE_DIR
+
+QUOTE_REFS_DIR = BASE_DIR / "data" / "quote_refs"
+QUOTE_REFS_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(prefix="/api/quotes", tags=["quotes"])
 
@@ -42,6 +46,7 @@ def _migrate():
         ('inquiry_time',    'TEXT'),
         ('source_channel',  'TEXT'),
         ('staff_name',      'TEXT'),
+        ('ref_photo_url',   'TEXT'),
     ]:
         try:
             conn.execute(f"ALTER TABLE quotes ADD COLUMN {col} {typ}")
@@ -101,6 +106,7 @@ class QuoteCreate(BaseModel):
     inquiry_time: Optional[str] = None
     source_channel: Optional[str] = None
     staff_name: Optional[str] = None
+    ref_photo_url: Optional[str] = None
 
 class QuoteUpdate(BaseModel):
     description: Optional[str] = None
@@ -164,13 +170,15 @@ def create_quote(body: QuoteCreate, _user=Depends(require_editor)):
                                gemstone_origin, quote_date, notes, photo_id,
                                customer_name, original_data, adjusted_data,
                                estimated_min, estimated_max, budget,
-                               stone_order_no, inquiry_time, source_channel, staff_name)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                               stone_order_no, inquiry_time, source_channel, staff_name,
+                               ref_photo_url)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (body.description, fp, body.material, body.gemstone,
          body.gemstone_origin, body.quote_date, body.notes, body.photo_id,
          body.customer_name, body.original_data, body.adjusted_data,
          body.estimated_min, body.estimated_max, body.budget,
-         body.stone_order_no, body.inquiry_time, body.source_channel, body.staff_name)
+         body.stone_order_no, body.inquiry_time, body.source_channel, body.staff_name,
+         body.ref_photo_url)
     )
     qid = cur.lastrowid
     conn.commit()
@@ -207,6 +215,30 @@ def update_quote(quote_id: int, body: QuoteUpdate, _user=Depends(require_editor)
     updated = conn.execute("SELECT * FROM quotes WHERE id=?", (quote_id,)).fetchone()
     conn.close()
     return dict(updated)
+
+
+@router.post("/upload-ref-photo")
+async def upload_ref_photo(file: UploadFile = File(...), _user=Depends(require_editor)):
+    """上傳客人參考照片，儲存後回傳可存取的 URL。"""
+    ext = Path(file.filename or "photo.jpg").suffix.lower() or ".jpg"
+    if ext not in {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}:
+        raise HTTPException(400, "不支援的格式")
+    filename = f"{uuid.uuid4().hex}{ext}"
+    dest = QUOTE_REFS_DIR / filename
+    content = await file.read()
+    # 壓縮至合理尺寸以節省空間
+    try:
+        from PIL import Image
+        import io
+        img = Image.open(io.BytesIO(content)).convert("RGB")
+        img.thumbnail((1200, 1200))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85, optimize=True)
+        dest.with_suffix(".jpg").write_bytes(buf.getvalue())
+        filename = dest.stem + ".jpg"
+    except Exception:
+        dest.write_bytes(content)
+    return {"url": f"/static/quote-refs/{filename}"}
 
 
 @router.delete("/all")

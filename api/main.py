@@ -200,16 +200,19 @@ _full_dir  = PROCESSED_DIR / "full"
 _thumb_dir = PROCESSED_DIR / "thumb"
 _micro_dir = PROCESSED_DIR / "micro"
 _classified_dir = BASE_DIR / "data" / "02_classified"
+_quote_refs_dir = BASE_DIR / "data" / "quote_refs"
 
 _full_dir.mkdir(parents=True, exist_ok=True)
 _thumb_dir.mkdir(parents=True, exist_ok=True)
 _micro_dir.mkdir(parents=True, exist_ok=True)
+_quote_refs_dir.mkdir(parents=True, exist_ok=True)
 _classified_dir.mkdir(parents=True, exist_ok=True)
 
-app.mount("/static/full",       StaticFiles(directory=str(_full_dir)),       name="full")
-app.mount("/static/thumb",      StaticFiles(directory=str(_thumb_dir)),      name="thumb")
-app.mount("/static/micro",      StaticFiles(directory=str(_micro_dir)),      name="micro")
-app.mount("/static/classified", StaticFiles(directory=str(_classified_dir)), name="classified")
+app.mount("/static/full",        StaticFiles(directory=str(_full_dir)),        name="full")
+app.mount("/static/thumb",       StaticFiles(directory=str(_thumb_dir)),       name="thumb")
+app.mount("/static/micro",       StaticFiles(directory=str(_micro_dir)),       name="micro")
+app.mount("/static/classified",  StaticFiles(directory=str(_classified_dir)),  name="classified")
+app.mount("/static/quote-refs",  StaticFiles(directory=str(_quote_refs_dir)),  name="quote-refs")
 
 
 @app.get("/api/health")
