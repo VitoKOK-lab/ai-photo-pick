@@ -58,12 +58,6 @@ def _run_migrations():
     """)
     conn.commit()
 
-    # 移除 9K金（不使用此規格，表可能尚未建立時跳過）
-    try:
-        conn.execute("DELETE FROM pricing_metals WHERE material='9K金'")
-        conn.commit()
-    except Exception:
-        pass
 
     # 簡化寶石顏色標籤
     color_renames = [
@@ -220,6 +214,18 @@ app.include_router(transactions_router)
 app.include_router(upload_router)
 app.include_router(auth_router)
 app.include_router(pricing_router)
+
+@app.on_event("startup")
+def _post_startup_cleanup():
+    """在所有 router 初始化（含建表）後執行的清理。"""
+    conn = sqlite3.connect(SQLITE_PATH)
+    try:
+        conn.execute("DELETE FROM pricing_metals WHERE material='9K金'")
+        conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
 app.include_router(agents_router)
 app.include_router(staging_router)
 app.include_router(admin_router)
