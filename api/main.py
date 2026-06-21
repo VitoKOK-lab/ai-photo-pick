@@ -11,7 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config.settings import BASE_DIR, PROCESSED_DIR, ALLOWED_ORIGINS, SQLITE_PATH
+from config.settings import BASE_DIR, PROCESSED_DIR, ALLOWED_ORIGINS, SQLITE_PATH, PRICING_DB_PATH
 
 
 def _run_migrations():
@@ -218,7 +218,7 @@ app.include_router(pricing_router)
 @app.on_event("startup")
 def _post_startup_cleanup():
     """在所有 router 初始化（含建表）後執行的清理。"""
-    conn = sqlite3.connect(SQLITE_PATH)
+    conn = sqlite3.connect(PRICING_DB_PATH)
     try:
         conn.execute("DELETE FROM pricing_metals WHERE material='9K金'")
         conn.commit()
