@@ -4158,6 +4158,11 @@ function App() {
             估價<QuotePendingBadge />
           </button>
         )}
+        {isAdmin && (
+          <button className={'tab-btn' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>
+            設定
+          </button>
+        )}
       </nav>
     </React.Fragment>
   );
