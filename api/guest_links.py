@@ -43,15 +43,19 @@ def create_link(body: CreateLinkBody, user=Depends(require_editor)):
         conn.commit()
         customer_id = cur.lastrowid
 
-    # 建立 session 記錄（記錄誰建立的連結）
+    # 建立 session 記錄（記錄誰建立的連結，可選）
     staff_display = body.staff_name or user.get("name", "")
-    staff_row = conn.execute("SELECT id FROM staff WHERE name=?", (staff_display,)).fetchone()
-    staff_id = staff_row["id"] if staff_row else None
-    session_cur = conn.execute(
-        "INSERT INTO customer_sessions(customer_id, staff_id, notes) VALUES(?,?,?)",
-        (customer_id, staff_id, f"建立臨時瀏覽連結")
-    )
-    session_id = session_cur.lastrowid
+    session_id = None
+    try:
+        staff_row = conn.execute("SELECT id FROM staff WHERE name=?", (staff_display,)).fetchone()
+        staff_id = staff_row["id"] if staff_row else None
+        session_cur = conn.execute(
+            "INSERT INTO customer_sessions(customer_id, staff_id, notes) VALUES(?,?,?)",
+            (customer_id, staff_id, "建立臨時瀏覽連結")
+        )
+        session_id = session_cur.lastrowid
+    except Exception:
+        pass
 
     token = secrets.token_urlsafe(16)
     expires_at = (datetime.utcnow() + timedelta(hours=LINK_HOURS)).isoformat()
