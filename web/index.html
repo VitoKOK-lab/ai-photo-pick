@@ -4073,18 +4073,23 @@ function UserMgmtSection() {
       flash('姓名、帳號、密碼都必填'); return;
     }
     setSaving(true);
-    const r = await fetch('/api/auth/users', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(form),
-    });
-    setSaving(false);
-    if (r.ok) {
-      setForm({ name:'', username:'', password:'', role:'editor' });
-      flash('✓ 帳號已新增');
-      load();
-    } else {
-      const d = await r.json().catch(()=>({}));
-      flash(d.detail || '新增失敗');
+    try {
+      const r = await fetch('/api/auth/users', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(form),
+      });
+      if (r.ok) {
+        setForm({ name:'', username:'', password:'', role:'editor' });
+        flash('✓ 帳號已新增');
+        load();
+      } else {
+        const d = await r.json().catch(()=>({}));
+        flash(d.detail || '新增失敗（' + r.status + '）');
+      }
+    } catch(e) {
+      flash('網路錯誤：' + e.message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -4116,9 +4121,6 @@ function UserMgmtSection() {
 
   return (
     <div>
-      {msg && <div style={{fontSize:13,fontWeight:600,marginBottom:10,
-        color: msg.startsWith('✓') ? '#2e7d32' : '#c62828'}}>{msg}</div>}
-
       {/* 新增帳號表單（永遠顯示在最上方） */}
       <div style={{background:'#fdf8ef',borderRadius:12,padding:'16px',border:'2px solid #c8b89a',marginBottom:20}}>
         <div style={{fontWeight:800,fontSize:15,marginBottom:12,color:'var(--text)'}}>+ 新增帳號</div>
@@ -4144,6 +4146,9 @@ function UserMgmtSection() {
             </select>
           </div>
         </div>
+        {msg && <div style={{fontSize:13,fontWeight:600,marginBottom:8,padding:'8px 10px',borderRadius:8,
+          background: msg.startsWith('✓') ? '#e8f5e9' : '#ffebee',
+          color: msg.startsWith('✓') ? '#2e7d32' : '#c62828'}}>{msg}</div>}
         <button onClick={createUser} disabled={saving}
           style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:10,
             padding:'12px 0',fontSize:15,fontWeight:800,cursor:'pointer',width:'100%',
