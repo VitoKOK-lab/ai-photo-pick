@@ -13,20 +13,44 @@ import sys
 from pathlib import Path
 
 # ── 登入速率限制（防暴力破解）──────────────────────────
-_attempts: dict = defaultdict(list)   # ip -> [timestamp, ...]
-_WINDOW   = 60    # 秒：計算視窗
-_MAX      = 5     # 視窗內最多嘗試次數
-_LOCKOUT  = 300   # 超過後鎖定秒數
+_attempts: dict = defaultdict(int)   # ip -> 失敗累計次數
+_MAX_FAILS = 5                        # 超過即永久封鎖
+
+def _get_db():
+    import sqlite3 as _sq
+    from config.settings import SQLITE_PATH as _SP
+    c = _sq.connect(_SP)
+    c.row_factory = _sq.Row
+    return c
+
+def _is_blocked(ip: str) -> bool:
+    try:
+        conn = _get_db()
+        row = conn.execute("SELECT 1 FROM blocked_ips WHERE ip=?", (ip,)).fetchone()
+        conn.close()
+        return row is not None
+    except Exception:
+        return False
+
+def _block_ip(ip: str, reason: str):
+    try:
+        conn = _get_db()
+        conn.execute("INSERT OR IGNORE INTO blocked_ips(ip, reason) VALUES(?,?)", (ip, reason))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
 def _check_rate_limit(request: Request):
     ip = request.client.host if request.client else "unknown"
-    now = time.time()
-    recent = [t for t in _attempts[ip] if now - t < _WINDOW]
-    if len(recent) >= _MAX:
-        wait = int(_LOCKOUT - (now - recent[0]))
-        raise HTTPException(429, f"嘗試次數過多，請 {max(1, wait//60)} 分鐘後再試")
-    recent.append(now)
-    _attempts[ip] = recent
+    if _is_blocked(ip):
+        raise HTTPException(403, "此 IP 已被封鎖，請聯繫管理員")
+
+def _record_fail(request: Request):
+    ip = request.client.host if request.client else "unknown"
+    _attempts[ip] += 1
+    if _attempts[ip] >= _MAX_FAILS:
+        _block_ip(ip, f"登入失敗 {_attempts[ip]} 次後自動封鎖")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH
@@ -103,6 +127,7 @@ def login(body: dict, request: Request):
     row = conn.execute("SELECT * FROM users WHERE username=? AND is_active=1", (username,)).fetchone()
     conn.close()
     if not row or not verify_password(password, row["password_hash"]):
+        _record_fail(request)
         raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
     token = create_token(row["id"], row["role"])
     return {"token": token, "user": {"id": row["id"], "name": row["name"], "username": row["username"], "role": row["role"]}}
@@ -187,7 +212,26 @@ def pin_login(body: dict, request: Request):
     elif staff_pin and pin == staff_pin:
         sub, role = "pin_staff", "editor"
     else:
+        _record_fail(request)
         raise HTTPException(status_code=401, detail="PIN 錯誤")
     expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     token = jwt.encode({"sub": sub, "role": role, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
     return {"token": token, "role": role}
+
+
+# ── 管理員：封鎖 IP 管理 ────────────────────────────────
+@router.get("/blocked-ips")
+def list_blocked_ips(_user=Depends(require_admin)):
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM blocked_ips ORDER BY blocked_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@router.delete("/blocked-ips/{ip}")
+def unblock_ip(ip: str, _user=Depends(require_admin)):
+    conn = get_db()
+    conn.execute("DELETE FROM blocked_ips WHERE ip=?", (ip,))
+    conn.commit()
+    conn.close()
+    _attempts.pop(ip, None)
+    return {"ok": True, "unblocked": ip}
