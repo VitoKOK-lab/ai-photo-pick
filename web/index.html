@@ -2404,7 +2404,12 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
       <div className="det-panel" style={{flexDirection:'column'}}>
         <div className="det-hd-bar">
           <button className="det-back" onClick={step===1?onBack:()=>setStep(s=>s-1)}>←</button>
-          <span className="det-hd-title">估價 · {STEPS[step-1]}</span>
+          <span className="det-hd-title" style={{flex:1}}>估價 · {STEPS[step-1]}</span>
+          {dispPhoto.thumb_url && (
+            <ImgZoom src={dispPhoto.thumb_url} fullSrc={dispPhoto.full_url || dispPhoto.thumb_url} alt=""
+              style={{width:34,height:34,objectFit:'cover',borderRadius:6,flexShrink:0,
+                border:'1.5px solid var(--gold)',cursor:'pointer'}} />
+          )}
           <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
         </div>
 
