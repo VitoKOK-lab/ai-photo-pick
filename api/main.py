@@ -27,6 +27,37 @@ def _run_migrations():
             conn.execute(f"ALTER TABLE photos ADD COLUMN {col} {typ}")
             print(f"[DB migration] 新增欄位：{col}")
 
+    # 確保新表存在（首次升級時建立）
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            name          TEXT NOT NULL,
+            username      TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role          TEXT NOT NULL DEFAULT 'editor' CHECK(role IN ('admin','editor','viewer')),
+            is_active     INTEGER NOT NULL DEFAULT 1,
+            created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS blocked_ips (
+            ip         TEXT PRIMARY KEY,
+            reason     TEXT,
+            blocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS guest_links (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            token         TEXT NOT NULL UNIQUE,
+            customer_id   INTEGER NOT NULL,
+            customer_name TEXT NOT NULL,
+            created_by    TEXT,
+            expires_at    TIMESTAMP NOT NULL,
+            created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_active     INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (customer_id) REFERENCES customers(id)
+        );
+    """)
+    conn.commit()
+
     # 簡化寶石顏色標籤
     color_renames = [
         ('紅色', '紅'), ('粉紅色', '粉'), ('橙色', '黃'), ('黃色', '黃'),
