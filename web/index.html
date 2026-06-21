@@ -371,13 +371,13 @@ button { font-family: inherit; cursor: pointer; }
 }
 .pricing-section-selector::-webkit-scrollbar { display: none; }
 .pricing-sec-btn {
-  padding: 7px 18px;
+  padding: 9px 20px;
   border-radius: 20px;
-  border: 1.5px solid #ccc;
-  background: #f0f0f0;
-  color: #444;
-  font-size: 14px;
-  font-weight: 500;
+  border: 2px solid #c0b0a0;
+  background: #f5f0ea;
+  color: #333;
+  font-size: 15px;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
   transition: all .15s;
@@ -3350,15 +3350,15 @@ function PricingSettingsTab() {
   const investKeys = Object.keys(invest);
   const commCaratKeys = Object.keys(commercialCarat);
 
-  const iS = { padding:'5px 8px', border:'1px solid var(--border)', borderRadius:6, fontSize:13, background:'var(--bg)', color:'var(--text)', boxSizing:'border-box', textAlign:'right', width:'100%' };
-  const hdSt = { fontSize:14, fontWeight:700, color:'var(--text)', padding:'14px 0 8px', borderBottom:'2px solid var(--border)', marginBottom:12 };
-  const thSt = { padding:'4px 8px', textAlign:'right', fontWeight:500, fontSize:11, color:'var(--text3)' };
+  const iS = { padding:'7px 10px', border:'2px solid #c8b89a', borderRadius:8, fontSize:15, background:'#fdf8ef', color:'var(--text)', fontWeight:600, boxSizing:'border-box', textAlign:'right', width:'100%' };
+  const hdSt = { fontSize:16, fontWeight:800, color:'var(--text)', padding:'16px 0 10px', borderBottom:'2px solid var(--border)', marginBottom:14 };
+  const thSt = { padding:'6px 8px', textAlign:'right', fontWeight:700, fontSize:13, color:'var(--text2)' };
   const matrixCell = (minVal, maxVal, onMin, onMax) => (
     <td style={{padding:'3px 4px',textAlign:'center'}}>
       <div style={{display:'flex',gap:2,alignItems:'center',justifyContent:'center'}}>
-        <input type="number" style={{...iS,width:54,fontSize:12,padding:'4px 4px'}} value={minVal||''} onChange={onMin} />
-        <span style={{color:'var(--text3)',fontSize:11}}>/</span>
-        <input type="number" style={{...iS,width:54,fontSize:12,padding:'4px 4px'}} value={maxVal||''} onChange={onMax} />
+        <input type="number" style={{...iS,width:62,fontSize:13,padding:'5px 4px'}} value={minVal||''} onChange={onMin} />
+        <span style={{color:'var(--text3)',fontSize:12}}>/</span>
+        <input type="number" style={{...iS,width:62,fontSize:13,padding:'5px 4px'}} value={maxVal||''} onChange={onMax} />
       </div>
     </td>
   );
@@ -3418,7 +3418,7 @@ function PricingSettingsTab() {
                     {metalKeys.map(mat => (
                       <th key={mat} style={{...thSt,textAlign:'center',minWidth:96,paddingBottom:4}}>
                         <div style={{fontWeight:600,marginBottom:4}}>{mat}</div>
-                        <input type="number" style={{...iS,width:80,fontSize:12,textAlign:'center',padding:'4px 6px'}}
+                        <input type="number" style={{...iS,width:86,fontSize:14,textAlign:'center',padding:'5px 6px'}}
                           value={metals[mat]||''} placeholder="NT$/克"
                           onChange={e => setMetals(prev => ({...prev,[mat]:e.target.value}))} />
                         <div style={{fontSize:10,color:'var(--text3)',marginTop:2}}>NT$/克</div>
