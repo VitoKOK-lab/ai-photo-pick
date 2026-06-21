@@ -76,6 +76,30 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+def _ensure_tables():
+    conn = sqlite3.connect(SQLITE_PATH)
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            name          TEXT NOT NULL,
+            username      TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role          TEXT NOT NULL DEFAULT 'editor' CHECK(role IN ('admin','editor','viewer')),
+            is_active     INTEGER NOT NULL DEFAULT 1,
+            created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS blocked_ips (
+            ip         TEXT PRIMARY KEY,
+            reason     TEXT,
+            blocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    conn.commit()
+    conn.close()
+
+_ensure_tables()
+
 def verify_password(plain, hashed):
     return pwd_context.verify(plain, hashed)
 
@@ -169,9 +193,12 @@ def create_user(body: dict, user=Depends(require_admin)):
         new_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         conn.close()
         return {"id": new_id, "name": name, "username": username, "role": role}
+    except sqlite3.IntegrityError:
+        conn.close()
+        raise HTTPException(status_code=400, detail="帳號已存在（用戶名重複）")
     except Exception as e:
         conn.close()
-        raise HTTPException(status_code=400, detail="帳號已存在")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.patch("/users/{user_id}")
 def update_user(user_id: int, body: dict, user=Depends(require_admin)):
