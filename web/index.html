@@ -2381,8 +2381,8 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           </button>
         </div>
 
-        {/* 上傳客人參考照片（選填）*/}
-        <div style={{width:'100%',maxWidth:320,marginBottom:16}}>
+        {/* 上傳客人參考照片（選填）— 只在無現有照片時顯示 */}
+        {!photo.id && !photo.thumb_url && <div style={{width:'100%',maxWidth:320,marginBottom:16}}>
           {uploadedUrl ? (
             <div style={{position:'relative',borderRadius:10,overflow:'hidden',border:'1.5px solid var(--gold)',background:'#eee'}}>
               <ImgZoom src={uploadedUrl} fullSrc={uploadedUrl} alt=""
@@ -2405,7 +2405,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
               <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{display:'none'}} />
             </label>
           )}
-        </div>
+        </div>}
 
         {/* 確認按鈕 */}
         <button onClick={() => setShowIntro(false)}
