@@ -50,7 +50,11 @@ def _record_fail(request: Request):
     ip = request.client.host if request.client else "unknown"
     _attempts[ip] += 1
     if _attempts[ip] >= _MAX_FAILS:
-        _block_ip(ip, f"登入失敗 {_attempts[ip]} 次後自動封鎖")
+        _block_ip(ip, f"連續登入失敗 {_attempts[ip]} 次後自動封鎖")
+
+def _record_success(request: Request):
+    ip = request.client.host if request.client else "unknown"
+    _attempts[ip] = 0
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH
@@ -129,6 +133,7 @@ def login(body: dict, request: Request):
     if not row or not verify_password(password, row["password_hash"]):
         _record_fail(request)
         raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
+    _record_success(request)
     token = create_token(row["id"], row["role"])
     return {"token": token, "user": {"id": row["id"], "name": row["name"], "username": row["username"], "role": row["role"]}}
 
@@ -214,6 +219,7 @@ def pin_login(body: dict, request: Request):
     else:
         _record_fail(request)
         raise HTTPException(status_code=401, detail="PIN 錯誤")
+    _record_success(request)
     expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     token = jwt.encode({"sub": sub, "role": role, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
     return {"token": token, "role": role}
