@@ -4620,11 +4620,94 @@ function StagingSection() {
 
 /* ── App ────────────────────────────────────────────── */
 /* ── 客人瀏覽模式（臨時連結） ───────────────────────── */
+function GuestFavSheet({ token, favIds, onToggle, onClose }) {
+  const [favPhotos, setFavPhotos] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/guest-links/favorites/${token}`)
+      .then(r => r.json())
+      .then(d => setFavPhotos(d.favorites || []))
+      .finally(() => setLoading(false));
+  }, [token, favIds.size]);
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:400,background:'var(--bg)',display:'flex',flexDirection:'column'}}>
+      {/* header */}
+      <div style={{display:'flex',alignItems:'center',padding:'14px 16px',
+        borderBottom:'1px solid var(--border)',background:'var(--surface)',flexShrink:0}}>
+        <button onClick={onClose}
+          style={{background:'none',border:'none',fontSize:22,cursor:'pointer',marginRight:12,color:'var(--text)',padding:'0 4px'}}>
+          ←
+        </button>
+        <span style={{fontWeight:800,fontSize:16,flex:1}}>我的收藏</span>
+        <span style={{fontSize:13,color:'var(--text2)'}}>
+          {favIds.size} / 9 張
+        </span>
+      </div>
+
+      {/* hint */}
+      <div style={{padding:'10px 16px',background:'#fff8e1',borderBottom:'1px solid #ffe082',
+        fontSize:12,color:'#795548',flexShrink:0}}>
+        💡 點擊照片可以取消收藏，騰出空位後即可繼續選新的款式
+      </div>
+
+      {/* grid */}
+      <div style={{flex:1,overflowY:'auto',padding:'12px 16px 32px'}}>
+        {loading ? (
+          <div style={{textAlign:'center',color:'var(--text3)',fontSize:13,marginTop:40}}>載入中…</div>
+        ) : favPhotos.length === 0 ? (
+          <div style={{textAlign:'center',color:'var(--text3)',fontSize:13,marginTop:40}}>
+            尚未收藏任何款式<br/><span style={{fontSize:11}}>返回瀏覽頁點 ♡ 加入收藏</span>
+          </div>
+        ) : (
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+            {favPhotos.map(f => (
+              <div key={f.photo_id}
+                style={{position:'relative',borderRadius:10,overflow:'hidden',
+                  border:'2px solid #e53935',cursor:'pointer',background:'#eee'}}
+                onClick={() => onToggle({ id: f.photo_id })}>
+                <img src={`/api/thumb/${f.photo_id}`}
+                  style={{width:'100%',aspectRatio:'1/1',objectFit:'cover',display:'block'}} />
+                {/* overlay remove btn */}
+                <div style={{position:'absolute',inset:0,background:'rgba(198,40,40,0.15)',
+                  display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:6}}>
+                  <span style={{background:'#c62828',color:'#fff',borderRadius:20,
+                    fontSize:11,fontWeight:700,padding:'3px 10px'}}>
+                    ✕ 取消
+                  </span>
+                </div>
+                <div style={{position:'absolute',top:4,right:4,background:'#e53935',
+                  color:'#fff',borderRadius:'50%',width:20,height:20,
+                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700}}>
+                  ♥
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* footer */}
+      <div style={{padding:'12px 16px',background:'var(--surface)',borderTop:'1px solid var(--border)',flexShrink:0}}>
+        <button onClick={onClose}
+          style={{width:'100%',background:'var(--accent)',color:'#fff',border:'none',
+            borderRadius:10,padding:'13px',fontSize:15,fontWeight:700,cursor:'pointer'}}>
+          繼續瀏覽款式
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function GuestApp({ token }) {
-  const [info,   setInfo]   = useState(null);
-  const [error,  setError]  = useState('');
-  const [favIds, setFavIds] = useState(new Set());
-  const [remain, setRemain] = useState(0);
+  const [info,       setInfo]       = useState(null);
+  const [error,      setError]      = useState('');
+  const [favIds,     setFavIds]     = useState(new Set());
+  const [remain,     setRemain]     = useState(0);
+  const [showSheet,  setShowSheet]  = useState(false);
+  const [limitToast, setLimitToast] = useState(false);
   const MAX_FAVS = 9;
 
   useEffect(() => {
@@ -4651,7 +4734,11 @@ function GuestApp({ token }) {
 
   const toggleFav = async photo => {
     const id = typeof photo === 'object' ? photo.id : photo;
-    if (!favIds.has(id) && favIds.size >= MAX_FAVS) return;
+    if (!favIds.has(id) && favIds.size >= MAX_FAVS) {
+      setLimitToast(true);
+      setTimeout(() => setLimitToast(false), 2500);
+      return;
+    }
     try {
       const r = await fetch(`/api/guest-links/favorite/${token}/${id}`, { method: 'POST' });
       if (!r.ok) return;
@@ -4681,29 +4768,131 @@ function GuestApp({ token }) {
 
   return (
     <React.Fragment>
-      {/* 用固定 nav 讓 BrowseTab 的動態 paddingTop 正常計算 */}
       <header className="nav">
         <span className="nav-logo">Tahir Zainab Selection</span>
-        <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <span style={{fontSize:13,color:'var(--text2)'}}>⏱ {timeStr}</span>
-          <span style={{fontSize:14,fontWeight:700,color: atLimit ? '#e53935' : 'var(--text)'}}>
-            ❤️ {favIds.size}<span style={{fontWeight:400,color:'var(--text3)'}}> / {MAX_FAVS}</span>
-          </span>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:12,color:'var(--text2)'}}>⏱ {timeStr}</span>
+          {/* 收藏按鈕 */}
+          <button onClick={() => setShowSheet(true)}
+            style={{display:'flex',alignItems:'center',gap:5,
+              background: atLimit ? '#c62828' : '#e53935',
+              color:'#fff',border:'none',borderRadius:20,
+              padding:'5px 12px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+            ❤️ {favIds.size}
+            <span style={{fontWeight:400,fontSize:11,opacity:0.85}}>/{MAX_FAVS}</span>
+          </button>
         </div>
       </header>
-      <div className="content">
+
+      <div className="content" style={{paddingBottom: favIds.size > 0 ? 56 : 0}}>
         <BrowseTab isFav={isFav} toggleFav={toggleFav} role="viewer" />
       </div>
+
+      {/* 底部提示條 */}
       {favIds.size > 0 && (
-        <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:300,
-          background: atLimit ? '#c62828' : '#e53935', color:'#fff',
-          padding:'12px 16px',textAlign:'center',fontSize:13,fontWeight:600}}>
-          {atLimit
-            ? `已選滿 ${MAX_FAVS} 張 · 請通知店員為您服務 ❤️`
-            : `已收藏 ${favIds.size} / ${MAX_FAVS} 張 · 繼續瀏覽或通知店員 ❤️`}
+        <div onClick={() => setShowSheet(true)}
+          style={{position:'fixed',bottom:0,left:0,right:0,zIndex:300,
+            background: atLimit ? '#c62828' : '#e53935', color:'#fff',
+            padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',
+            cursor:'pointer',fontSize:13,fontWeight:600}}>
+          <span>
+            {atLimit
+              ? `✅ 已選滿 ${MAX_FAVS} 張 — 請通知店員`
+              : `❤️ 已收藏 ${favIds.size} / ${MAX_FAVS} 張`}
+          </span>
+          <span style={{fontSize:12,fontWeight:400,opacity:0.9}}>管理收藏 →</span>
         </div>
       )}
+
+      {/* 上限提示 toast */}
+      {limitToast && (
+        <div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',
+          zIndex:500,background:'rgba(0,0,0,0.82)',color:'#fff',
+          padding:'14px 24px',borderRadius:12,fontSize:14,fontWeight:600,
+          textAlign:'center',maxWidth:240,lineHeight:1.5,pointerEvents:'none'}}>
+          已達上限 {MAX_FAVS} 張<br/>
+          <span style={{fontSize:12,fontWeight:400,opacity:0.8}}>點底部「管理收藏」可取消後再選</span>
+        </div>
+      )}
+
+      {/* 收藏管理 sheet */}
+      {showSheet && (
+        <GuestFavSheet
+          token={token}
+          favIds={favIds}
+          onToggle={toggleFav}
+          onClose={() => setShowSheet(false)}
+        />
+      )}
     </React.Fragment>
+  );
+}
+
+/* ── 員工：查看客人收藏 modal ────────────────────────── */
+function GuestFavViewModal({ link, onClose }) {
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/guest-links/favorites/${link.token}`)
+      .then(r => r.json())
+      .then(d => setData(d))
+      .finally(() => setLoading(false));
+  }, [link.token]);
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,0.55)',
+      display:'flex',alignItems:'flex-end',justifyContent:'center'}}
+      onClick={onClose}>
+      <div style={{background:'var(--bg)',borderRadius:'16px 16px 0 0',width:'100%',
+        maxHeight:'85vh',display:'flex',flexDirection:'column'}}
+        onClick={e => e.stopPropagation()}>
+        {/* header */}
+        <div style={{padding:'14px 16px',borderBottom:'1px solid var(--border)',
+          display:'flex',alignItems:'center',background:'var(--surface)',borderRadius:'16px 16px 0 0',flexShrink:0}}>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:800,fontSize:15}}>{link.customer_name} 的收藏</div>
+            <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>
+              員工：{link.created_by} · {link.created_at?.slice(0,16).replace('T',' ')}
+            </div>
+          </div>
+          <button onClick={onClose}
+            style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'var(--text)',padding:'0 4px'}}>
+            ✕
+          </button>
+        </div>
+
+        {/* content */}
+        <div style={{flex:1,overflowY:'auto',padding:'12px 16px 24px'}}>
+          {loading ? (
+            <div style={{textAlign:'center',color:'var(--text3)',fontSize:13,marginTop:30}}>載入中…</div>
+          ) : !data || data.favorites?.length === 0 ? (
+            <div style={{textAlign:'center',color:'var(--text3)',fontSize:13,marginTop:30}}>
+              客人尚未收藏任何款式
+            </div>
+          ) : (
+            <>
+              <div style={{fontSize:12,color:'var(--text3)',marginBottom:10}}>
+                共收藏 <strong style={{color:'var(--text)'}}>{data.favorites.length}</strong> 張
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+                {data.favorites.map(f => (
+                  <div key={f.photo_id}
+                    style={{borderRadius:10,overflow:'hidden',border:'1px solid var(--border)',background:'#eee'}}>
+                    <img src={`/api/thumb/${f.photo_id}`}
+                      style={{width:'100%',aspectRatio:'1/1',objectFit:'cover',display:'block'}} />
+                    <div style={{padding:'4px 6px',fontSize:10,color:'var(--text3)',
+                      background:'var(--surface)',lineHeight:1.4}}>
+                      {[f.category, f.gemstone, f.style].filter(Boolean).join(' · ')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -4716,6 +4905,7 @@ function GuestLinksPanel() {
   const staffName = getJwtUser()?.name || getJwtUser()?.username || '';
   const [msg,      setMsg]      = useState('');
   const [newLink,  setNewLink]  = useState(null);
+  const [viewLink, setViewLink] = useState(null);
 
   const baseUrl = window.location.origin;
 
@@ -4815,6 +5005,8 @@ function GuestLinksPanel() {
 
       {/* 歷史連結 */}
       <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>連結紀錄</div>
+      {viewLink && <GuestFavViewModal link={viewLink} onClose={() => setViewLink(null)} />}
+
       {loading ? <div style={{color:'var(--text3)',fontSize:13}}>載入中…</div> : (
         links.length === 0 ? <div style={{color:'var(--text3)',fontSize:13}}>尚無連結</div> :
         links.map(l => {
@@ -4830,7 +5022,13 @@ function GuestLinksPanel() {
                   color: l.active?'#2e7d32':'#888'}}>
                   {l.active ? '有效' : l.expired ? '已過期' : '已停用'}
                 </span>
-                {l.fav_count > 0 && <span style={{fontSize:11,color:'#e53935',fontWeight:700}}>❤️ {l.fav_count}</span>}
+                {l.fav_count > 0 && (
+                <button onClick={() => setViewLink(l)}
+                  style={{fontSize:11,color:'#e53935',fontWeight:700,background:'#ffebee',
+                    border:'none',borderRadius:6,padding:'2px 8px',cursor:'pointer'}}>
+                  ❤️ {l.fav_count} 查看
+                </button>
+              )}
               </div>
               <div style={{fontSize:11,color:'var(--text3)',marginBottom:8}}>
                 {l.created_by && `員工：${l.created_by} · `}建立：{l.created_at?.slice(0,16).replace('T',' ')}
