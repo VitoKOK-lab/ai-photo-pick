@@ -3511,7 +3511,7 @@ function PricingParamsPanel() {
   );
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+    <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', background:'var(--surface)', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
         <span style={{ fontSize:13, color: saved ? 'var(--gold)' : 'var(--text2)', flex:1, fontWeight: saved ? 600 : 400 }}>
           {saved ? '✓ 已儲存' : saving ? '儲存中…' : '修改後點「儲存」生效'}
