@@ -1322,7 +1322,7 @@ function FavsTab({ favs, isFav, toggleFav, clearFavs, role }) {
 
   if (favs.length === 0) return (
     <div className="body-row" style={{paddingTop:'var(--nav-h)'}}><div style={{flex:1}}>
-      <div className="fav-empty">尚無收藏款式<br/><span style={{fontSize:12,color:'var(--text3)'}}>找款頁面點 ♡ 即可收藏</span></div>
+      <div className="fav-empty">尚無收藏款式<br/><span style={{fontSize:12,color:'var(--text3)'}}>照片庫點 ♡ 即可收藏</span></div>
     </div></div>
   );
 
@@ -5290,7 +5290,7 @@ function App() {
       <header className="nav">
         <span className="nav-logo" style={{cursor:'pointer'}} onClick={() => setSplash(true)}>Tahir Zainab Selection</span>
         <div className="nav-tabs">
-          <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>找款</button>
+          <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>照片庫</button>
           <button className={'nav-tab' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
             收藏 {favCount > 0 && <span className="badge">{favCount}</span>}
           </button>
@@ -5329,7 +5329,7 @@ function App() {
         {tab === 'settings'  && isAdmin  && <PricingSettingsTab />}
       </div>
       <nav className="tab-bar">
-        <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>找款</button>
+        <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>照片庫</button>
         <button className={'tab-btn' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
           收藏{favCount > 0 && <span className="tab-badge">{favCount}</span>}
         </button>
