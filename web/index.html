@@ -4648,9 +4648,9 @@ function GuestFavSheet({ token, favIds, onToggle, onClose }) {
       </div>
 
       {/* hint */}
-      <div style={{padding:'10px 16px',background:'#fff8e1',borderBottom:'1px solid #ffe082',
-        fontSize:12,color:'#795548',flexShrink:0}}>
-        💡 點擊照片可以取消收藏，騰出空位後即可繼續選新的款式
+      <div style={{padding:'10px 16px',background:'#fdf8ef',borderBottom:'1px solid var(--border)',
+        fontSize:12,color:'var(--text2)',flexShrink:0}}>
+        💡 點擊照片可以「取消已選」，騰出空位後即可繼續選新的款式
       </div>
 
       {/* grid */}
@@ -4666,19 +4666,19 @@ function GuestFavSheet({ token, favIds, onToggle, onClose }) {
             {favPhotos.map(f => (
               <div key={f.photo_id}
                 style={{position:'relative',borderRadius:10,overflow:'hidden',
-                  border:'2px solid #e53935',cursor:'pointer',background:'#eee'}}
+                  border:'2px solid var(--gold)',cursor:'pointer',background:'#eee'}}
                 onClick={() => onToggle({ id: f.photo_id })}>
                 <img src={`/api/thumb/${f.photo_id}`}
                   style={{width:'100%',aspectRatio:'1/1',objectFit:'cover',display:'block'}} />
                 {/* overlay remove btn */}
-                <div style={{position:'absolute',inset:0,background:'rgba(198,40,40,0.15)',
+                <div style={{position:'absolute',inset:0,background:'rgba(184,147,90,0.15)',
                   display:'flex',alignItems:'flex-end',justifyContent:'center',paddingBottom:6}}>
-                  <span style={{background:'#c62828',color:'#fff',borderRadius:20,
+                  <span style={{background:'var(--accent)',color:'#fff',borderRadius:20,
                     fontSize:11,fontWeight:700,padding:'3px 10px'}}>
-                    ✕ 取消
+                    取消已選
                   </span>
                 </div>
-                <div style={{position:'absolute',top:4,right:4,background:'#e53935',
+                <div style={{position:'absolute',top:4,right:4,background:'var(--gold)',
                   color:'#fff',borderRadius:'50%',width:20,height:20,
                   display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700}}>
                   ♥
@@ -4775,7 +4775,7 @@ function GuestApp({ token }) {
           {/* 收藏按鈕 */}
           <button onClick={() => setShowSheet(true)}
             style={{display:'flex',alignItems:'center',gap:5,
-              background: atLimit ? '#c62828' : '#e53935',
+              background: atLimit ? 'var(--accent)' : 'var(--gold)',
               color:'#fff',border:'none',borderRadius:20,
               padding:'5px 12px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
             ❤️ {favIds.size}
@@ -4792,7 +4792,7 @@ function GuestApp({ token }) {
       {favIds.size > 0 && (
         <div onClick={() => setShowSheet(true)}
           style={{position:'fixed',bottom:0,left:0,right:0,zIndex:300,
-            background: atLimit ? '#c62828' : '#e53935', color:'#fff',
+            background: atLimit ? 'var(--accent)' : 'var(--gold)', color:'#fff',
             padding:'10px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',
             cursor:'pointer',fontSize:13,fontWeight:600}}>
           <span>
