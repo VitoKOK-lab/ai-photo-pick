@@ -4325,7 +4325,7 @@ function QuoteHistoryPage({ role }) {
         {quotes.map(q => {
           const pending = !q.final_price || q.final_price === 0;
           const adj = (() => { try { return JSON.parse(q.adjusted_data||'{}'); } catch { return {}; } })();
-          const thumbUrl = q.photo_id ? `/api/thumb/${q.photo_id}` : null;
+          const thumbUrl = q.photo_id ? `/api/thumb/${q.photo_id}` : (q.ref_photo_url || null);
           return (
             <div key={q.id} onClick={() => setSelected(q)}
               style={{display:'flex',gap:12,alignItems:'center',padding:'12px 16px',background:'var(--surface)',borderBottom:'1px solid var(--border)',cursor:'pointer',transition:'background .12s'}}
@@ -4413,7 +4413,8 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
   const rCommissionNote = adj.commission_note || '';
   const rOrderType      = adj.order_type      || '';
   const rStaffName      = adj.staff_name      || q.staff_name || '';
-  const thumbUrl  = q.photo_id ? `/api/thumb/${q.photo_id}` : null;
+  const thumbUrl  = q.photo_id ? `/api/thumb/${q.photo_id}` : (q.ref_photo_url || null);
+  const fullUrl   = q.photo_id ? `/api/thumb/${q.photo_id}?size=1200` : (q.ref_photo_url || null);
   const finalNum  = parseInt(String(finalInput).replace(/[^0-9]/g,'')) || 0;
 
   async function doSave() {
@@ -4456,7 +4457,7 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
           <div style={{display:'flex',gap:12,marginBottom:16}}>
             {thumbUrl && (
               <div style={{width:80,height:80,borderRadius:10,background:'var(--s3)',flexShrink:0,overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <ImgZoom src={thumbUrl} fullSrc={`${thumbUrl}?size=1200`} alt="" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}} />
+                <ImgZoom src={thumbUrl} fullSrc={fullUrl} alt="" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}} />
               </div>
             )}
             <div style={{flex:1}}>
