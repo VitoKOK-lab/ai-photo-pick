@@ -2990,7 +2990,12 @@ function LoginPage({ onAuth }) {
   const [err,      setErr]      = useState(false);
   const [shake,    setShake]    = useState(false);
   const [loading,  setLoading]  = useState(false);
+  const [userList, setUserList] = useState([]);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    fetch('/api/auth/user-list').then(r => r.json()).then(setUserList).catch(() => {});
+  }, []);
 
   function triggerError() {
     setErr(true); setPin(''); setPassword('');
@@ -3045,12 +3050,31 @@ function LoginPage({ onAuth }) {
           ) : (
             <>
               <div className="login-label">帳號登入</div>
-              <input ref={inputRef} type="text" className="login-pin-input"
-                placeholder="帳號" value={username} autoFocus
-                style={{marginBottom:8,textAlign:'left',paddingLeft:14}}
-                onChange={e => { setUsername(e.target.value); setErr(false); }}
-                onKeyDown={e => e.key === 'Enter' && submit()} />
-              <input type="password" className="login-pin-input"
+              {/* 選帳號 */}
+              {userList.length > 0 ? (
+                <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:12,justifyContent:'center'}}>
+                  {userList.map(u => (
+                    <button key={u.username}
+                      onClick={() => { setUsername(u.username); setErr(false); inputRef.current?.focus(); }}
+                      style={{
+                        padding:'8px 18px', fontSize:14, fontWeight: username===u.username ? 700 : 500,
+                        border: username===u.username ? '2px solid var(--gold)' : '2px solid var(--border)',
+                        borderRadius:10, background: username===u.username ? '#fdf8ef' : 'var(--s3)',
+                        color: username===u.username ? 'var(--gold)' : 'var(--text2)', cursor:'pointer',
+                      }}>
+                      {u.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <input type="text" className="login-pin-input"
+                  placeholder="帳號" value={username} autoFocus
+                  style={{marginBottom:8,textAlign:'left',paddingLeft:14}}
+                  onChange={e => { setUsername(e.target.value); setErr(false); }}
+                  onKeyDown={e => e.key === 'Enter' && submit()} />
+              )}
+              {/* 輸密碼 */}
+              <input ref={inputRef} type="password" className="login-pin-input"
                 placeholder="密碼" value={password}
                 style={{textAlign:'left',paddingLeft:14}}
                 onChange={e => { setPassword(e.target.value); setErr(false); }}

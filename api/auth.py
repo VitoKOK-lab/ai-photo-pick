@@ -148,6 +148,20 @@ def require_admin(user=Depends(require_auth)):
         raise HTTPException(status_code=403, detail="需要管理員權限")
     return user
 
+@router.get("/user-list")
+def public_user_list():
+    """公開端點：回傳帳號名單供登入頁下拉選擇（不含密碼）"""
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT name, username FROM users WHERE is_active=1 ORDER BY name"
+        ).fetchall()
+        return [{"name": r["name"], "username": r["username"]} for r in rows]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
 @router.post("/login")
 def login(body: dict, request: Request):
     _check_rate_limit(request)
