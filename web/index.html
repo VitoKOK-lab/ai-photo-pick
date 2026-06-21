@@ -3401,8 +3401,6 @@ function PricingParamsPanel() {
   const [weights,        setWeights]        = useState({});
   const [invest,         setInvest]         = useState({});
   const [commercialCarat,setCommercialCarat]= useState({});
-  const [spotLoading,    setSpotLoading]    = useState(false);
-  const [spotErr,        setSpotErr]        = useState('');
   const [showWtEdit,     setShowWtEdit]     = useState(false);
   const [loaded,         setLoaded]         = useState(false);
   const [saving,         setSaving]         = useState(false);
@@ -3524,46 +3522,10 @@ function PricingParamsPanel() {
 
         {/* 貴金屬行情：金屬 × 重量 自動計算矩陣 */}
         {(() => {
-          const fetchSpot = async () => {
-            setSpotLoading(true); setSpotErr('');
-            try {
-              const d = await fetch('/api/pricing/metals-spot').then(r => r.json());
-              const s = d.suggested || {};
-              const MULT = 1.2;
-              const updated = {};
-              if (s['18K金']) updated['18K金'] = Math.round(s['18K金'] * MULT);
-              if (s['14K金']) updated['14K金'] = Math.round(s['14K金'] * MULT);
-              if (s['9K金'])  updated['9K金']  = Math.round(s['9K金']  * MULT);
-              if (s['925銀']) updated['925銀'] = Math.round(s['925銀'] * MULT);
-              if (s['Pt950']) updated['Pt950'] = Math.round(s['Pt950'] * MULT);
-              if (Object.keys(updated).length === 0) {
-                setSpotErr('⚠️ 無法取得即時行情（網路或 Yahoo Finance 限制），請手動輸入');
-                return;
-              }
-              setMetals(prev => ({...prev, ...updated}));
-              setSpotErr('✓ 已帶入今日行情 ×1.2，按「儲存」生效');
-            } catch { setSpotErr('網路錯誤，請稍後再試'); }
-            finally { setSpotLoading(false); }
-          };
           return (
-            <div style={{...hdSt,display:'flex',alignItems:'baseline',gap:8,flexWrap:'wrap'}}>
+            <div style={{...hdSt}}>
               貴金屬行情
-              <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>輸入NT$/克，其餘自動帶入</span>
-              <button onClick={fetchSpot} disabled={spotLoading}
-                style={{marginLeft:'auto',fontSize:11,padding:'3px 12px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:spotLoading?'var(--text3)':'var(--text2)',cursor:spotLoading?'default':'pointer',flexShrink:0}}>
-                {spotLoading ? '抓取中…' : '↺ 同步今日行情'}
-              </button>
-              {spotErr && (
-                <div style={{width:'100%',display:'flex',alignItems:'center',gap:8,marginTop:2}}>
-                  <span style={{fontSize:11,color:spotErr.startsWith('✓')?'#2e7d32':'#d32f2f',flex:1}}>{spotErr}</span>
-                  {spotErr.startsWith('✓') && (
-                    <button onClick={saveAll} disabled={saving}
-                      style={{fontSize:12,padding:'4px 14px',borderRadius:6,border:'none',background:'var(--accent)',color:'#fff',fontWeight:700,cursor:'pointer',flexShrink:0,opacity:saving?0.6:1}}>
-                      {saving ? '儲存中…' : '儲存'}
-                    </button>
-                  )}
-                </div>
-              )}
+              <span style={{fontWeight:400,fontSize:12,color:'var(--text3)',marginLeft:8}}>輸入NT$/克，其餘自動帶入</span>
             </div>
           );
         })()}

@@ -26,7 +26,6 @@ def _conn():
 _SEED_METALS = [
     # Spot (Jun 2026): 24K=4781/g, 999Ag=83/g, Pt999=2213/g  ×karat×1.2 retail
     ("925銀",   92),   # 83×0.925×1.2≈92
-    ("9K金",  2150),   # 4781×0.375×1.2≈2152→2150
     ("14K金", 3350),   # 4781×0.585×1.2≈3355→3350
     ("18K金", 4300),   # 4781×0.75×1.2≈4303→4300
     ("Pt950", 2520),   # 2213×0.95×1.2≈2523→2520
@@ -755,7 +754,7 @@ def get_metals_spot():
     suggested: dict = {}
     if "gold" in spot:
         g = spot["gold"]
-        suggested["9K金"]  = round(g * 9  / 24)
+
         suggested["14K金"] = round(g * 14 / 24)
         suggested["18K金"] = round(g * 18 / 24)
     if "silver" in spot:

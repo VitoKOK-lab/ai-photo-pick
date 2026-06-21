@@ -58,6 +58,10 @@ def _run_migrations():
     """)
     conn.commit()
 
+    # 移除 9K金（不使用此規格）
+    conn.execute("DELETE FROM pricing_metals WHERE material='9K金'")
+    conn.commit()
+
     # 簡化寶石顏色標籤
     color_renames = [
         ('紅色', '紅'), ('粉紅色', '粉'), ('橙色', '黃'), ('黃色', '黃'),
