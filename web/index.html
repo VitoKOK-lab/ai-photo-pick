@@ -1640,6 +1640,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [showEstimateCard,  setShowEstimateCard]  = useState(false);
   const [orderType,         setOrderType]         = useState('全訂制');
   const [commissionNote,    setCommissionNote]    = useState('');
+  const [showIntro,         setShowIntro]         = useState(true);
   const staffName = getJwtUser()?.name || '';
 
   useEffect(() => {
@@ -2281,6 +2282,53 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
       </div>
     );
   };
+
+  if (showIntro) return (
+    <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="det-panel" style={{flexDirection:'column',justifyContent:'center',alignItems:'center',padding:'32px 28px',gap:0}}>
+        <button className="det-x" style={{position:'absolute',top:12,right:12}} onClick={onClose}>×</button>
+
+        {/* 品牌名稱 */}
+        <div style={{fontSize:11,letterSpacing:3,fontWeight:600,color:'var(--text3)',marginBottom:12,textTransform:'uppercase'}}>
+          專屬估價服務
+        </div>
+
+        {/* 鑽石圖示 */}
+        <div style={{fontSize:52,lineHeight:1,marginBottom:20}}>💎</div>
+
+        {/* 主標題 */}
+        <div style={{fontSize:21,fontWeight:800,color:'var(--text)',textAlign:'center',lineHeight:1.4,marginBottom:12}}>
+          快速款式比對<br/>精準預算區間
+        </div>
+
+        {/* 說明段落 */}
+        <div style={{fontSize:14,color:'var(--text2)',textAlign:'center',lineHeight:1.8,marginBottom:20,maxWidth:300}}>
+          我們的 AI 估價系統會根據您選擇的<strong style={{color:'var(--text)'}}>款式、寶石、工藝等級</strong>，即時比對歷史成交資料，為您提供參考預算區間——讓您在幾分鐘內掌握大方向，不必等待。
+        </div>
+
+        {/* 免責聲明卡片 */}
+        <div style={{background:'#FFF8EC',border:'1px solid #F0D080',borderRadius:10,padding:'14px 18px',marginBottom:28,width:'100%',maxWidth:320,boxSizing:'border-box'}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#B8860B',marginBottom:6}}>📋 重要說明</div>
+          <div style={{fontSize:12,color:'#6B5500',lineHeight:1.75}}>
+            本估價為<strong>快速參考區間</strong>，僅供預算規劃使用。<br/>
+            最終精準報價需由我們<strong>精工部門</strong>依實際材料、工時及市場行情進行正式估算，結果可能與此參考值有所差異。
+          </div>
+        </div>
+
+        {/* 確認按鈕 */}
+        <button onClick={() => setShowIntro(false)}
+          style={{width:'100%',maxWidth:320,padding:'14px 0',borderRadius:12,border:'none',
+            background:'var(--accent)',color:'#fff',fontSize:16,fontWeight:800,
+            cursor:'pointer',letterSpacing:0.5,boxShadow:'0 4px 16px rgba(0,0,0,0.15)'}}>
+          我了解，開始估價 →
+        </button>
+
+        <div style={{fontSize:11,color:'var(--text3)',marginTop:14,textAlign:'center'}}>
+          點擊開始即表示您已知悉以上說明
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
