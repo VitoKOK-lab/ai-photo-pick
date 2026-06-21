@@ -2328,7 +2328,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 
   if (showIntro) return (
     <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="det-panel" style={{flexDirection:'column',justifyContent:'center',alignItems:'center',padding:'32px 28px',gap:0}}>
+      <div className="det-panel" style={{flexDirection:'column',justifyContent:'flex-start',alignItems:'center',padding:'32px 28px 24px',gap:0,overflowY:'auto'}}>
         <button className="det-x" style={{position:'absolute',top:12,right:12}} onClick={onClose}>×</button>
 
         {/* 品牌名稱 */}
@@ -2363,7 +2363,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
           {uploadedUrl ? (
             <div style={{position:'relative',borderRadius:10,overflow:'hidden',border:'1.5px solid var(--gold)',background:'#eee'}}>
               <ImgZoom src={uploadedUrl} fullSrc={uploadedUrl} alt=""
-                style={{width:'100%',maxHeight:160,objectFit:'contain',display:'block',background:'#f8f8f8'}} />
+                style={{width:'100%',maxHeight:110,objectFit:'contain',display:'block',background:'#f8f8f8'}} />
               <button onClick={() => setUploadedUrl(null)}
                 style={{position:'absolute',top:6,right:6,background:'rgba(0,0,0,0.55)',color:'#fff',
                   border:'none',borderRadius:20,fontSize:11,fontWeight:700,padding:'3px 10px',cursor:'pointer'}}>
