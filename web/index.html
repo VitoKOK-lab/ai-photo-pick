@@ -4039,19 +4039,22 @@ function UserMgmtSection() {
   const ROLE_LABEL = { admin:'管理員', editor:'員工', viewer:'唯讀' };
   const ROLE_COLOR = { admin:'#b8935a', editor:'#4caf77', viewer:'#8a8a8a' };
 
-  const [users,    setUsers]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editPw,   setEditPw]   = useState(null); // user id being password-changed
-  const [newPw,    setNewPw]    = useState('');
-  const [form,     setForm]     = useState({ name:'', username:'', password:'', role:'editor' });
-  const [saving,   setSaving]   = useState(false);
-  const [msg,      setMsg]      = useState('');
+  const [users,   setUsers]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editPw,  setEditPw]  = useState(null);
+  const [newPw,   setNewPw]   = useState('');
+  const [form,    setForm]    = useState({ name:'', username:'', password:'', role:'editor' });
+  const [saving,  setSaving]  = useState(false);
+  const [msg,     setMsg]     = useState('');
 
-  const iS = { padding:'7px 10px', border:'2px solid #c8b89a', borderRadius:8, fontSize:15,
+  const iS = { padding:'10px 12px', border:'2px solid #c8b89a', borderRadius:8, fontSize:15,
                background:'#fdf8ef', color:'var(--text)', fontWeight:600, width:'100%', boxSizing:'border-box' };
+  const btnSm = (bg, color) => ({
+    padding:'5px 12px', fontSize:12, fontWeight:600, border:'none', borderRadius:6,
+    background: bg, color: color, cursor:'pointer',
+  });
 
-  function flash(text) { setMsg(text); setTimeout(() => setMsg(''), 2500); }
+  function flash(text) { setMsg(text); setTimeout(() => setMsg(''), 3000); }
 
   async function load() {
     setLoading(true);
@@ -4076,11 +4079,10 @@ function UserMgmtSection() {
     setSaving(false);
     if (r.ok) {
       setForm({ name:'', username:'', password:'', role:'editor' });
-      setShowForm(false);
-      flash('帳號已新增');
+      flash('✓ 帳號已新增');
       load();
     } else {
-      const d = await r.json();
+      const d = await r.json().catch(()=>({}));
       flash(d.detail || '新增失敗');
     }
   }
@@ -4111,119 +4113,89 @@ function UserMgmtSection() {
     flash('密碼已更新');
   }
 
-  const hdSt = { fontSize:16, fontWeight:800, color:'var(--text)', marginBottom:10, marginTop:28 };
-  const btnSm = (bg, color) => ({
-    padding:'4px 10px', fontSize:12, fontWeight:600, border:'none', borderRadius:6,
-    background: bg, color: color, cursor:'pointer',
-  });
-
   return (
     <div>
-      <div style={hdSt}>帳號管理</div>
-      {msg && <div style={{fontSize:13,color:'var(--gold)',fontWeight:600,marginBottom:8}}>{msg}</div>}
+      {msg && <div style={{fontSize:13,fontWeight:600,marginBottom:10,
+        color: msg.startsWith('✓') ? '#2e7d32' : '#c62828'}}>{msg}</div>}
 
-      {loading ? <div style={{fontSize:13,color:'var(--text3)'}}>載入中…</div> : (
-        <div style={{overflowX:'auto',marginBottom:16}}>
-          <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-            <thead>
-              <tr style={{borderBottom:'2px solid var(--border)'}}>
-                {['姓名','帳號','角色','狀態','操作'].map(h => (
-                  <th key={h} style={{padding:'6px 8px',textAlign:'left',fontWeight:700,color:'var(--text2)',whiteSpace:'nowrap'}}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => (
-                <tr key={u.id} style={{borderBottom:'1px solid var(--border)', opacity: u.is_active ? 1 : 0.5}}>
-                  <td style={{padding:'8px',fontWeight:600}}>{u.name}</td>
-                  <td style={{padding:'8px',color:'var(--text2)',fontFamily:'monospace'}}>{u.username}</td>
-                  <td style={{padding:'8px'}}>
-                    <span style={{background: ROLE_COLOR[u.role]+'22', color: ROLE_COLOR[u.role],
-                      borderRadius:6, padding:'2px 8px', fontWeight:700, fontSize:12}}>
-                      {ROLE_LABEL[u.role] || u.role}
-                    </span>
-                  </td>
-                  <td style={{padding:'8px'}}>
-                    <span style={{color: u.is_active ? '#4caf77' : '#e53935', fontWeight:600, fontSize:12}}>
-                      {u.is_active ? '啟用' : '停用'}
-                    </span>
-                  </td>
-                  <td style={{padding:'8px'}}>
-                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                      {editPw === u.id ? (
-                        <>
-                          <input type="password" placeholder="新密碼" value={newPw}
-                            onChange={e=>setNewPw(e.target.value)}
-                            style={{...iS,width:120,padding:'3px 8px',fontSize:13}}/>
-                          <button style={btnSm('#4caf77','#fff')} onClick={()=>savePassword(u)} disabled={saving}>儲存</button>
-                          <button style={btnSm('var(--s3)','var(--text)')} onClick={()=>{setEditPw(null);setNewPw('');}}>取消</button>
-                        </>
-                      ) : (
-                        <>
-                          <button style={btnSm('var(--s3)','var(--text)')} onClick={()=>{setEditPw(u.id);setNewPw('');}}>改密碼</button>
-                          <button style={btnSm(u.is_active?'#fff3e0':'#e8f5e9', u.is_active?'#e65100':'#2e7d32')} onClick={()=>toggleActive(u)}>
-                            {u.is_active ? '停用' : '啟用'}
-                          </button>
-                          <button style={btnSm('#ffebee','#c62828')} onClick={()=>deleteUser(u)}>刪除</button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {users.length === 0 && (
-                <tr><td colSpan={5} style={{padding:'16px 8px',color:'var(--text3)',textAlign:'center',fontSize:13}}>尚無帳號</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {showForm ? (
-        <div style={{background:'var(--s2)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)',marginBottom:12}}>
-          <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>新增帳號</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
-            <div>
-              <div style={{fontSize:12,fontWeight:600,marginBottom:4}}>姓名</div>
-              <input style={iS} value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="例：小明" />
-            </div>
-            <div>
-              <div style={{fontSize:12,fontWeight:600,marginBottom:4}}>帳號（登入用）</div>
-              <input style={iS} value={form.username} onChange={e=>setForm(p=>({...p,username:e.target.value}))} placeholder="例：ming123" />
-            </div>
-            <div>
-              <div style={{fontSize:12,fontWeight:600,marginBottom:4}}>密碼</div>
-              <input style={iS} type="password" value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))} placeholder="至少 4 個字元" />
-            </div>
-            <div>
-              <div style={{fontSize:12,fontWeight:600,marginBottom:4}}>角色</div>
-              <select style={iS} value={form.role} onChange={e=>setForm(p=>({...p,role:e.target.value}))}>
-                <option value="editor">員工（可新增／編輯）</option>
-                <option value="viewer">唯讀（只能看）</option>
-                <option value="admin">管理員（全權限）</option>
-              </select>
-            </div>
+      {/* 新增帳號表單（永遠顯示在最上方） */}
+      <div style={{background:'#fdf8ef',borderRadius:12,padding:'16px',border:'2px solid #c8b89a',marginBottom:20}}>
+        <div style={{fontWeight:800,fontSize:15,marginBottom:12,color:'var(--text)'}}>+ 新增帳號</div>
+        <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:12}}>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>姓名</div>
+            <input style={iS} value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="例：小明" />
           </div>
-          <div style={{display:'flex',gap:8}}>
-            <button onClick={createUser} disabled={saving}
-              style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
-              {saving ? '新增中…' : '確認新增'}
-            </button>
-            <button onClick={()=>setShowForm(false)}
-              style={{background:'var(--s3)',color:'var(--text)',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,cursor:'pointer'}}>
-              取消
-            </button>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>帳號（登入用）</div>
+            <input style={iS} value={form.username} onChange={e=>setForm(p=>({...p,username:e.target.value}))} placeholder="例：ming123" />
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>密碼</div>
+            <input style={iS} type="password" value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))} placeholder="至少 4 個字元" />
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>角色</div>
+            <select style={iS} value={form.role} onChange={e=>setForm(p=>({...p,role:e.target.value}))}>
+              <option value="editor">員工（可新增／編輯）</option>
+              <option value="viewer">唯讀（只能看）</option>
+              <option value="admin">管理員（全權限）</option>
+            </select>
           </div>
         </div>
-      ) : (
-        <button onClick={()=>setShowForm(true)}
-          style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:10,padding:'9px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
-          + 新增帳號
+        <button onClick={createUser} disabled={saving}
+          style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:10,
+            padding:'12px 0',fontSize:15,fontWeight:800,cursor:'pointer',width:'100%',
+            opacity:saving?0.6:1}}>
+          {saving ? '新增中…' : '確認新增'}
         </button>
+      </div>
+
+      {/* 現有帳號列表 */}
+      <div style={{fontWeight:800,fontSize:14,marginBottom:10,color:'var(--text2)'}}>現有帳號</div>
+      {loading ? <div style={{fontSize:13,color:'var(--text3)'}}>載入中…</div> : (
+        users.length === 0
+          ? <div style={{fontSize:13,color:'var(--text3)',padding:'16px 0'}}>尚無帳號</div>
+          : users.map(u => (
+            <div key={u.id} style={{background:'var(--surface)',borderRadius:10,padding:'12px 14px',
+              marginBottom:10,border:'1px solid var(--border)',opacity:u.is_active?1:0.5}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
+                <div>
+                  <span style={{fontWeight:700,fontSize:14}}>{u.name}</span>
+                  <span style={{fontFamily:'monospace',fontSize:12,color:'var(--text3)',marginLeft:8}}>@{u.username}</span>
+                </div>
+                <span style={{background:ROLE_COLOR[u.role]+'22',color:ROLE_COLOR[u.role],
+                  borderRadius:6,padding:'2px 8px',fontWeight:700,fontSize:12}}>
+                  {ROLE_LABEL[u.role]||u.role}
+                </span>
+              </div>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                {editPw === u.id ? (
+                  <>
+                    <input type="password" placeholder="新密碼" value={newPw}
+                      onChange={e=>setNewPw(e.target.value)}
+                      style={{...iS,width:140,padding:'4px 8px',fontSize:13}}/>
+                    <button style={btnSm('#4caf77','#fff')} onClick={()=>savePassword(u)} disabled={saving}>儲存</button>
+                    <button style={btnSm('var(--s3)','var(--text)')} onClick={()=>{setEditPw(null);setNewPw('');}}>取消</button>
+                  </>
+                ) : (
+                  <>
+                    <button style={btnSm('var(--s3)','var(--text)')} onClick={()=>{setEditPw(u.id);setNewPw('');}}>改密碼</button>
+                    <button style={btnSm(u.is_active?'#fff3e0':'#e8f5e9',u.is_active?'#e65100':'#2e7d32')} onClick={()=>toggleActive(u)}>
+                      {u.is_active?'停用':'啟用'}
+                    </button>
+                    <button style={btnSm('#ffebee','#c62828')} onClick={()=>deleteUser(u)}>刪除</button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))
       )}
     </div>
   );
 }
+
+
 
 /* ── Quote History Page ──────────────────────────────── */
 function QuoteHistoryPage({ role }) {
