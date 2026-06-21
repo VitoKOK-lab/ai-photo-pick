@@ -4856,9 +4856,28 @@ function App() {
   const [showDarkBg,     setShowDarkBg]     = useState(false);
   const [role,           setRole]           = useState(() => localStorage.getItem('userRole') || 'guest');
   const [metalsLastUpd,  setMetalsLastUpd]  = useState(null);
+  const [idleWarning,    setIdleWarning]    = useState(false);
 
   const isAdmin = role === 'admin';
   const isStaff = role === 'admin' || role === 'editor';
+
+  // 15 分鐘無操作自動登出
+  useEffect(() => {
+    if (role === 'guest') return;
+    const IDLE_MS = 15 * 60 * 1000;
+    const WARN_MS = 13 * 60 * 1000;
+    let idleTimer, warnTimer;
+    function reset() {
+      clearTimeout(idleTimer); clearTimeout(warnTimer);
+      setIdleWarning(false);
+      warnTimer = setTimeout(() => setIdleWarning(true), WARN_MS);
+      idleTimer = setTimeout(() => { clearJwtAuth(); localStorage.removeItem('userRole'); setRole('guest'); }, IDLE_MS);
+    }
+    const evts = ['mousemove','mousedown','keydown','touchstart','scroll','click'];
+    evts.forEach(e => window.addEventListener(e, reset, true));
+    reset();
+    return () => { clearTimeout(idleTimer); clearTimeout(warnTimer); evts.forEach(e => window.removeEventListener(e, reset, true)); };
+  }, [role]);
 
   // Fetch metals_last_updated for banner
   useEffect(() => {
@@ -4986,6 +5005,19 @@ function App() {
           </button>
         )}
       </nav>
+      {idleWarning && (
+        <div style={{position:'fixed',bottom:80,left:'50%',transform:'translateX(-50%)',
+          background:'#323232',color:'#fff',borderRadius:12,padding:'12px 20px',
+          zIndex:9999,display:'flex',alignItems:'center',gap:14,boxShadow:'0 4px 20px rgba(0,0,0,.4)',
+          fontSize:13,fontWeight:500,whiteSpace:'nowrap'}}>
+          ⏰ 2 分鐘後自動登出
+          <button onClick={() => setIdleWarning(false)}
+            style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:8,
+              padding:'5px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+            繼續使用
+          </button>
+        </div>
+      )}
     </React.Fragment>
   );
 }
