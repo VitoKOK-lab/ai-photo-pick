@@ -2909,59 +2909,87 @@ function QuoteTab() {
 
 /* ── LoginPage (full-screen) ── */
 function LoginPage({ onAuth }) {
-  const [pin,     setPin]     = useState('');
-  const [err,     setErr]     = useState(false);
-  const [shake,   setShake]   = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [mode,     setMode]     = useState('pin');   // 'pin' | 'account'
+  const [pin,      setPin]      = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [err,      setErr]      = useState(false);
+  const [shake,    setShake]    = useState(false);
+  const [loading,  setLoading]  = useState(false);
   const inputRef = useRef(null);
 
+  function triggerError() {
+    setErr(true); setPin(''); setPassword('');
+    setShake(true);
+    setTimeout(() => setShake(false), 500);
+    inputRef.current?.focus();
+  }
+
+  function storeAndAuth(data) {
+    localStorage.setItem('jwt_token', data.token);
+    localStorage.setItem('jwt_user', JSON.stringify({ role: data.role }));
+    localStorage.setItem('userRole', data.role);
+    onAuth(data.role);
+  }
+
   async function submit() {
-    if (!pin.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/pin-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('jwt_token', data.token);
-        localStorage.setItem('jwt_user', JSON.stringify({ role: data.role }));
-        localStorage.setItem('userRole', data.role);
-        onAuth(data.role);
+      let res;
+      if (mode === 'pin') {
+        if (!pin.trim()) { setLoading(false); return; }
+        res = await fetch('/api/auth/pin-login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin }),
+        });
       } else {
-        setErr(true); setPin('');
-        setShake(true);
-        setTimeout(() => setShake(false), 500);
-        inputRef.current?.focus();
+        if (!username.trim() || !password.trim()) { setLoading(false); return; }
+        res = await fetch('/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
       }
-    } catch {
-      setErr(true);
-    } finally {
-      setLoading(false);
-    }
+      if (res.ok) { storeAndAuth(await res.json()); }
+      else { triggerError(); }
+    } catch { triggerError(); }
+    finally { setLoading(false); }
   }
 
   return (
     <div className="login-page">
       <div className="login-brand">Tahir Zainab Selection</div>
       <div className="login-card">
-        <div className="login-label">請輸入密碼</div>
-        <input
-          ref={inputRef}
-          type="password"
-          inputMode="numeric"
-          maxLength={6}
-          className={'login-pin-input' + (shake ? ' shake' : '')}
-          placeholder="••••"
-          value={pin}
-          autoFocus
-          onChange={e => { setPin(e.target.value); setErr(false); }}
-          onKeyDown={e => e.key === 'Enter' && submit()}
-        />
-        <div className="login-err">{err ? '密碼錯誤' : ''}</div>
-        <button className="login-btn" onClick={submit} disabled={loading}>{loading ? '驗證中…' : '確認'}</button>
+        <div className={'login-card-inner' + (shake ? ' shake' : '')}>
+          {mode === 'pin' ? (
+            <>
+              <div className="login-label">請輸入密碼</div>
+              <input ref={inputRef} type="password" inputMode="numeric" maxLength={6}
+                className="login-pin-input" placeholder="••••" value={pin} autoFocus
+                onChange={e => { setPin(e.target.value); setErr(false); }}
+                onKeyDown={e => e.key === 'Enter' && submit()} />
+            </>
+          ) : (
+            <>
+              <div className="login-label">帳號登入</div>
+              <input ref={inputRef} type="text" className="login-pin-input"
+                placeholder="帳號" value={username} autoFocus
+                style={{marginBottom:8,textAlign:'left',paddingLeft:14}}
+                onChange={e => { setUsername(e.target.value); setErr(false); }}
+                onKeyDown={e => e.key === 'Enter' && submit()} />
+              <input type="password" className="login-pin-input"
+                placeholder="密碼" value={password}
+                style={{textAlign:'left',paddingLeft:14}}
+                onChange={e => { setPassword(e.target.value); setErr(false); }}
+                onKeyDown={e => e.key === 'Enter' && submit()} />
+            </>
+          )}
+          <div className="login-err">{err ? (mode==='pin'?'密碼錯誤':'帳號或密碼錯誤') : ''}</div>
+          <button className="login-btn" onClick={submit} disabled={loading}>{loading ? '驗證中…' : '確認'}</button>
+          <button onClick={() => { setMode(m => m==='pin'?'account':'pin'); setErr(false); setPin(''); setUsername(''); setPassword(''); }}
+            style={{background:'none',border:'none',color:'var(--text3)',fontSize:12,cursor:'pointer',marginTop:8,textDecoration:'underline'}}>
+            {mode === 'pin' ? '使用帳號密碼登入' : '使用 PIN 碼登入'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -3628,10 +3656,203 @@ function PricingSettingsTab() {
         </div>
 
 
+        {/* ── 帳號管理 ── */}
+        <UserMgmtSection />
+
       </div>
     </div>
   );
 }
+
+/* ── UserMgmtSection ────────────────────────────────── */
+function UserMgmtSection() {
+  const ROLE_LABEL = { admin:'管理員', editor:'員工', viewer:'唯讀' };
+  const ROLE_COLOR = { admin:'#b8935a', editor:'#4caf77', viewer:'#8a8a8a' };
+
+  const [users,    setUsers]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editPw,   setEditPw]   = useState(null); // user id being password-changed
+  const [newPw,    setNewPw]    = useState('');
+  const [form,     setForm]     = useState({ name:'', username:'', password:'', role:'editor' });
+  const [saving,   setSaving]   = useState(false);
+  const [msg,      setMsg]      = useState('');
+
+  const iS = { padding:'7px 10px', border:'2px solid #c8b89a', borderRadius:8, fontSize:15,
+               background:'#fdf8ef', color:'var(--text)', fontWeight:600, width:'100%', boxSizing:'border-box' };
+
+  function flash(text) { setMsg(text); setTimeout(() => setMsg(''), 2500); }
+
+  async function load() {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/auth/users');
+      if (r.ok) setUsers(await r.json());
+    } finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function createUser() {
+    if (!form.name.trim() || !form.username.trim() || !form.password.trim()) {
+      flash('姓名、帳號、密碼都必填'); return;
+    }
+    setSaving(true);
+    const r = await fetch('/api/auth/users', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(form),
+    });
+    setSaving(false);
+    if (r.ok) {
+      setForm({ name:'', username:'', password:'', role:'editor' });
+      setShowForm(false);
+      flash('帳號已新增');
+      load();
+    } else {
+      const d = await r.json();
+      flash(d.detail || '新增失敗');
+    }
+  }
+
+  async function toggleActive(u) {
+    await fetch(`/api/auth/users/${u.id}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ is_active: u.is_active ? 0 : 1 }),
+    });
+    load();
+  }
+
+  async function deleteUser(u) {
+    if (!confirm(`確定刪除「${u.name}」的帳號？此操作無法還原。`)) return;
+    await fetch(`/api/auth/users/${u.id}`, { method:'DELETE' });
+    flash('帳號已刪除'); load();
+  }
+
+  async function savePassword(u) {
+    if (!newPw.trim() || newPw.length < 4) { flash('密碼至少 4 個字元'); return; }
+    setSaving(true);
+    await fetch(`/api/auth/users/${u.id}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ password: newPw }),
+    });
+    setSaving(false);
+    setEditPw(null); setNewPw('');
+    flash('密碼已更新');
+  }
+
+  const hdSt = { fontSize:16, fontWeight:800, color:'var(--text)', marginBottom:10, marginTop:28 };
+  const btnSm = (bg, color) => ({
+    padding:'4px 10px', fontSize:12, fontWeight:600, border:'none', borderRadius:6,
+    background: bg, color: color, cursor:'pointer',
+  });
+
+  return (
+    <div>
+      <div style={hdSt}>帳號管理</div>
+      {msg && <div style={{fontSize:13,color:'var(--gold)',fontWeight:600,marginBottom:8}}>{msg}</div>}
+
+      {loading ? <div style={{fontSize:13,color:'var(--text3)'}}>載入中…</div> : (
+        <div style={{overflowX:'auto',marginBottom:16}}>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+            <thead>
+              <tr style={{borderBottom:'2px solid var(--border)'}}>
+                {['姓名','帳號','角色','狀態','操作'].map(h => (
+                  <th key={h} style={{padding:'6px 8px',textAlign:'left',fontWeight:700,color:'var(--text2)',whiteSpace:'nowrap'}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u.id} style={{borderBottom:'1px solid var(--border)', opacity: u.is_active ? 1 : 0.5}}>
+                  <td style={{padding:'8px',fontWeight:600}}>{u.name}</td>
+                  <td style={{padding:'8px',color:'var(--text2)',fontFamily:'monospace'}}>{u.username}</td>
+                  <td style={{padding:'8px'}}>
+                    <span style={{background: ROLE_COLOR[u.role]+'22', color: ROLE_COLOR[u.role],
+                      borderRadius:6, padding:'2px 8px', fontWeight:700, fontSize:12}}>
+                      {ROLE_LABEL[u.role] || u.role}
+                    </span>
+                  </td>
+                  <td style={{padding:'8px'}}>
+                    <span style={{color: u.is_active ? '#4caf77' : '#e53935', fontWeight:600, fontSize:12}}>
+                      {u.is_active ? '啟用' : '停用'}
+                    </span>
+                  </td>
+                  <td style={{padding:'8px'}}>
+                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                      {editPw === u.id ? (
+                        <>
+                          <input type="password" placeholder="新密碼" value={newPw}
+                            onChange={e=>setNewPw(e.target.value)}
+                            style={{...iS,width:120,padding:'3px 8px',fontSize:13}}/>
+                          <button style={btnSm('#4caf77','#fff')} onClick={()=>savePassword(u)} disabled={saving}>儲存</button>
+                          <button style={btnSm('var(--s3)','var(--text)')} onClick={()=>{setEditPw(null);setNewPw('');}}>取消</button>
+                        </>
+                      ) : (
+                        <>
+                          <button style={btnSm('var(--s3)','var(--text)')} onClick={()=>{setEditPw(u.id);setNewPw('');}}>改密碼</button>
+                          <button style={btnSm(u.is_active?'#fff3e0':'#e8f5e9', u.is_active?'#e65100':'#2e7d32')} onClick={()=>toggleActive(u)}>
+                            {u.is_active ? '停用' : '啟用'}
+                          </button>
+                          <button style={btnSm('#ffebee','#c62828')} onClick={()=>deleteUser(u)}>刪除</button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr><td colSpan={5} style={{padding:'16px 8px',color:'var(--text3)',textAlign:'center',fontSize:13}}>尚無帳號</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showForm ? (
+        <div style={{background:'var(--s2)',borderRadius:12,padding:'14px 16px',border:'1px solid var(--border)',marginBottom:12}}>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>新增帳號</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+            <div>
+              <div style={{fontSize:12,fontWeight:600,marginBottom:4}}>姓名</div>
+              <input style={iS} value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="例：小明" />
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:600,marginBottom:4}}>帳號（登入用）</div>
+              <input style={iS} value={form.username} onChange={e=>setForm(p=>({...p,username:e.target.value}))} placeholder="例：ming123" />
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:600,marginBottom:4}}>密碼</div>
+              <input style={iS} type="password" value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))} placeholder="至少 4 個字元" />
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:600,marginBottom:4}}>角色</div>
+              <select style={iS} value={form.role} onChange={e=>setForm(p=>({...p,role:e.target.value}))}>
+                <option value="editor">員工（可新增／編輯）</option>
+                <option value="viewer">唯讀（只能看）</option>
+                <option value="admin">管理員（全權限）</option>
+              </select>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={createUser} disabled={saving}
+              style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+              {saving ? '新增中…' : '確認新增'}
+            </button>
+            <button onClick={()=>setShowForm(false)}
+              style={{background:'var(--s3)',color:'var(--text)',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,cursor:'pointer'}}>
+              取消
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={()=>setShowForm(true)}
+          style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:10,padding:'9px 20px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+          + 新增帳號
+        </button>
+      )}
+    </div>
+  );
+}
+
 /* ── Quote History Page ──────────────────────────────── */
 function QuoteHistoryPage({ role }) {
   const isAdmin = role === 'admin';
