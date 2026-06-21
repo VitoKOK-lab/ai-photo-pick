@@ -3291,6 +3291,33 @@ function DarkBgModal({ onClose, onDeleted }) {
 
 /* ── Pricing Settings Tab ────────────────────────────── */
 function PricingSettingsTab() {
+  const [settingsTab, setSettingsTab] = useState('pricing'); // 'pricing' | 'staff' | 'customers'
+
+  const tabBtnSt = (active) => ({
+    flex: 1, padding: '9px 4px', fontSize: 13, fontWeight: active ? 700 : 500,
+    border: 'none', borderBottom: active ? '3px solid var(--gold)' : '3px solid transparent',
+    background: 'var(--surface)', color: active ? 'var(--gold)' : 'var(--text2)',
+    cursor: 'pointer', transition: 'all .15s',
+  });
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      {/* 分頁選擇列 */}
+      <div style={{ display:'flex', borderBottom:'1px solid var(--border)', background:'var(--surface)', flexShrink:0 }}>
+        <button style={tabBtnSt(settingsTab==='pricing')}  onClick={()=>setSettingsTab('pricing')}>📊 估價參數</button>
+        <button style={tabBtnSt(settingsTab==='staff')}    onClick={()=>setSettingsTab('staff')}>👥 員工管理</button>
+        <button style={tabBtnSt(settingsTab==='customers')} onClick={()=>setSettingsTab('customers')}>💡 客人分析</button>
+      </div>
+
+      {settingsTab === 'pricing'   && <PricingParamsPanel />}
+      {settingsTab === 'staff'     && <StaffMgmtPanel />}
+      {settingsTab === 'customers' && <CustomerAnalyticsPanel />}
+    </div>
+  );
+}
+
+/* ── 估價參數面板（原 PricingSettingsTab 內容） ──────── */
+function PricingParamsPanel() {
   const [metals,         setMetals]         = useState({});
   const [labor,          setLabor]          = useState({});
   const [laborConfig,    setLaborConfig]    = useState({daily_rate:2000,'極簡':0.5,'簡單':1,'中等':2,'複雜':4,'精工':8});
@@ -3656,10 +3683,253 @@ function PricingSettingsTab() {
         </div>
 
 
-        {/* ── 帳號管理 ── */}
-        <UserMgmtSection />
-
       </div>
+    </div>
+  );
+}
+
+/* ── 員工管理面板 ────────────────────────────────────── */
+function StaffMgmtPanel() {
+  const [subView, setSubView] = useState('accounts'); // 'accounts' | 'activity'
+  const btnSt = (active) => ({
+    padding:'7px 18px', fontSize:13, fontWeight: active?700:500, border:'none',
+    borderRadius:8, cursor:'pointer', marginRight:6,
+    background: active ? 'var(--accent)' : 'var(--s3)',
+    color: active ? '#fff' : 'var(--text2)',
+  });
+  return (
+    <div style={{flex:1,overflowY:'auto',padding:'14px 20px 40px'}}>
+      <div style={{marginBottom:16}}>
+        <button style={btnSt(subView==='accounts')} onClick={()=>setSubView('accounts')}>帳號管理</button>
+        <button style={btnSt(subView==='activity')} onClick={()=>setSubView('activity')}>員工動態</button>
+      </div>
+      {subView === 'accounts' && <UserMgmtSection />}
+      {subView === 'activity' && <StaffActivitySection />}
+    </div>
+  );
+}
+
+/* ── 員工動態 ────────────────────────────────────────── */
+function StaffActivitySection() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
+  const ROLE_COLOR = { admin:'#b8935a', editor:'#4caf77', viewer:'#8a8a8a' };
+  const ROLE_LABEL = { admin:'管理員', editor:'員工', viewer:'唯讀' };
+
+  useEffect(() => {
+    fetch('/api/admin/staff-activity').then(r=>r.json()).then(d=>{setData(d);setLoading(false);}).catch(()=>setLoading(false));
+  }, []);
+
+  if (loading) return <div style={{padding:24,color:'var(--text3)',fontSize:13}}>載入中…</div>;
+  if (!data.length) return <div style={{padding:24,color:'var(--text3)',fontSize:13}}>尚無員工帳號</div>;
+
+  return (
+    <div>
+      <div style={{fontSize:16,fontWeight:800,color:'var(--text)',marginBottom:14}}>員工動態</div>
+      {data.map(u => (
+        <div key={u.id} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,marginBottom:10,overflow:'hidden'}}>
+          {/* 摘要列 */}
+          <div onClick={()=>setExpanded(expanded===u.id?null:u.id)}
+            style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',cursor:'pointer',userSelect:'none'}}>
+            <div style={{flex:1}}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontWeight:700,fontSize:14}}>{u.name}</span>
+                <span style={{background:ROLE_COLOR[u.role]+'22',color:ROLE_COLOR[u.role],borderRadius:6,padding:'1px 8px',fontSize:11,fontWeight:700}}>
+                  {ROLE_LABEL[u.role]}
+                </span>
+                {!u.is_active && <span style={{color:'#e53935',fontSize:11,fontWeight:600}}>(停用)</span>}
+              </div>
+              <div style={{fontSize:11,color:'var(--text3)',marginTop:2,fontFamily:'monospace'}}>{u.username}</div>
+            </div>
+            <div style={{display:'flex',gap:16,textAlign:'center'}}>
+              <div>
+                <div style={{fontSize:18,fontWeight:700,color:'var(--gold)'}}>{u.quotes_week}</div>
+                <div style={{fontSize:10,color:'var(--text3)'}}>本週估價</div>
+              </div>
+              <div>
+                <div style={{fontSize:18,fontWeight:700}}>{u.quotes_month}</div>
+                <div style={{fontSize:10,color:'var(--text3)'}}>本月估價</div>
+              </div>
+              <div>
+                <div style={{fontSize:18,fontWeight:700}}>{u.customers_served}</div>
+                <div style={{fontSize:10,color:'var(--text3)'}}>服務客人</div>
+              </div>
+            </div>
+            <div style={{color:'var(--text3)',fontSize:14}}>{expanded===u.id?'▲':'▼'}</div>
+          </div>
+          {/* 展開：近期動作 */}
+          {expanded === u.id && (
+            <div style={{borderTop:'1px solid var(--border)',padding:'10px 16px'}}>
+              {u.sales_month > 0 && (
+                <div style={{fontSize:12,color:'var(--gold)',fontWeight:700,marginBottom:8}}>
+                  本月成交金額：NT${u.sales_month.toLocaleString()}
+                </div>
+              )}
+              {u.recent_actions.length === 0 ? (
+                <div style={{fontSize:12,color:'var(--text3)'}}>暫無記錄</div>
+              ) : u.recent_actions.map((a,i) => (
+                <div key={i} style={{display:'flex',gap:10,alignItems:'flex-start',padding:'6px 0',borderBottom: i<u.recent_actions.length-1?'1px solid var(--border)':'none'}}>
+                  <span style={{fontSize:16,flexShrink:0}}>{a.type==='quote'?'💬':'👤'}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:500}}>{a.label}</div>
+                    {a.customer && <div style={{fontSize:11,color:'var(--text3)'}}>客人：{a.customer}</div>}
+                  </div>
+                  <div style={{fontSize:11,color:'var(--text3)',flexShrink:0}}>{(a.date||'').slice(0,10)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── 客人分析面板 ────────────────────────────────────── */
+function CustomerAnalyticsPanel() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState('overview'); // 'overview' | 'customers' | 'photos'
+
+  useEffect(() => {
+    fetch('/api/admin/customer-analytics').then(r=>r.json()).then(d=>{setData(d);setLoading(false);}).catch(()=>setLoading(false));
+  }, []);
+
+  if (loading) return <div style={{flex:1,padding:24,color:'var(--text3)',fontSize:13}}>載入中…</div>;
+  if (!data)   return <div style={{flex:1,padding:24,color:'#e53935',fontSize:13}}>載入失敗</div>;
+
+  const { summary, distribution, recent_interactions, customers, top_photos } = data;
+
+  function DistBar({ items, colorMap }) {
+    const max = Math.max(...items.map(i=>i.cnt), 1);
+    return (
+      <div style={{display:'flex',flexDirection:'column',gap:5}}>
+        {items.map(item => (
+          <div key={item[Object.keys(item)[0]]} style={{display:'flex',alignItems:'center',gap:8}}>
+            <div style={{width:60,fontSize:12,color:'var(--text)',fontWeight:500,flexShrink:0,textAlign:'right'}}>
+              {item[Object.keys(item)[0]]}
+            </div>
+            <div style={{flex:1,background:'var(--s3)',borderRadius:4,height:18,overflow:'hidden'}}>
+              <div style={{width:`${Math.round(item.cnt/max*100)}%`,height:'100%',
+                background: colorMap?.[item[Object.keys(item)[0]]] || 'var(--gold)',
+                borderRadius:4, minWidth:4, transition:'width .3s'}} />
+            </div>
+            <div style={{width:28,fontSize:11,color:'var(--text3)',textAlign:'right',flexShrink:0}}>{item.cnt}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const btnSt = (active) => ({
+    padding:'7px 18px', fontSize:13, fontWeight: active?700:500, border:'none',
+    borderRadius:8, cursor:'pointer', marginRight:6,
+    background: active ? 'var(--accent)' : 'var(--s3)',
+    color: active ? '#fff' : 'var(--text2)',
+  });
+
+  return (
+    <div style={{flex:1,overflowY:'auto',padding:'14px 20px 40px'}}>
+      {/* 摘要卡片 */}
+      <div style={{display:'flex',gap:10,marginBottom:20}}>
+        {[
+          {label:'客人總數', val:summary.total_customers},
+          {label:'互動次數', val:summary.total_sessions},
+          {label:'總收藏數', val:summary.total_favs},
+        ].map(s=>(
+          <div key={s.label} style={{flex:1,background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:'12px',textAlign:'center'}}>
+            <div style={{fontSize:24,fontWeight:800,color:'var(--gold)'}}>{s.val}</div>
+            <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 分頁 */}
+      <div style={{marginBottom:16}}>
+        <button style={btnSt(view==='overview')}   onClick={()=>setView('overview')}>喜好分析</button>
+        <button style={btnSt(view==='customers')}  onClick={()=>setView('customers')}>客人列表</button>
+        <button style={btnSt(view==='photos')}     onClick={()=>setView('photos')}>熱門照片</button>
+      </div>
+
+      {view === 'overview' && (
+        <div>
+          {/* 近期互動 */}
+          <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>近期互動</div>
+          {recent_interactions.slice(0,10).map(r=>(
+            <div key={r.id} style={{display:'flex',gap:12,alignItems:'center',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600}}>{r.customer_name}</div>
+                <div style={{fontSize:11,color:'var(--text3)'}}>
+                  {r.staff_name ? `員工：${r.staff_name}` : ''}
+                  {r.fav_count > 0 ? `　收藏 ${r.fav_count} 張` : ''}
+                  {r.notes ? `　備註：${r.notes}` : ''}
+                </div>
+              </div>
+              <div style={{fontSize:11,color:'var(--text3)',flexShrink:0}}>{(r.created_at||'').slice(0,10)}</div>
+            </div>
+          ))}
+
+          <div style={{fontSize:14,fontWeight:700,margin:'20px 0 10px'}}>類別喜好</div>
+          <DistBar items={distribution.category} />
+
+          <div style={{fontSize:14,fontWeight:700,margin:'20px 0 10px'}}>款式喜好</div>
+          <DistBar items={distribution.style} colorMap={{'無鑽':'#ccc','簡約':'#90caf9','輕奢':'#b8935a','奢華':'#ffd700'}} />
+
+          <div style={{fontSize:14,fontWeight:700,margin:'20px 0 10px'}}>寶石喜好 Top 10</div>
+          <DistBar items={distribution.gemstone} />
+
+          <div style={{fontSize:14,fontWeight:700,margin:'20px 0 10px'}}>顏色喜好</div>
+          <DistBar items={distribution.color} colorMap={{'紅':'#e53935','粉':'#f48fb1','黃':'#fdd835','綠':'#43a047','藍':'#1e88e5','紫':'#8e24aa','白':'#bdbdbd','彩':'linear-gradient(90deg,red,yellow,blue)'}} />
+        </div>
+      )}
+
+      {view === 'customers' && (
+        <div>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>客人列表（最近活躍）</div>
+          {customers.map(c=>(
+            <div key={c.id} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:10,padding:'10px 14px',marginBottom:8}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:14}}>{c.name}</div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>
+                    {c.phone && `📱 ${c.phone}`}
+                    {c.line_id && `  LINE: ${c.line_id}`}
+                  </div>
+                </div>
+                <div style={{textAlign:'right',fontSize:11,color:'var(--text3)'}}>
+                  {(c.last_interaction||'').slice(0,10)}<br/>最後互動
+                </div>
+              </div>
+              <div style={{display:'flex',gap:16,marginTop:8,fontSize:12}}>
+                <span>互動 <b>{c.session_count}</b> 次</span>
+                <span>收藏 <b>{c.fav_count}</b> 張</span>
+                {c.tx_count>0 && <span style={{color:'var(--gold)',fontWeight:700}}>成交 {c.tx_count} 次 ✓</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view === 'photos' && (
+        <div>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:10}}>最多被收藏的照片 Top 20</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))',gap:8}}>
+            {top_photos.map((p,i)=>(
+              <div key={p.id} style={{position:'relative',borderRadius:8,overflow:'hidden',background:'var(--s3)',aspectRatio:'1'}}>
+                <img src={`/api/thumb/${p.id}`} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} loading="lazy"/>
+                <div style={{position:'absolute',top:4,left:4,background:'rgba(0,0,0,.7)',color:'#fff',fontSize:10,fontWeight:700,borderRadius:4,padding:'2px 6px'}}>
+                  #{i+1}
+                </div>
+                <div style={{position:'absolute',bottom:0,left:0,right:0,background:'rgba(0,0,0,.65)',color:'#fff',fontSize:10,padding:'3px 5px',display:'flex',justifyContent:'space-between'}}>
+                  <span>{p.category}</span>
+                  <span>❤️{p.fav_count}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -165,6 +165,7 @@ from api.auth         import router as auth_router
 from api.pricing      import router as pricing_router
 from api.agents       import router as agents_router
 from api.staging      import router as staging_router
+from api.admin        import router as admin_router
 
 app.include_router(photos_router)
 app.include_router(similar_router)
@@ -182,5 +183,6 @@ app.include_router(auth_router)
 app.include_router(pricing_router)
 app.include_router(agents_router)
 app.include_router(staging_router)
+app.include_router(admin_router)
 
 app.mount("/", StaticFiles(directory=str(BASE_DIR / "web"), html=True), name="web")
