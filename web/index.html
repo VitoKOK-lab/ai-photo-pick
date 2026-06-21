@@ -4889,7 +4889,7 @@ function GuestFavViewModal({ link, onClose }) {
   const role = getJwtUser()?.role || 'editor';
 
   useEffect(() => {
-    fetch(`/api/guest-links/favorites/${link.token}`)
+    fetch(`/api/guest-links/staff-favorites/${link.token}`)
       .then(r => r.json())
       .then(d => setData(d))
       .finally(() => setLoading(false));
@@ -5020,7 +5020,7 @@ function GuestLinksPanel() {
   useEffect(() => { load(); }, []);
 
   async function create() {
-    if (!name.trim()) { flash('請輸入客人名字'); return; }
+    if (!name.trim()) { flash('請輸入客人 LINE ID'); return; }
     setCreating(true);
     const r = await fetch('/api/guest-links', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -5075,8 +5075,8 @@ function GuestLinksPanel() {
       {/* 建立表單 */}
       <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:'14px',marginBottom:20}}>
         <div style={{marginBottom:12}}>
-          <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>客人名字 *</div>
-          <input style={iS} placeholder="例：Amy、小美" value={name}
+          <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>客人 LINE ID *</div>
+          <input style={iS} placeholder="例：@amy_lin、小美" value={name}
             onChange={e=>setName(e.target.value)}
             onKeyDown={e=>e.key==='Enter'&&create()} />
         </div>
@@ -5084,7 +5084,7 @@ function GuestLinksPanel() {
           服務員工：<strong style={{color:'var(--text)'}}>{staffName || '（未知）'}</strong>
         </div>
         <div style={{fontSize:11,color:'var(--text3)',marginBottom:10}}>
-          ⏱ 連結有效 4 小時，客人可在時限內瀏覽所有去背照片並收藏
+          ⏱ 連結有效 4 小時 · 連結過期後收藏記錄仍保留
         </div>
         <button onClick={create} disabled={creating}
           style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:8,
@@ -5143,24 +5143,12 @@ function GuestLinksPanel() {
                     style={{flex:1,padding:'6px',fontSize:12,fontWeight:600,border:'1px solid var(--border)',borderRadius:6,background:'var(--s2)',cursor:'pointer'}}>
                     📋 複製
                   </button>
-                  {l.fav_count > 0 && (
-                    <button onClick={() => setViewLink(l)}
-                      style={{flex:1,padding:'6px',fontSize:12,fontWeight:700,border:'none',borderRadius:6,background:'#ffebee',color:'#c62828',cursor:'pointer'}}>
-                      ❤️ {l.fav_count} 查看收藏
-                    </button>
-                  )}
                   <button onClick={()=>deactivate(l.token)}
                     style={{padding:'6px 10px',fontSize:12,fontWeight:600,border:'none',borderRadius:6,background:'#ffebee',color:'#c62828',cursor:'pointer'}}>
                     停用
                   </button>
                 </>}
-                {!l.active && isAdmin && (
-                  <button onClick={()=>restore(l.token)}
-                    style={{flex:1,padding:'6px 10px',fontSize:12,fontWeight:700,border:'none',borderRadius:6,background:'#e8f5e9',color:'#2e7d32',cursor:'pointer'}}>
-                    ↩ 恢復（再延 4 小時）
-                  </button>
-                )}
-                {!l.active && l.fav_count > 0 && (
+                {l.fav_count > 0 && (
                   <button onClick={() => setViewLink(l)}
                     style={{flex:1,padding:'6px',fontSize:12,fontWeight:700,border:'none',borderRadius:6,background:'#ffebee',color:'#c62828',cursor:'pointer'}}>
                     ❤️ {l.fav_count} 查看收藏

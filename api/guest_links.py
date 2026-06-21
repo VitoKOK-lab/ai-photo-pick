@@ -204,7 +204,7 @@ def toggle_favorite(token: str, photo_id: int):
     return {"favorited": favorited, "photo_id": photo_id, "total_favs": fav_count}
 
 
-# ── 公開：取得收藏清單 ──────────────────────────────────
+# ── 公開：取得收藏清單（客人用，需連結有效）──────────────
 @router.get("/favorites/{token}")
 def get_favorites(token: str):
     conn = _conn()
@@ -218,6 +218,27 @@ def get_favorites(token: str):
         conn.close()
         raise HTTPException(410, "連結已過期")
 
+    favs = conn.execute(
+        """SELECT cf.photo_id, p.filename, p.category, p.style, p.color, p.gemstone
+           FROM customer_favorites cf
+           JOIN photos p ON p.id = cf.photo_id
+           WHERE cf.customer_id=?
+           ORDER BY cf.created_at""",
+        (r["customer_id"],)
+    ).fetchall()
+    conn.close()
+    return {"customer_name": r["customer_name"], "favorites": [dict(f) for f in favs]}
+
+
+# ── 員工：查看收藏（不限過期，需登入）──────────────────
+@router.get("/staff-favorites/{token}")
+def staff_get_favorites(token: str, _user=Depends(require_editor)):
+    conn = _conn()
+    row = conn.execute("SELECT * FROM guest_links WHERE token=?", (token,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "連結不存在")
+    r = dict(row)
     favs = conn.execute(
         """SELECT cf.photo_id, p.filename, p.category, p.style, p.color, p.gemstone
            FROM customer_favorites cf
