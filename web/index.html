@@ -4649,7 +4649,8 @@ function GuestApp({ token }) {
 
   const isFav = id => favIds.has(id);
 
-  const toggleFav = async id => {
+  const toggleFav = async photo => {
+    const id = typeof photo === 'object' ? photo.id : photo;
     if (!favIds.has(id) && favIds.size >= MAX_FAVS) return;
     try {
       const r = await fetch(`/api/guest-links/favorite/${token}/${id}`, { method: 'POST' });
