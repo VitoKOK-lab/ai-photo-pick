@@ -113,9 +113,11 @@ class NoCacheHTMLMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         path = request.url.path
         if path.endswith(".html") or path == "/" or not "." in path.split("/")[-1]:
-            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
+            response.headers["Surrogate-Control"] = "no-store"  # Cloudflare CDN skip cache
+            response.headers["CDN-Cache-Control"] = "no-store"  # Cloudflare specific
         return response
 
 
