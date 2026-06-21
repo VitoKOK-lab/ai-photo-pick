@@ -4628,6 +4628,7 @@ function GuestBrowseView({ token }) {
   const [error,   setError]   = useState('');
   const [toggling,setToggling]= useState(new Set());
   const [remain,  setRemain]  = useState(0);
+  const MAX_FAVS = 9;
 
   useEffect(() => {
     fetch(`/api/guest-links/info/${token}`)
@@ -4704,8 +4705,12 @@ function GuestBrowseView({ token }) {
             </div>
           </div>
           <div style={{textAlign:'right'}}>
-            <div style={{fontSize:22,fontWeight:800,color:'#e53935'}}>❤️ {favIds.size}</div>
-            <div style={{fontSize:10,color:'#888'}}>已收藏</div>
+            <div style={{fontSize:22,fontWeight:800,color: favIds.size >= MAX_FAVS ? '#e53935' : '#333'}}>
+              ❤️ {favIds.size} <span style={{fontSize:14,fontWeight:400,color:'#aaa'}}>/ {MAX_FAVS}</span>
+            </div>
+            <div style={{fontSize:10,color: favIds.size >= MAX_FAVS ? '#e53935' : '#888'}}>
+              {favIds.size >= MAX_FAVS ? '已達上限' : '已收藏'}
+            </div>
           </div>
         </div>
       </div>
@@ -4729,16 +4734,22 @@ function GuestBrowseView({ token }) {
                 <img src={`/api/thumb/${p.id}`} alt="" loading="lazy"
                   style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}} />
                 {/* 愛心按鈕 */}
-                <button onClick={() => toggleFav(p.id)} disabled={busy}
-                  style={{position:'absolute',bottom:6,right:6,
-                    width:34,height:34,borderRadius:'50%',border:'none',
-                    background: isFav ? '#e53935' : 'rgba(255,255,255,.9)',
-                    color: isFav ? '#fff' : '#888',
-                    fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
-                    boxShadow:'0 2px 6px rgba(0,0,0,.2)',transition:'all .15s',
-                    opacity: busy ? 0.5 : 1}}>
-                  {isFav ? '❤️' : '🤍'}
-                </button>
+                {(() => {
+                  const atLimit = !isFav && favIds.size >= MAX_FAVS;
+                  return (
+                    <button onClick={() => !atLimit && toggleFav(p.id)} disabled={busy}
+                      style={{position:'absolute',bottom:6,right:6,
+                        width:34,height:34,borderRadius:'50%',border:'none',
+                        background: isFav ? '#e53935' : 'rgba(255,255,255,.9)',
+                        color: isFav ? '#fff' : atLimit ? '#ccc' : '#888',
+                        fontSize:18,cursor: atLimit ? 'not-allowed' : 'pointer',
+                        display:'flex',alignItems:'center',justifyContent:'center',
+                        boxShadow:'0 2px 6px rgba(0,0,0,.2)',transition:'all .15s',
+                        opacity: busy ? 0.5 : atLimit ? 0.4 : 1}}>
+                      {isFav ? '❤️' : '🤍'}
+                    </button>
+                  );
+                })()}
               </div>
             );
           })}
@@ -4750,9 +4761,12 @@ function GuestBrowseView({ token }) {
 
       {/* 底部收藏提示 */}
       {favIds.size > 0 && (
-        <div style={{position:'fixed',bottom:0,left:0,right:0,background:'#e53935',color:'#fff',
-          padding:'12px 16px',textAlign:'center',fontSize:14,fontWeight:600,zIndex:200}}>
-          已收藏 {favIds.size} 張 · 通知員工後他們即可查看您的收藏 ❤️
+        <div style={{position:'fixed',bottom:0,left:0,right:0,
+          background: favIds.size >= MAX_FAVS ? '#c62828' : '#e53935',
+          color:'#fff',padding:'12px 16px',textAlign:'center',fontSize:14,fontWeight:600,zIndex:200}}>
+          {favIds.size >= MAX_FAVS
+            ? `已收藏 ${MAX_FAVS} 張（已達上限）· 通知員工查看您的收藏 ❤️`
+            : `已收藏 ${favIds.size} / ${MAX_FAVS} 張 · 可繼續選，選好後通知員工 ❤️`}
         </div>
       )}
     </div>

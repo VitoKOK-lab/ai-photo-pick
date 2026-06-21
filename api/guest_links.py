@@ -12,6 +12,7 @@ from config.settings import SQLITE_PATH
 from api.auth import require_editor
 
 LINK_HOURS = 4
+MAX_FAVS   = 9
 router = APIRouter(prefix="/api/guest-links", tags=["guest-links"])
 
 
@@ -163,6 +164,12 @@ def toggle_favorite(token: str, photo_id: int):
                      (customer_id, photo_id))
         favorited = False
     else:
+        fav_count_now = conn.execute(
+            "SELECT COUNT(*) FROM customer_favorites WHERE customer_id=?", (customer_id,)
+        ).fetchone()[0]
+        if fav_count_now >= MAX_FAVS:
+            conn.close()
+            raise HTTPException(400, f"最多只能收藏 {MAX_FAVS} 張")
         conn.execute(
             "INSERT OR IGNORE INTO customer_favorites(customer_id, photo_id) VALUES(?,?)",
             (customer_id, photo_id)
