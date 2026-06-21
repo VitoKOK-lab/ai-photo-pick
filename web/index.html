@@ -4937,17 +4937,19 @@ function GuestFavViewModal({ link, onClose }) {
         </div>
       )}
 
-      {/* PhotoDetail overlay */}
+      {/* PhotoDetail overlay — transform creates new fixed containing block above modal z-index */}
       {selectedPhoto && (
-        <PhotoDetail
-          photo={selectedPhoto}
-          onClose={() => setSelectedPhoto(null)}
-          isFav={() => false}
-          toggleFav={() => {}}
-          role={role}
-          onDeleted={null}
-          onUpdated={null}
-        />
+        <div style={{position:'fixed',inset:0,zIndex:900,transform:'translateZ(0)'}}>
+          <PhotoDetail
+            photo={selectedPhoto}
+            onClose={() => setSelectedPhoto(null)}
+            isFav={() => false}
+            toggleFav={() => {}}
+            role={role}
+            onDeleted={null}
+            onUpdated={null}
+          />
+        </div>
       )}
     </>
   );
@@ -5047,12 +5049,6 @@ function GuestLinksPanel() {
               style={{flex:1,background:'#4caf77',color:'#fff',border:'none',borderRadius:8,padding:'9px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
               📋 複製連結
             </button>
-            {navigator.share && (
-              <button onClick={()=>navigator.share({title:`${newLink.customer_name}的挑選`,url:newLink.url})}
-                style={{flex:1,background:'#1976d2',color:'#fff',border:'none',borderRadius:8,padding:'9px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
-                📤 分享（LINE）
-              </button>
-            )}
           </div>
           <div style={{fontSize:11,color:'#888',marginTop:8,textAlign:'center'}}>
             有效至 {newLink.expires_at?.slice(0,16).replace('T',' ')} UTC
@@ -5096,12 +5092,6 @@ function GuestLinksPanel() {
                     style={{flex:1,padding:'6px',fontSize:12,fontWeight:600,border:'1px solid var(--border)',borderRadius:6,background:'var(--s2)',cursor:'pointer'}}>
                     📋 複製
                   </button>
-                  {navigator.share && (
-                    <button onClick={()=>navigator.share({title:`${l.customer_name}的挑選`,url})}
-                      style={{flex:1,padding:'6px',fontSize:12,fontWeight:600,border:'1px solid var(--border)',borderRadius:6,background:'var(--s2)',cursor:'pointer'}}>
-                      📤 分享
-                    </button>
-                  )}
                   <button onClick={()=>deactivate(l.token)}
                     style={{padding:'6px 10px',fontSize:12,fontWeight:600,border:'none',borderRadius:6,background:'#ffebee',color:'#c62828',cursor:'pointer'}}>
                     停用
@@ -5225,7 +5215,7 @@ function App() {
           )}
           {isStaff && (
             <button className={'nav-tab' + (tab === 'guest' ? ' on' : '')} onClick={() => setTab('guest')}>
-              客人連結
+              客人收藏夾
             </button>
           )}
           {isAdmin && (
@@ -5264,7 +5254,7 @@ function App() {
         )}
         {isStaff && (
           <button className={'tab-btn' + (tab === 'guest' ? ' on' : '')} onClick={() => setTab('guest')}>
-            客人
+            收藏夾
           </button>
         )}
         {isAdmin && (
