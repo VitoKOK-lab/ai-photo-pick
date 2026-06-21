@@ -111,6 +111,26 @@ def deactivate_link(token: str, _user=Depends(require_editor)):
     return {"ok": True}
 
 
+# ── 管理員：恢復連結 ────────────────────────────────────
+@router.patch("/{token}/restore")
+def restore_link(token: str, _user=Depends(require_editor)):
+    conn = _conn()
+    row = conn.execute("SELECT expires_at FROM guest_links WHERE token=?", (token,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "連結不存在")
+    # 恢復有效期：從現在起再加 4 小時
+    from datetime import datetime, timedelta
+    new_exp = (datetime.utcnow() + timedelta(hours=LINK_HOURS)).isoformat()
+    conn.execute(
+        "UPDATE guest_links SET is_active=1, expires_at=? WHERE token=?",
+        (new_exp, token)
+    )
+    conn.commit()
+    conn.close()
+    return {"ok": True, "expires_at": new_exp}
+
+
 # ── 公開：驗證 token ────────────────────────────────────
 @router.get("/info/{token}")
 def get_link_info(token: str):

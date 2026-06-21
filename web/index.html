@@ -5002,6 +5002,7 @@ function GuestLinksPanel() {
   const [loading,  setLoading]  = useState(true);
   const [creating, setCreating] = useState(false);
   const [name,     setName]     = useState('');
+  const isAdmin = getJwtUser()?.role === 'admin';
   const staffName = getJwtUser()?.name || getJwtUser()?.username || '';
   const [msg,      setMsg]      = useState('');
   const [newLink,  setNewLink]  = useState(null);
@@ -5038,8 +5039,24 @@ function GuestLinksPanel() {
   }
 
   async function deactivate(token) {
+    // optimistic update — no full reload
+    setLinks(prev => prev.map(l => l.token === token
+      ? { ...l, is_active: 0, active: false }
+      : l
+    ));
     await fetch(`/api/guest-links/${token}`, { method:'DELETE' });
-    flash('已停用'); load();
+    flash('已停用');
+  }
+
+  async function restore(token) {
+    const r = await fetch(`/api/guest-links/${token}/restore`, { method:'PATCH' });
+    if (!r.ok) { flash('恢復失敗'); return; }
+    const d = await r.json();
+    setLinks(prev => prev.map(l => l.token === token
+      ? { ...l, is_active: 1, active: true, expired: false, expires_at: d.expires_at }
+      : l
+    ));
+    flash('已恢復，有效期再延 4 小時');
   }
 
   async function copyLink(url) {
@@ -5120,8 +5137,8 @@ function GuestLinksPanel() {
               <div style={{fontSize:11,color:'var(--text3)',marginBottom:8}}>
                 {l.created_by && `員工：${l.created_by} · `}建立：{l.created_at?.slice(0,16).replace('T',' ')}
               </div>
-              {l.active && (
-                <div style={{display:'flex',gap:6}}>
+              <div style={{display:'flex',gap:6}}>
+                {l.active && <>
                   <button onClick={()=>copyLink(url)}
                     style={{flex:1,padding:'6px',fontSize:12,fontWeight:600,border:'1px solid var(--border)',borderRadius:6,background:'var(--s2)',cursor:'pointer'}}>
                     📋 複製
@@ -5136,8 +5153,20 @@ function GuestLinksPanel() {
                     style={{padding:'6px 10px',fontSize:12,fontWeight:600,border:'none',borderRadius:6,background:'#ffebee',color:'#c62828',cursor:'pointer'}}>
                     停用
                   </button>
-                </div>
-              )}
+                </>}
+                {!l.active && isAdmin && (
+                  <button onClick={()=>restore(l.token)}
+                    style={{flex:1,padding:'6px 10px',fontSize:12,fontWeight:700,border:'none',borderRadius:6,background:'#e8f5e9',color:'#2e7d32',cursor:'pointer'}}>
+                    ↩ 恢復（再延 4 小時）
+                  </button>
+                )}
+                {!l.active && l.fav_count > 0 && (
+                  <button onClick={() => setViewLink(l)}
+                    style={{flex:1,padding:'6px',fontSize:12,fontWeight:700,border:'none',borderRadius:6,background:'#ffebee',color:'#c62828',cursor:'pointer'}}>
+                    ❤️ {l.fav_count} 查看收藏
+                  </button>
+                )}
+              </div>
             </div>
           );
         })
