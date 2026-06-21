@@ -4231,11 +4231,22 @@ function QuoteHistoryPage({ role }) {
           <div style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>估價紀錄</div>
           <div style={{fontSize:11,color:'var(--text3)',marginTop:1}}>{quotes.length} 筆</div>
         </div>
-        {isAdmin && (
-          <button onClick={() => setSubView('newquote')} style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
-            + 新估價
-          </button>
-        )}
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          {isAdmin && quotes.length > 0 && (
+            <button onClick={async () => {
+              if (!confirm(`確定清空全部 ${quotes.length} 筆估價紀錄？`)) return;
+              await fetch('/api/quotes/all', { method: 'DELETE' });
+              setQuotes([]);
+            }} style={{background:'#ffebee',color:'#c62828',border:'none',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+              清空
+            </button>
+          )}
+          {isAdmin && (
+            <button onClick={() => setSubView('newquote')} style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+              + 新估價
+            </button>
+          )}
+        </div>
       </div>
 
       {/* List */}
@@ -4830,8 +4841,11 @@ function GuestApp({ token }) {
 
 /* ── 員工：查看客人收藏 modal ────────────────────────── */
 function GuestFavViewModal({ link, onClose }) {
-  const [data,    setData]    = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data,          setData]          = useState(null);
+  const [loading,       setLoading]       = useState(true);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [loadingPhoto,  setLoadingPhoto]  = useState(false);
+  const role = getJwtUser()?.role || 'editor';
 
   useEffect(() => {
     fetch(`/api/guest-links/favorites/${link.token}`)
@@ -4840,59 +4854,102 @@ function GuestFavViewModal({ link, onClose }) {
       .finally(() => setLoading(false));
   }, [link.token]);
 
-  return (
-    <div style={{position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,0.55)',
-      display:'flex',alignItems:'flex-end',justifyContent:'center'}}
-      onClick={onClose}>
-      <div style={{background:'var(--bg)',borderRadius:'16px 16px 0 0',width:'100%',
-        maxHeight:'85vh',display:'flex',flexDirection:'column'}}
-        onClick={e => e.stopPropagation()}>
-        {/* header */}
-        <div style={{padding:'14px 16px',borderBottom:'1px solid var(--border)',
-          display:'flex',alignItems:'center',background:'var(--surface)',borderRadius:'16px 16px 0 0',flexShrink:0}}>
-          <div style={{flex:1}}>
-            <div style={{fontWeight:800,fontSize:15}}>{link.customer_name} 的收藏</div>
-            <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>
-              員工：{link.created_by} · {link.created_at?.slice(0,16).replace('T',' ')}
-            </div>
-          </div>
-          <button onClick={onClose}
-            style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'var(--text)',padding:'0 4px'}}>
-            ✕
-          </button>
-        </div>
+  async function openPhoto(photoId) {
+    setLoadingPhoto(true);
+    try {
+      const r = await fetch(`/api/photos/${photoId}`);
+      if (r.ok) setSelectedPhoto(await r.json());
+    } finally {
+      setLoadingPhoto(false);
+    }
+  }
 
-        {/* content */}
-        <div style={{flex:1,overflowY:'auto',padding:'12px 16px 24px'}}>
-          {loading ? (
-            <div style={{textAlign:'center',color:'var(--text3)',fontSize:13,marginTop:30}}>載入中…</div>
-          ) : !data || data.favorites?.length === 0 ? (
-            <div style={{textAlign:'center',color:'var(--text3)',fontSize:13,marginTop:30}}>
-              客人尚未收藏任何款式
+  return (
+    <>
+      <div style={{position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,0.55)',
+        display:'flex',alignItems:'flex-end',justifyContent:'center'}}
+        onClick={onClose}>
+        <div style={{background:'var(--bg)',borderRadius:'16px 16px 0 0',width:'100%',
+          maxHeight:'85vh',display:'flex',flexDirection:'column'}}
+          onClick={e => e.stopPropagation()}>
+          {/* header */}
+          <div style={{padding:'14px 16px',borderBottom:'1px solid var(--border)',
+            display:'flex',alignItems:'center',background:'var(--surface)',borderRadius:'16px 16px 0 0',flexShrink:0}}>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:800,fontSize:15}}>{link.customer_name} 的收藏</div>
+              <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>
+                員工：{link.created_by} · {link.created_at?.slice(0,16).replace('T',' ')}
+              </div>
             </div>
-          ) : (
-            <>
-              <div style={{fontSize:12,color:'var(--text3)',marginBottom:10}}>
-                共收藏 <strong style={{color:'var(--text)'}}>{data.favorites.length}</strong> 張
+            <button onClick={onClose}
+              style={{background:'none',border:'none',fontSize:22,cursor:'pointer',color:'var(--text)',padding:'0 4px'}}>
+              ✕
+            </button>
+          </div>
+
+          {/* content */}
+          <div style={{flex:1,overflowY:'auto',padding:'12px 16px 24px'}}>
+            {loading ? (
+              <div style={{textAlign:'center',color:'var(--text3)',fontSize:13,marginTop:30}}>載入中…</div>
+            ) : !data || data.favorites?.length === 0 ? (
+              <div style={{textAlign:'center',color:'var(--text3)',fontSize:13,marginTop:30}}>
+                客人尚未收藏任何款式
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
-                {data.favorites.map(f => (
-                  <div key={f.photo_id}
-                    style={{borderRadius:10,overflow:'hidden',border:'1px solid var(--border)',background:'#eee'}}>
-                    <img src={`/api/thumb/${f.photo_id}`}
-                      style={{width:'100%',aspectRatio:'1/1',objectFit:'cover',display:'block'}} />
-                    <div style={{padding:'4px 6px',fontSize:10,color:'var(--text3)',
-                      background:'var(--surface)',lineHeight:1.4}}>
-                      {[f.category, f.gemstone, f.style].filter(Boolean).join(' · ')}
+            ) : (
+              <>
+                <div style={{fontSize:12,color:'var(--text3)',marginBottom:10}}>
+                  共收藏 <strong style={{color:'var(--text)'}}>{data.favorites.length}</strong> 張 · 點擊放大 / 估價
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+                  {data.favorites.map(f => (
+                    <div key={f.photo_id}
+                      style={{borderRadius:10,overflow:'hidden',border:'1px solid var(--border)',
+                        background:'#eee',cursor:'pointer',position:'relative'}}
+                      onClick={() => openPhoto(f.photo_id)}>
+                      <img src={`/api/thumb/${f.photo_id}`}
+                        style={{width:'100%',aspectRatio:'1/1',objectFit:'cover',display:'block'}} />
+                      {/* hover hint overlay */}
+                      <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0)',
+                        display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        <span style={{background:'rgba(0,0,0,0.45)',color:'#fff',borderRadius:20,
+                          fontSize:10,fontWeight:700,padding:'3px 9px',opacity:0}}>
+                          放大
+                        </span>
+                      </div>
+                      <div style={{padding:'4px 6px',fontSize:10,color:'var(--text3)',
+                        background:'var(--surface)',lineHeight:1.4}}>
+                        {[f.category, f.gemstone, f.style].filter(Boolean).join(' · ')}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* loading spinner */}
+      {loadingPhoto && (
+        <div style={{position:'fixed',inset:0,zIndex:700,background:'rgba(0,0,0,0.4)',
+          display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{color:'#fff',fontSize:14}}>載入中…</div>
+        </div>
+      )}
+
+      {/* PhotoDetail overlay */}
+      {selectedPhoto && (
+        <PhotoDetail
+          photo={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)}
+          isFav={() => false}
+          toggleFav={() => {}}
+          role={role}
+          onDeleted={null}
+          onUpdated={null}
+        />
+      )}
+    </>
   );
 }
 

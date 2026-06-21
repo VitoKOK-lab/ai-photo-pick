@@ -209,6 +209,15 @@ def update_quote(quote_id: int, body: QuoteUpdate, _user=Depends(require_editor)
     return dict(updated)
 
 
+@router.delete("/all")
+def delete_all_quotes(_user=Depends(require_editor)):
+    conn = _conn()
+    conn.execute("DELETE FROM quotes")
+    conn.commit()
+    conn.close()
+    return {"deleted": True}
+
+
 @router.delete("/{quote_id}")
 def delete_quote(quote_id: int, _user=Depends(require_editor)):
     conn = _conn()
