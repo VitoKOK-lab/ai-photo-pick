@@ -5116,13 +5116,6 @@ function GuestLinksPanel() {
                   color: l.active?'#2e7d32':'#888'}}>
                   {l.active ? '有效' : l.expired ? '已過期' : '已停用'}
                 </span>
-                {l.fav_count > 0 && (
-                <button onClick={() => setViewLink(l)}
-                  style={{fontSize:11,color:'#e53935',fontWeight:700,background:'#ffebee',
-                    border:'none',borderRadius:6,padding:'2px 8px',cursor:'pointer'}}>
-                  ❤️ {l.fav_count} 查看
-                </button>
-              )}
               </div>
               <div style={{fontSize:11,color:'var(--text3)',marginBottom:8}}>
                 {l.created_by && `員工：${l.created_by} · `}建立：{l.created_at?.slice(0,16).replace('T',' ')}
@@ -5133,6 +5126,12 @@ function GuestLinksPanel() {
                     style={{flex:1,padding:'6px',fontSize:12,fontWeight:600,border:'1px solid var(--border)',borderRadius:6,background:'var(--s2)',cursor:'pointer'}}>
                     📋 複製
                   </button>
+                  {l.fav_count > 0 && (
+                    <button onClick={() => setViewLink(l)}
+                      style={{flex:1,padding:'6px',fontSize:12,fontWeight:700,border:'none',borderRadius:6,background:'#ffebee',color:'#c62828',cursor:'pointer'}}>
+                      ❤️ {l.fav_count} 查看收藏
+                    </button>
+                  )}
                   <button onClick={()=>deactivate(l.token)}
                     style={{padding:'6px 10px',fontSize:12,fontWeight:600,border:'none',borderRadius:6,background:'#ffebee',color:'#c62828',cursor:'pointer'}}>
                     停用
