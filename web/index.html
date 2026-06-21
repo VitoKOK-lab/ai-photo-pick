@@ -3309,9 +3309,11 @@ function PricingSettingsTab() {
         <button style={tabBtnSt(settingsTab==='customers')} onClick={()=>setSettingsTab('customers')}>💡 客人分析</button>
       </div>
 
-      {settingsTab === 'pricing'   && <PricingParamsPanel />}
-      {settingsTab === 'staff'     && <StaffMgmtPanel />}
-      {settingsTab === 'customers' && <CustomerAnalyticsPanel />}
+      <div style={{flex:1, minHeight:0, overflow:'hidden', display: settingsTab === 'pricing' ? 'flex' : 'none', flexDirection:'column'}}>
+        <PricingParamsPanel />
+      </div>
+      {settingsTab === 'staff'     && <div style={{flex:1, minHeight:0, overflow:'hidden'}}><StaffMgmtPanel /></div>}
+      {settingsTab === 'customers' && <div style={{flex:1, minHeight:0, overflow:'hidden'}}><CustomerAnalyticsPanel /></div>}
     </div>
   );
 }
@@ -3475,7 +3477,17 @@ function PricingParamsPanel() {
                 style={{marginLeft:'auto',fontSize:11,padding:'3px 12px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg)',color:spotLoading?'var(--text3)':'var(--text2)',cursor:spotLoading?'default':'pointer',flexShrink:0}}>
                 {spotLoading ? '抓取中…' : '↺ 同步今日行情'}
               </button>
-              {spotErr && <div style={{width:'100%',fontSize:11,color:spotErr.startsWith('✓')?'#2e7d32':'#d32f2f',marginTop:2}}>{spotErr}</div>}
+              {spotErr && (
+                <div style={{width:'100%',display:'flex',alignItems:'center',gap:8,marginTop:2}}>
+                  <span style={{fontSize:11,color:spotErr.startsWith('✓')?'#2e7d32':'#d32f2f',flex:1}}>{spotErr}</span>
+                  {spotErr.startsWith('✓') && (
+                    <button onClick={saveAll} disabled={saving}
+                      style={{fontSize:12,padding:'4px 14px',borderRadius:6,border:'none',background:'var(--accent)',color:'#fff',fontWeight:700,cursor:'pointer',flexShrink:0,opacity:saving?0.6:1}}>
+                      {saving ? '儲存中…' : '儲存'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           );
         })()}
