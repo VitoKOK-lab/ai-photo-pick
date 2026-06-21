@@ -3373,8 +3373,8 @@ function PricingSettingsTab() {
       <div style={{flex:1, minHeight:0, overflow:'hidden', display: settingsTab === 'pricing' ? 'flex' : 'none', flexDirection:'column'}}>
         <PricingParamsPanel />
       </div>
-      {settingsTab === 'staff'     && <div style={{flex:1, minHeight:0, overflow:'hidden'}}><StaffMgmtPanel /></div>}
-      {settingsTab === 'customers' && <div style={{flex:1, minHeight:0, overflow:'hidden'}}><CustomerAnalyticsPanel /></div>}
+      {settingsTab === 'staff'     && <div style={{flex:1, minHeight:0, overflow:'hidden', display:'flex', flexDirection:'column'}}><StaffMgmtPanel /></div>}
+      {settingsTab === 'customers' && <div style={{flex:1, minHeight:0, overflow:'hidden', display:'flex', flexDirection:'column'}}><CustomerAnalyticsPanel /></div>}
     </div>
   );
 }
@@ -4127,8 +4127,7 @@ function UserMgmtSection() {
           <div>
             <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>角色</div>
             <select style={iS} value={form.role} onChange={e=>setForm(p=>({...p,role:e.target.value}))}>
-              <option value="editor">員工（可新增／編輯）</option>
-              <option value="viewer">唯讀（只能看）</option>
+              <option value="editor">員工（可估價、建連結、上傳）</option>
               <option value="admin">管理員（全權限）</option>
             </select>
           </div>
