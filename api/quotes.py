@@ -3,8 +3,9 @@ import sqlite3
 import sys
 from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
+from api.auth import require_editor
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH
@@ -152,7 +153,7 @@ def list_quotes(
 
 
 @router.post("")
-def create_quote(body: QuoteCreate):
+def create_quote(body: QuoteCreate, _user=Depends(require_editor)):
     fp = body.final_price if body.final_price is not None else 0
     if fp < 0:
         raise HTTPException(status_code=400, detail="final_price 不可為負數")
@@ -178,7 +179,7 @@ def create_quote(body: QuoteCreate):
 
 
 @router.patch("/{quote_id}")
-def update_quote(quote_id: int, body: QuoteUpdate):
+def update_quote(quote_id: int, body: QuoteUpdate, _user=Depends(require_editor)):
     conn = _conn()
     row = conn.execute("SELECT * FROM quotes WHERE id=?", (quote_id,)).fetchone()
     if not row:
@@ -209,7 +210,7 @@ def update_quote(quote_id: int, body: QuoteUpdate):
 
 
 @router.delete("/{quote_id}")
-def delete_quote(quote_id: int):
+def delete_quote(quote_id: int, _user=Depends(require_editor)):
     conn = _conn()
     cur = conn.cursor()
     cur.execute("DELETE FROM quotes WHERE id = ?", (quote_id,))

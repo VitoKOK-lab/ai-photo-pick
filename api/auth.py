@@ -1,4 +1,5 @@
 """auth.py - JWT authentication"""
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -12,7 +13,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH
 
-SECRET_KEY = "jewelry-app-secret-key-change-in-production"
+_raw_secret = os.environ.get("JWT_SECRET", "")
+if not _raw_secret:
+    import warnings
+    warnings.warn("JWT_SECRET 未設定，使用預設值。請在 .env 設定 JWT_SECRET=<隨機長字串>", stacklevel=2)
+SECRET_KEY = _raw_secret or "jewelry-app-secret-key-change-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 
@@ -41,8 +46,12 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         return None
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = int(payload.get("sub"))
+        sub = payload.get("sub", "")
         role = payload.get("role")
+        # PIN-login synthetic tokens skip DB lookup
+        if sub in ("pin_admin", "pin_staff"):
+            return {"id": sub, "role": role, "name": "PIN User", "username": sub}
+        user_id = int(sub)
         conn = get_db()
         row = conn.execute("SELECT * FROM users WHERE id=? AND is_active=1", (user_id,)).fetchone()
         conn.close()
@@ -145,3 +154,20 @@ def delete_user(user_id: int, user=Depends(require_admin)):
     conn.commit()
     conn.close()
     return {"ok": True}
+
+
+@router.post("/pin-login")
+def pin_login(body: dict):
+    """PIN 碼登入（前端用）：驗證成功回傳 JWT token"""
+    pin = str(body.get("pin", "")).strip()
+    admin_pin = os.environ.get("ADMIN_PIN", "666")
+    staff_pin = os.environ.get("STAFF_PIN", "")
+    if pin == admin_pin:
+        sub, role = "pin_admin", "admin"
+    elif staff_pin and pin == staff_pin:
+        sub, role = "pin_staff", "editor"
+    else:
+        raise HTTPException(status_code=401, detail="PIN 錯誤")
+    expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    token = jwt.encode({"sub": sub, "role": role, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
+    return {"token": token, "role": role}

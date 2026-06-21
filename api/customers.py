@@ -3,8 +3,9 @@ import sqlite3
 import sys
 from pathlib import Path
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
+from api.auth import require_editor
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH
@@ -107,7 +108,7 @@ def list_customers(q: Optional[str] = Query(None)):
 
 
 @router.post("", status_code=201)
-def create_customer(body: CustomerCreate):
+def create_customer(body: CustomerCreate, _user=Depends(require_editor)):
     if not body.name.strip():
         raise HTTPException(400, "name required")
     conn = _conn()
@@ -133,7 +134,7 @@ def get_customer(customer_id: int):
 
 
 @router.put("/{customer_id}")
-def update_customer(customer_id: int, body: CustomerUpdate):
+def update_customer(customer_id: int, body: CustomerUpdate, _user=Depends(require_editor)):
     conn = _conn()
     row = conn.execute("SELECT * FROM customers WHERE id=?", (customer_id,)).fetchone()
     if not row:
@@ -155,7 +156,7 @@ def update_customer(customer_id: int, body: CustomerUpdate):
 
 
 @router.post("/{customer_id}/sessions")
-def save_discovery_session(customer_id: int, body: DiscoverySession):
+def save_discovery_session(customer_id: int, body: DiscoverySession, _user=Depends(require_editor)):
     """儲存一次偏好探索結果：喜愛照片 + 偏好標籤"""
     conn = _conn()
     row = conn.execute("SELECT * FROM customers WHERE id=?", (customer_id,)).fetchone()
@@ -228,7 +229,7 @@ def list_sessions(customer_id: int):
 
 
 @router.delete("/{customer_id}/tags/{tag}")
-def remove_tag(customer_id: int, tag: str):
+def remove_tag(customer_id: int, tag: str, _user=Depends(require_editor)):
     conn = _conn()
     conn.execute(
         "DELETE FROM customer_tags WHERE customer_id=? AND tag=?", (customer_id, tag)
@@ -239,7 +240,7 @@ def remove_tag(customer_id: int, tag: str):
 
 
 @router.delete("/{customer_id}")
-def delete_customer(customer_id: int):
+def delete_customer(customer_id: int, _user=Depends(require_editor)):
     conn = _conn()
     cur = conn.execute("DELETE FROM customers WHERE id=?", (customer_id,))
     conn.commit()

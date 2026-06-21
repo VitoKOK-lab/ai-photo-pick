@@ -4,7 +4,10 @@ import tempfile
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
+from api.auth import require_editor
+
+MAX_UPLOAD_BYTES = 30 * 1024 * 1024  # 30 MB per file
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -14,7 +17,7 @@ ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 
 
 @router.post("")
-async def upload_photos(files: List[UploadFile] = File(...)):
+async def upload_photos(files: List[UploadFile] = File(...), _user=Depends(require_editor)):
     """上傳一或多張照片：自動裁切三種尺寸 + CLIP 分類後存入 DB。"""
     from scripts.process_image import process_one, file_hash
     from scripts.classify import classify_one
@@ -35,6 +38,9 @@ async def upload_photos(files: List[UploadFile] = File(...)):
         tmp_path = None
         try:
             content = await f.read()
+            if len(content) > MAX_UPLOAD_BYTES:
+                errors.append({"filename": f.filename, "error": f"檔案超過 30MB 限制"})
+                continue
             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                 tmp.write(content)
                 tmp_path = Path(tmp.name)

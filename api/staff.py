@@ -2,8 +2,9 @@
 import sqlite3
 import sys
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+from api.auth import require_admin
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH
@@ -30,7 +31,7 @@ def list_staff():
 
 
 @router.post("", status_code=201)
-def create_staff(body: StaffBody):
+def create_staff(body: StaffBody, _user=Depends(require_admin)):
     name = body.name.strip()
     if not name:
         raise HTTPException(400, "name required")
@@ -47,7 +48,7 @@ def create_staff(body: StaffBody):
 
 
 @router.put("/{staff_id}")
-def update_staff(staff_id: int, body: StaffBody):
+def update_staff(staff_id: int, body: StaffBody, _user=Depends(require_admin)):
     name = body.name.strip()
     if not name:
         raise HTTPException(400, "name required")
@@ -61,7 +62,7 @@ def update_staff(staff_id: int, body: StaffBody):
 
 
 @router.delete("/{staff_id}")
-def delete_staff(staff_id: int):
+def delete_staff(staff_id: int, _user=Depends(require_admin)):
     conn = _conn()
     cur = conn.execute("DELETE FROM staff WHERE id=?", (staff_id,))
     conn.commit()

@@ -3,7 +3,8 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
+from api.auth import require_admin
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import DB_DIR, LOG_DIR
@@ -59,6 +60,7 @@ def _run_backup(db_only: bool):
 def trigger_backup(
     background_tasks: BackgroundTasks,
     db_only: bool = False,
+    _user=Depends(require_admin),
 ):
     """手動觸發備份（背景執行）"""
     global _backup_running

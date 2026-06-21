@@ -586,32 +586,31 @@ const { useState, useEffect, useRef } = React;
 /* ── Config ─────────────────────────────────────────── */
 const BANNERS = ['/banners/ｂ1.png','/banners/ｂ2.png','/banners/ｂ3.png','/banners/ｂ4.png','/banners/ｂ5.png','/banners/ｂ6.png','/banners/ｂ7.png','/banners/ｂ8.png','/banners/ｂ9.png','/banners/ｂ10.png'].sort(() => Math.random() - 0.5);
 
-/* ── Session & event tracking ───────────────────────── */
-const ADMIN_PIN  = '666'; // ← 修改這裡改密碼
+/* ── JWT auth utilities ─────────────────────────────── */
+function getJwtToken() { return localStorage.getItem('jwt_token'); }
+function getJwtUser()  { try { return JSON.parse(localStorage.getItem('jwt_user') || 'null'); } catch { return null; } }
+function clearJwtAuth() { localStorage.removeItem('jwt_token'); localStorage.removeItem('jwt_user'); }
 
-/* ── JWT auth toggle & utilities ────────────────────── */
-const USE_JWT_AUTH = false; // 切換到 true 即啟用新系統
+/* Intercept all fetch() calls — automatically attach Bearer token for /api/ routes,
+   and fire 'authExpired' event on 401 so App can show the login screen again. */
+(function() {
+  const _origFetch = window.fetch.bind(window);
+  window.fetch = function(url, opts = {}) {
+    const token = getJwtToken();
+    if (token && typeof url === 'string' && url.startsWith('/api/')) {
+      opts = { ...opts, headers: { 'Authorization': `Bearer ${token}`, ...(opts.headers || {}) } };
+    }
+    return _origFetch(url, opts).then(resp => {
+      if (resp.status === 401 && typeof url === 'string' && url.startsWith('/api/') && !url.includes('/api/auth/')) {
+        clearJwtAuth();
+        window.dispatchEvent(new CustomEvent('authExpired'));
+      }
+      return resp;
+    });
+  };
+})();
 
-function getJwtToken() {
-  return localStorage.getItem('jwt_token');
-}
-
-function getJwtUser() {
-  try { return JSON.parse(localStorage.getItem('jwt_user') || 'null'); } catch { return null; }
-}
-
-function clearJwtAuth() {
-  localStorage.removeItem('jwt_token');
-  localStorage.removeItem('jwt_user');
-}
-
-async function apiFetch(url, options = {}) {
-  const token = getJwtToken();
-  if (token) {
-    options.headers = { ...(options.headers || {}), 'Authorization': `Bearer ${token}` };
-  }
-  return fetch(url, options);
-}
+async function apiFetch(url, options = {}) { return fetch(url, options); }
 const SESSION_ID = (sessionStorage.getItem('sid') || (() => { const s = Math.random().toString(36).slice(2); sessionStorage.setItem('sid', s); return s; })());
 async function logEvent(photo_id, event_type, extra = {}) {
   try {
@@ -2910,18 +2909,37 @@ function QuoteTab() {
 
 /* ── LoginPage (full-screen) ── */
 function LoginPage({ onAuth }) {
-  const [pin,   setPin]   = useState('');
-  const [err,   setErr]   = useState(false);
-  const [shake, setShake] = useState(false);
+  const [pin,     setPin]     = useState('');
+  const [err,     setErr]     = useState(false);
+  const [shake,   setShake]   = useState(false);
+  const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
 
-  function submit() {
-    if (pin === ADMIN_PIN) { localStorage.setItem('userRole', 'admin'); onAuth('admin'); }
-    else {
-      setErr(true); setPin('');
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-      inputRef.current?.focus();
+  async function submit() {
+    if (!pin.trim()) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/pin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('jwt_token', data.token);
+        localStorage.setItem('jwt_user', JSON.stringify({ role: data.role }));
+        localStorage.setItem('userRole', data.role);
+        onAuth(data.role);
+      } else {
+        setErr(true); setPin('');
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+        inputRef.current?.focus();
+      }
+    } catch {
+      setErr(true);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -2943,7 +2961,7 @@ function LoginPage({ onAuth }) {
           onKeyDown={e => e.key === 'Enter' && submit()}
         />
         <div className="login-err">{err ? '密碼錯誤' : ''}</div>
-        <button className="login-btn" onClick={submit}>確認</button>
+        <button className="login-btn" onClick={submit} disabled={loading}>{loading ? '驗證中…' : '確認'}</button>
       </div>
     </div>
   );
@@ -4064,23 +4082,29 @@ function App() {
       .catch(() => {});
   }, [isStaff]);
 
-  // JWT init (only when USE_JWT_AUTH = true)
+  // JWT init — restore session from localStorage on page load
   useEffect(() => {
-    if (!USE_JWT_AUTH) return;
-    const user = getJwtUser();
     const token = getJwtToken();
-    if (user && token) {
-      setRole(user.role);
-      fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } })
+    const user  = getJwtUser();
+    if (token && user) {
+      // verify token is still valid
+      fetch('/api/auth/me')
         .then(r => r.json())
-        .then(data => { if (!data.authenticated) { clearJwtAuth(); setRole('guest'); } })
+        .then(data => {
+          if (!data.authenticated) { clearJwtAuth(); setRole('guest'); }
+          else setRole(data.user?.role || user.role);
+        })
         .catch(() => {});
     }
+    // Handle 401 from anywhere in the app
+    const onExpire = () => { clearJwtAuth(); setRole('guest'); };
+    window.addEventListener('authExpired', onExpire);
+    return () => window.removeEventListener('authExpired', onExpire);
   }, []);
 
   function handleLogout() {
     localStorage.removeItem('userRole');
-    if (USE_JWT_AUTH) clearJwtAuth();
+    clearJwtAuth();
     setRole('guest');
   }
 

@@ -3,8 +3,9 @@ import sqlite3
 import sys
 from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+from api.auth import require_editor
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH
@@ -75,7 +76,7 @@ def material_benchmarks():
 
 
 @router.post("", status_code=201)
-def create_transaction(body: TransactionCreate):
+def create_transaction(body: TransactionCreate, _user=Depends(require_editor)):
     if body.price <= 0:
         raise HTTPException(400, "price 需為正整數")
     conn = _conn()
@@ -96,7 +97,7 @@ def create_transaction(body: TransactionCreate):
 
 
 @router.put("/{tx_id}")
-def update_transaction(tx_id: int, body: TransactionUpdate):
+def update_transaction(tx_id: int, body: TransactionUpdate, _user=Depends(require_editor)):
     conn = _conn()
     row = conn.execute("SELECT * FROM transactions WHERE id=?", (tx_id,)).fetchone()
     if not row:
@@ -129,7 +130,7 @@ def update_transaction(tx_id: int, body: TransactionUpdate):
 
 
 @router.delete("/{tx_id}")
-def delete_transaction(tx_id: int):
+def delete_transaction(tx_id: int, _user=Depends(require_editor)):
     conn = _conn()
     cur = conn.execute("DELETE FROM transactions WHERE id=?", (tx_id,))
     conn.commit()

@@ -3,8 +3,9 @@ import io
 import sys
 import threading
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import Response
+from api.auth import require_editor, require_admin
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import UNSORTED_DIR
@@ -38,7 +39,9 @@ def list_staging():
 
 @router.get("/thumb/{rel_path:path}")
 def staging_thumb(rel_path: str, size: int = 300):
-    p = UNSORTED_DIR / rel_path
+    p = (UNSORTED_DIR / rel_path).resolve()
+    if not p.is_relative_to(UNSORTED_DIR.resolve()):
+        raise HTTPException(status_code=400, detail="非法路徑")
     if not p.exists() or not p.is_file() or p.suffix.lower() not in VALID_EXT:
         raise HTTPException(status_code=404)
     try:
@@ -53,8 +56,10 @@ def staging_thumb(rel_path: str, size: int = 300):
 
 
 @router.delete("/{rel_path:path}")
-def delete_staging(rel_path: str):
-    p = UNSORTED_DIR / rel_path
+def delete_staging(rel_path: str, _user=Depends(require_admin)):
+    p = (UNSORTED_DIR / rel_path).resolve()
+    if not p.is_relative_to(UNSORTED_DIR.resolve()):
+        raise HTTPException(status_code=400, detail="非法路徑")
     if not p.exists():
         raise HTTPException(status_code=404)
     p.unlink(missing_ok=True)
@@ -79,7 +84,7 @@ def get_ingest_status():
 
 
 @router.post("/ingest")
-def start_ingest():
+def start_ingest(_user=Depends(require_admin)):
     with _lock:
         if _status["running"]:
             return {"message": "已在執行中", "status": dict(_status)}

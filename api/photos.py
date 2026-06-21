@@ -4,8 +4,9 @@ import sqlite3
 import sys
 from pathlib import Path
 from typing import Optional, List
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
 from pydantic import BaseModel
+from api.auth import require_editor, require_admin
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH, BASE_DIR
@@ -269,7 +270,7 @@ class BulkDeleteBody(BaseModel):
     ids: List[int]
 
 @router.delete("/bulk")
-def bulk_delete(body: BulkDeleteBody):
+def bulk_delete(body: BulkDeleteBody, _user=Depends(require_admin)):
     """批次永久刪除照片（含磁碟檔案）。"""
     if not body.ids:
         return {"deleted": []}
@@ -305,7 +306,7 @@ def get_photo(photo_id: int):
     return _row_to_dict(row)
 
 @router.patch("/{photo_id}")
-def update_photo(photo_id: int, body: dict):
+def update_photo(photo_id: int, body: dict, _user=Depends(require_editor)):
     allowed = {"category", "style", "setting_amount", "craft_complexity", "metal_color", "color", "gemstone", "material", "price_band"}
     updates = {k: v for k, v in body.items() if k in allowed}
     if not updates:
@@ -326,7 +327,7 @@ def update_photo(photo_id: int, body: dict):
     return _row_to_dict(row)
 
 @router.delete("/{photo_id}")
-def delete_photo(photo_id: int):
+def delete_photo(photo_id: int, _user=Depends(require_admin)):
     conn = _conn()
     cur = conn.cursor()
     cur.execute("SELECT full_path FROM photos WHERE id = ?", (photo_id,))
