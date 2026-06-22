@@ -577,28 +577,52 @@ button { font-family: inherit; cursor: pointer; }
 }
 .swipe-mode-btn:active { transform: scale(.97); }
 @media (min-width: 768px) { .swipe-launch-btn { display: none !important; } }
-.swipe-dir-left  { border: 4px solid #e53935; }
-.swipe-dir-right { border: 4px solid var(--gold); }
-.swipe-dir-down  { border: 4px solid #4caf77; }
-/* Single centered swipe label that follows the card */
+/* ── Swipe explore dark-luxury theme ── */
+.swipe-dir-left  { box-shadow: 0 0 28px rgba(180,60,60,0.55),  0 20px 50px rgba(0,0,0,.55) !important; }
+.swipe-dir-right { box-shadow: 0 0 32px rgba(184,147,90,0.65), 0 20px 50px rgba(0,0,0,.55) !important; }
+.swipe-dir-down  { box-shadow: 0 0 28px rgba(76,175,100,0.5),  0 20px 50px rgba(0,0,0,.55) !important; }
 .swipe-lbl {
-  position: absolute; top: 38%; left: 50%;
+  position: absolute; top: 42%; left: 50%;
   transform: translateX(-50%) translateY(-50%);
   opacity: 0; transition: opacity .08s;
   pointer-events: none; z-index: 5;
-  font-size: 28px; font-weight: 800; letter-spacing: 3px;
-  padding: 7px 22px; border-radius: 8px; border: 3px solid currentColor;
-  background: rgba(255,255,255,0.88); white-space: nowrap;
+  font-size: 30px; font-weight: 900; letter-spacing: 5px;
+  padding: 9px 26px; border-radius: 6px; border: 3px solid currentColor;
+  background: rgba(255,255,255,0.92); white-space: nowrap;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+}
+@keyframes particleFly {
+  0%   { transform: translate(0,0) scale(1.1) rotate(0deg);   opacity:1; }
+  100% { transform: translate(var(--tx),var(--ty)) scale(0) rotate(200deg); opacity:0; }
 }
 @keyframes heartBeat {
-  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(229,57,53,0)); }
-  22%  { transform: scale(1.75); filter: drop-shadow(0 0 10px #e53935); }
-  45%  { transform: scale(1.4);  filter: drop-shadow(0 0 6px #e53935); }
-  65%  { transform: scale(1.7);  filter: drop-shadow(0 0 12px #e53935); }
-  85%  { transform: scale(1.45); filter: drop-shadow(0 0 8px #e53935); }
-  100% { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(229,57,53,0)); }
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 0px  rgba(229,57,53,0)); }
+  20%  { transform: scale(1.8);  filter: drop-shadow(0 0 12px #e53935); }
+  45%  { transform: scale(1.4);  filter: drop-shadow(0 0 8px  #e53935); }
+  65%  { transform: scale(1.72); filter: drop-shadow(0 0 14px #e53935); }
+  85%  { transform: scale(1.45); filter: drop-shadow(0 0 10px #e53935); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0px  rgba(229,57,53,0)); }
 }
-.heart-beat { animation: heartBeat 0.65s ease forwards; color: #e53935 !important; }
+.heart-beat { animation: heartBeat 0.7s ease forwards; color: #e53935 !important; }
+@keyframes streakIn {
+  0%   { transform: translateX(-50%) scale(0.5) translateY(-6px); opacity:0; }
+  65%  { transform: translateX(-50%) scale(1.15) translateY(1px); opacity:1; }
+  100% { transform: translateX(-50%) scale(1) translateY(0); opacity:1; }
+}
+.streak-badge {
+  position: absolute; top: 10px; left: 50%; z-index: 10;
+  animation: streakIn 0.38s cubic-bezier(.34,1.3,.64,1) forwards;
+  background: linear-gradient(135deg,#7a1010,#d93535);
+  color:#fff; font-size:12px; font-weight:700; letter-spacing:2px;
+  padding:5px 16px; border-radius:20px; white-space:nowrap;
+  box-shadow: 0 4px 16px rgba(220,50,50,0.45);
+}
+@keyframes scorePopKf {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.55); }
+  100% { transform: scale(1); }
+}
+.score-pop { animation: scorePopKf 0.3s cubic-bezier(.34,1.5,.64,1) forwards; }
   </style>
 </head>
 <body>
@@ -1283,16 +1307,19 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
   const [idx,         setIdx]         = useState(0);
   const [loading,     setLoading]     = useState(true);
   const [done,        setDone]        = useState(false);
-  const [detail,      setDetail]      = useState(null);
   const [showTutorial,setShowTutorial]= useState(true);
+  const [favCount,    setFavCount]    = useState(0);
+  const [streak,      setStreak]      = useState(0);
 
   const pageRef     = useRef(1);
   const hasMoreRef  = useRef(true);
   const loadingRef  = useRef(false);
   const cardRef     = useRef(null);
-  const lblRef      = useRef(null);       // single centered label
-  const heartRef    = useRef(null);       // persistent heart at bottom
-  const dragRef     = useRef({ active:false, x0:0, y0:0, dx:0, dy:0, vx:0, vy:0, lastT:0 });
+  const lblRef      = useRef(null);
+  const heartRef    = useRef(null);
+  const heartNumRef = useRef(null);
+  const lastDirRef  = useRef(null);
+  const dragRef     = useRef({ active:false, x0:0, y0:0, dx:0, dy:0 });
 
   /* tutorial refs */
   const tutCardRef  = useRef(null);
@@ -1317,7 +1344,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
 
   useEffect(() => { loadMore(); }, []);
 
-  /* ── tutorial animation: human throw feel ── */
+  /* ── tutorial: cinematic human-throw demo ── */
   useEffect(() => {
     if (!showTutorial) return;
     const card  = tutCardRef.current;
@@ -1325,67 +1352,52 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     const heart = tutHeartRef.current;
     if (!card) return;
 
+    const SHADOW_BASE = '0 14px 48px rgba(0,0,0,.65)';
     const setLbl = (text, color, rot = '0deg') => {
       if (!lbl) return;
-      lbl.textContent = text;
-      lbl.style.color = color;
-      lbl.style.borderColor = color;
+      lbl.textContent = text; lbl.style.color = color; lbl.style.borderColor = color;
       lbl.style.transform = `translateX(-50%) translateY(-50%) rotate(${rot})`;
       lbl.style.opacity = '1';
     };
-    const clearLbl  = () => { if (lbl) lbl.style.opacity = '0'; };
-    const springBack = () => {
-      card.style.transition = 'transform 0.48s cubic-bezier(0.34,1.3,0.64,1), border-color .25s';
-      card.style.transform  = '';
-      card.style.borderColor = 'transparent';
+    const clearLbl = () => { if (lbl) lbl.style.opacity = '0'; };
+    const spring   = () => {
+      card.style.transition = 'transform .5s cubic-bezier(.34,1.3,.64,1), box-shadow .3s';
+      card.style.transform  = ''; card.style.boxShadow = SHADOW_BASE;
     };
 
     const timers = [
-      /* LEFT – pickup then throw */
+      /* LEFT */
+      setTimeout(() => { card.style.transition='transform .22s ease-out'; card.style.transform='translateX(-20px) rotate(-2.5deg)'; }, 450),
       setTimeout(() => {
-        card.style.transition = 'transform 0.22s ease-out';
-        card.style.transform  = 'translateX(-18px) rotate(-2deg)';
-      }, 450),
-      setTimeout(() => {
-        card.style.transition = 'transform 0.52s cubic-bezier(0.1,0.3,0.55,1), border-color .15s';
-        card.style.transform  = 'translateX(-88px) rotate(-19deg)';
-        card.style.borderColor = '#e53935';
+        card.style.transition = 'transform .54s cubic-bezier(.1,.3,.55,1), box-shadow .18s';
+        card.style.transform  = 'translateX(-92px) rotate(-20deg)';
+        card.style.boxShadow  = `0 0 32px rgba(200,50,50,.55), ${SHADOW_BASE}`;
         setLbl('不愛', '#e53935', '-12deg');
       }, 680),
-      setTimeout(() => { clearLbl(); springBack(); }, 1520),
+      setTimeout(() => { clearLbl(); spring(); }, 1530),
 
-      /* RIGHT – pickup then throw */
+      /* RIGHT */
+      setTimeout(() => { card.style.transition='transform .22s ease-out'; card.style.transform='translateX(20px) rotate(2.5deg)'; }, 2200),
       setTimeout(() => {
-        card.style.transition = 'transform 0.22s ease-out';
-        card.style.transform  = 'translateX(18px) rotate(2deg)';
-      }, 2200),
-      setTimeout(() => {
-        card.style.transition = 'transform 0.52s cubic-bezier(0.1,0.3,0.55,1), border-color .15s';
-        card.style.transform  = 'translateX(88px) rotate(19deg)';
-        card.style.borderColor = 'var(--gold)';
+        card.style.transition = 'transform .54s cubic-bezier(.1,.3,.55,1), box-shadow .18s';
+        card.style.transform  = 'translateX(92px) rotate(20deg)';
+        card.style.boxShadow  = `0 0 36px rgba(184,147,90,.65), ${SHADOW_BASE}`;
         setLbl('不錯', '#b8935a', '12deg');
       }, 2430),
-      setTimeout(() => { clearLbl(); springBack(); }, 3280),
+      setTimeout(() => { clearLbl(); spring(); }, 3290),
 
-      /* DOWN – slow fall, pause, heart glows, spring back */
+      /* DOWN – slow fall → pause → heart glows → spring back */
       setTimeout(() => {
-        card.style.transition = 'transform 0.55s cubic-bezier(0.3,0,0.5,0.85), border-color .2s';
-        card.style.transform  = 'translateY(60px) scale(0.88)';
-        card.style.borderColor = '#4caf77';
+        card.style.transition = 'transform .58s cubic-bezier(.3,0,.5,.88), box-shadow .2s';
+        card.style.transform  = 'translateY(62px) scale(.87)';
+        card.style.boxShadow  = `0 0 28px rgba(76,175,100,.5), ${SHADOW_BASE}`;
         setLbl('♥ 收藏', '#4caf77', '0deg');
       }, 3900),
-      /* heart glows while card is paused */
       setTimeout(() => {
-        if (heart) {
-          heart.classList.remove('heart-beat');
-          void heart.offsetWidth;
-          heart.classList.add('heart-beat');
-        }
-      }, 4520),
-      setTimeout(() => { clearLbl(); springBack(); }, 5050),
-
-      /* dismiss */
-      setTimeout(() => setShowTutorial(false), 5750),
+        if (heart) { heart.classList.remove('heart-beat'); void heart.offsetWidth; heart.classList.add('heart-beat'); }
+      }, 4530),
+      setTimeout(() => { clearLbl(); spring(); }, 5060),
+      setTimeout(() => setShowTutorial(false), 5800),
     ];
     return () => timers.forEach(clearTimeout);
   }, [showTutorial]);
@@ -1404,87 +1416,110 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     return null;
   };
 
-  /* single centered label */
+  /* DOM particle burst – no React state, zero re-renders */
+  const burstParticles = (dir) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const cx = rect.left + rect.width  / 2;
+    const cy = rect.top  + rect.height / 2;
+    const cfgs = {
+      left:  { color:'rgba(160,140,140,0.75)', chars:['·','·','·','·','·'] },
+      right: { color:'#c9a86c', chars:['✦','·','✦','✦','·','✦','·','✦','·','✦'] },
+      down:  { color:'#e05070', chars:['♥','·','♥','♥','·','♥','·','♥','·','♥'] },
+    };
+    const cfg = cfgs[dir]; if (!cfg) return;
+    cfg.chars.forEach((ch, i) => {
+      const el    = document.createElement('div');
+      const angle = (360 / cfg.chars.length) * i + (Math.random()-.5)*30;
+      const dist  = 55 + Math.random() * 80;
+      const tx    = Math.cos(angle * Math.PI/180) * dist;
+      const ty    = Math.sin(angle * Math.PI/180) * dist;
+      el.textContent = ch;
+      el.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;color:${cfg.color};`
+        + `font-size:${ch==='·'?7:13}px;font-weight:900;pointer-events:none;z-index:920;`
+        + `margin:-8px 0 0 -4px;--tx:${tx}px;--ty:${ty}px;`
+        + `animation:particleFly .72s cubic-bezier(.2,0,.5,1) ${i*16}ms forwards;`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 900);
+    });
+  };
+
+  /* single centered label + box-shadow glow */
   const showLabel = dir => {
     const lbl  = lblRef.current;
     const card = cardRef.current;
+    const GLOW_BASE = '0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4)';
     if (card) {
-      card.classList.remove('swipe-dir-left','swipe-dir-right','swipe-dir-down');
-      if (dir) card.classList.add('swipe-dir-' + dir);
+      if (!dir) { card.style.boxShadow = GLOW_BASE; }
+      else {
+        const g = { left:'rgba(200,60,60,.5)', right:'rgba(184,147,90,.65)', down:'rgba(76,175,100,.5)' };
+        card.style.boxShadow = `0 0 30px ${g[dir]}, ${GLOW_BASE}`;
+      }
     }
     if (!lbl) return;
     if (!dir) { lbl.style.opacity = '0'; return; }
-    const CFG = {
-      left:  { text:'不愛',   color:'#e53935',     rot:'-13deg' },
-      right: { text:'不錯',   color:'#b8935a',     rot:'13deg'  },
-      down:  { text:'♥ 收藏', color:'#4caf77',     rot:'0deg'   },
-    };
-    const c = CFG[dir];
-    lbl.textContent   = c.text;
-    lbl.style.color   = c.color;
-    lbl.style.borderColor = c.color;
-    lbl.style.transform   = `translateX(-50%) translateY(-50%) rotate(${c.rot})`;
-    lbl.style.opacity     = '1';
+    const C = { left:['不愛','#e53935','-13deg'], right:['不錯','#b8935a','13deg'], down:['♥ 收藏','#4caf77','0deg'] }[dir];
+    lbl.textContent = C[0]; lbl.style.color = C[1]; lbl.style.borderColor = C[1];
+    lbl.style.transform = `translateX(-50%) translateY(-50%) rotate(${C[2]})`;
+    lbl.style.opacity = '1';
   };
 
-  /* physics throw – two-phase for left/right, pause+heartglow for down */
+  /* two-phase physics throw */
   const advance = dir => {
     const card = cardRef.current;
     showLabel(null);
     if (!card) { setIdx(i => i+1); return; }
 
     if (dir === 'down') {
-      /* Phase 1: fall toward heart */
-      card.style.transition = 'transform 0.38s cubic-bezier(0.4,0,0.7,0.5), opacity .38s';
-      card.style.transform  = 'translateY(46vh) scale(0.68)';
-      /* Phase 2: heart glows, card shrinks away */
+      card.style.transition = 'transform .4s cubic-bezier(.4,0,.7,.55)';
+      card.style.transform  = 'translateY(44vh) scale(.65)';
       setTimeout(() => {
         const h = heartRef.current;
         if (h) { h.classList.remove('heart-beat'); void h.offsetWidth; h.classList.add('heart-beat'); }
-        card.style.transition = 'transform 0.22s ease-in, opacity 0.22s';
-        card.style.transform  = 'translateY(48vh) scale(0.1)';
+        /* bump favCount + animate number */
+        setFavCount(n => n + 1);
+        setTimeout(() => {
+          const num = heartNumRef.current;
+          if (num) { num.classList.remove('score-pop'); void num.offsetWidth; num.classList.add('score-pop'); }
+        }, 50);
+        card.style.transition = 'transform .22s ease-in, opacity .22s';
+        card.style.transform  = 'translateY(46vh) scale(.08)';
         card.style.opacity    = '0';
-      }, 400);
-      setTimeout(() => {
-        card.style.cssText = '';
-        setIdx(i => i+1);
-      }, 650);
+      }, 420);
+      setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 670);
     } else {
-      const tx  = dir === 'right' ? '115vw' : '-115vw';
-      const ty  = '-18px';
-      const rot = dir === 'right' ? '26deg' : '-26deg';
-      /* velocity-boosted throw */
-      card.style.transition = `transform 0.4s cubic-bezier(0.15,0.3,0.65,1)`;
-      card.style.transform  = `translate(${tx},${ty}) rotate(${rot})`;
-      setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 400);
+      const tx  = dir === 'right' ? '118vw' : '-118vw';
+      const rot = dir === 'right' ? '28deg' : '-28deg';
+      card.style.transition = 'transform .42s cubic-bezier(.15,.3,.65,1)';
+      card.style.transform  = `translate(${tx},-16px) rotate(${rot})`;
+      setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 420);
     }
+    burstParticles(dir);
+    /* streak tracking */
+    if (dir === 'down') {
+      setStreak(s => lastDirRef.current === 'down' ? s + 1 : 1);
+    } else {
+      setStreak(0);
+    }
+    lastDirRef.current = dir;
   };
 
   const onTouchStart = e => {
     const t = e.touches[0];
-    dragRef.current = { active:true, x0:t.clientX, y0:t.clientY, dx:0, dy:0, vx:0, vy:0, lastT:Date.now() };
-    if (cardRef.current) { cardRef.current.style.transition = 'none'; }
+    dragRef.current = { active:true, x0:t.clientX, y0:t.clientY, dx:0, dy:0 };
+    if (cardRef.current) cardRef.current.style.transition = 'none';
   };
-
   const onTouchMove = e => {
     if (!dragRef.current.active) return;
-    const t  = e.touches[0];
-    const now= Date.now();
-    const dt = now - dragRef.current.lastT;
+    const t = e.touches[0];
     const dx = t.clientX - dragRef.current.x0;
     const dy = t.clientY - dragRef.current.y0;
-    /* track instantaneous velocity */
-    dragRef.current.vx   = dt > 0 ? (dx - dragRef.current.dx) / dt : 0;
-    dragRef.current.vy   = dt > 0 ? (dy - dragRef.current.dy) / dt : 0;
-    dragRef.current.dx   = dx;
-    dragRef.current.dy   = dy;
-    dragRef.current.lastT= now;
-    const rot = dx * 0.06;
+    dragRef.current.dx = dx; dragRef.current.dy = dy;
     if (cardRef.current)
-      cardRef.current.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg)`;
+      cardRef.current.style.transform = `translate(${dx}px,${dy}px) rotate(${dx*0.055}deg)`;
     showLabel(getDir(dx, dy, 40));
   };
-
   const onTouchEnd = () => {
     if (!dragRef.current.active) return;
     dragRef.current.active = false;
@@ -1497,124 +1532,157 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     } else if (dir === 'right') {
       advance('right');
       if (current) {
-        fetch(`/api/photos/${current.id}/similar?limit=6`)
-          .then(r => r.json())
-          .then(similars => {
-            if (Array.isArray(similars) && similars.length > 0) {
-              setPhotos(prev => {
-                const ci = idx + 1;
-                return [...prev.slice(0,ci), ...similars.filter(s=>s.id!==current.id), ...prev.slice(ci)];
-              });
-            }
-          }).catch(() => {});
+        fetch(`/api/photos/${current.id}/similar?limit=6`).then(r=>r.json()).then(similars => {
+          if (Array.isArray(similars) && similars.length > 0) {
+            setPhotos(prev => {
+              const ci = idx + 1;
+              return [...prev.slice(0,ci), ...similars.filter(s=>s.id!==current.id), ...prev.slice(ci)];
+            });
+          }
+        }).catch(()=>{});
       }
     } else if (dir === 'left') {
       advance('left');
     } else {
-      /* snap back with spring */
       if (cardRef.current) {
-        cardRef.current.style.transition = 'transform 0.38s cubic-bezier(0.34,1.3,0.64,1)';
+        cardRef.current.style.transition = 'transform .38s cubic-bezier(.34,1.3,.64,1), box-shadow .25s';
         cardRef.current.style.transform  = '';
+        cardRef.current.style.boxShadow  = '0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4)';
         setTimeout(() => { if (cardRef.current) cardRef.current.style.transition=''; }, 400);
       }
     }
   };
 
+  /* ── RENDER ── */
+  const BG = 'radial-gradient(ellipse at 50% 90%, #1e1508 0%, #0a0705 100%)';
+
   return (
-    <div style={{position:'fixed',inset:0,zIndex:800,background:'var(--bg)',display:'flex',flexDirection:'column',touchAction:'none'}}>
-      {/* Header */}
-      <div style={{display:'flex',alignItems:'center',padding:'12px 16px',background:'var(--surface)',borderBottom:'1px solid var(--border)',flexShrink:0}}>
-        <button onClick={onClose} style={{border:'none',background:'none',fontSize:13,fontWeight:600,cursor:'pointer',padding:'4px 8px 4px 0',color:'var(--text2)',whiteSpace:'nowrap'}}>回到一般模式</button>
-        <span style={{flex:1,textAlign:'center',fontWeight:600,fontSize:15,color:'var(--text)'}}>
-          {current?.category ? `${current.category} · 探索` : '探索模式'}
+    <div style={{position:'fixed',inset:0,zIndex:800,background:BG,display:'flex',flexDirection:'column',touchAction:'none'}}>
+
+      {/* ── Header ── */}
+      <div style={{display:'flex',alignItems:'center',padding:'11px 16px',
+        background:'rgba(6,4,2,.65)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',
+        borderBottom:'1px solid rgba(184,147,90,.15)',flexShrink:0}}>
+        <button onClick={onClose} style={{border:'none',background:'none',fontSize:12,fontWeight:600,cursor:'pointer',
+          padding:'4px 10px 4px 0',color:'rgba(184,147,90,.65)',whiteSpace:'nowrap',letterSpacing:.5}}>
+          ← 一般模式
+        </button>
+        <span style={{flex:1,textAlign:'center',fontWeight:700,fontSize:14,color:'rgba(220,195,140,.9)',letterSpacing:3}}>
+          {current?.category || '探索'}
         </span>
-        <span style={{width:80,textAlign:'right',fontSize:13,color:'var(--text3)'}}>{photos.length>0?`${idx+1}/${photos.length}`:''}</span>
+        {/* Favorites counter */}
+        <div style={{display:'flex',alignItems:'center',gap:5,minWidth:52,justifyContent:'flex-end'}}>
+          <span ref={heartNumRef} style={{fontSize:15,fontWeight:700,color:favCount>0?'#c9a86c':'rgba(255,255,255,.2)',minWidth:16,textAlign:'right'}}>
+            {favCount > 0 ? favCount : ''}
+          </span>
+          <span style={{fontSize:16,color:favCount>0?'#c04060':'rgba(255,255,255,.2)',transition:'color .4s'}}>♥</span>
+        </div>
       </div>
 
-      {/* Card area – overflow:visible so card can fly off screen */}
-      <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',overflow:'visible',padding:'16px 16px 0'}}>
-        {loading && !current && <div style={{color:'var(--text3)',fontSize:14}}>載入中…</div>}
+      {/* ── Card area ── */}
+      <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',
+        position:'relative',overflow:'visible',padding:'14px 16px 0'}}>
+
+        {/* streak badge */}
+        {streak >= 2 && (
+          <div className="streak-badge">{streak} 連藏 🔥</div>
+        )}
+
+        {loading && !current && (
+          <div style={{color:'rgba(184,147,90,.5)',fontSize:14,letterSpacing:2}}>載入中…</div>
+        )}
         {done && (
-          <div style={{textAlign:'center',color:'var(--text2)'}}>
-            <div style={{fontSize:40,marginBottom:12}}>✓</div>
-            <div style={{fontSize:15}}>已瀏覽完所有照片</div>
-            <button onClick={onClose} style={{marginTop:20,padding:'10px 28px',borderRadius:10,border:'1px solid var(--border)',background:'var(--surface)',fontSize:14,cursor:'pointer'}}>返回</button>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:44,marginBottom:12,filter:'drop-shadow(0 0 12px rgba(184,147,90,.6))'}}>✦</div>
+            <div style={{fontSize:15,color:'rgba(220,195,140,.8)',letterSpacing:2}}>探索完畢</div>
+            <div style={{fontSize:13,color:'rgba(255,255,255,.35)',marginTop:6}}>共收藏 {favCount} 件</div>
+            <button onClick={onClose} style={{marginTop:22,padding:'10px 30px',borderRadius:20,
+              border:'1px solid rgba(184,147,90,.4)',background:'rgba(184,147,90,.1)',
+              color:'rgba(220,195,140,.85)',fontSize:14,cursor:'pointer',letterSpacing:1}}>
+              返回
+            </button>
           </div>
         )}
         {current && !done && (
           <div ref={cardRef}
-            style={{width:'100%',maxWidth:440,background:'var(--surface)',borderRadius:20,overflow:'hidden',
-              boxShadow:'0 8px 32px rgba(0,0,0,.12)',position:'relative',userSelect:'none',touchAction:'none',border:'4px solid transparent'}}
+            style={{width:'100%',maxWidth:430,background:'#fefcf8',borderRadius:18,overflow:'hidden',
+              boxShadow:'0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4)',
+              position:'relative',userSelect:'none',touchAction:'none'}}
             onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
             <img src={current.full_url || current.thumb_url} alt="" draggable={false}
-              style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f9f9f9',display:'block',pointerEvents:'none'}} />
-            {/* Single centered label */}
+              style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f5f2ed',display:'block',pointerEvents:'none'}} />
             <div ref={lblRef} className="swipe-lbl" />
-            {/* Tags */}
-            <div style={{padding:'10px 14px 14px',display:'flex',flexWrap:'wrap',gap:6}}>
+            <div style={{padding:'10px 14px 13px',display:'flex',flexWrap:'wrap',gap:6,background:'#fefcf8'}}>
               {[current.category,current.gemstone,current.style,current.stone_size].filter(v=>v&&v!=='未定').map((t,i)=>(
-                <span key={i} style={{fontSize:12,background:'var(--bg)',borderRadius:6,padding:'3px 8px',color:'var(--text2)'}}>{t}</span>
+                <span key={i} style={{fontSize:12,background:'#f0ede8',borderRadius:6,padding:'3px 9px',color:'#888'}}>{t}</span>
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Heart target at bottom – animate when card falls in */}
+      {/* ── Heart Collection Box ── */}
       {!done && (
-        <div style={{textAlign:'center',padding:'10px 0 28px',flexShrink:0}}>
-          <div ref={heartRef} style={{fontSize:32,color:'var(--text3)',display:'inline-block',transition:'color .3s'}}>♥</div>
+        <div style={{flexShrink:0,padding:'14px 0 30px',display:'flex',justifyContent:'center'}}>
+          <div style={{
+            display:'flex',flexDirection:'column',alignItems:'center',gap:3,
+            padding:'10px 28px 9px',borderRadius:14,
+            border:'1px solid rgba(184,147,90,.28)',
+            background:'rgba(184,147,90,.06)',
+            backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
+          }}>
+            <div ref={heartRef} style={{fontSize:24,color:'rgba(184,147,90,.4)',display:'inline-block',lineHeight:1,transition:'color .3s'}}>♥</div>
+            <div style={{fontSize:9,color:'rgba(184,147,90,.4)',letterSpacing:3,marginTop:2}}>收藏</div>
+          </div>
         </div>
       )}
 
-      {/* PhotoDetail overlay */}
-      {detail && (
-        <div style={{position:'fixed',inset:0,zIndex:850,transform:'translateZ(0)'}}>
-          <PhotoDetail photo={detail} onClose={() => { setDetail(null); advance('right'); }}
-            isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p=>setDetail(p)} role={role}
-            onDeleted={() => { setDetail(null); advance('right'); }}
-            onUpdated={updated => setDetail(updated)} />
-        </div>
-      )}
-
-      {/* Tutorial overlay */}
+      {/* ── Tutorial overlay ── */}
       {showTutorial && (
-        <div style={{position:'absolute',inset:0,zIndex:850,background:'rgba(8,6,3,0.85)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+        <div style={{position:'absolute',inset:0,zIndex:850,
+          background:'rgba(5,3,1,.9)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',
+          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+
+          {/* Decorative title */}
+          <div style={{fontSize:11,letterSpacing:5,color:'rgba(184,147,90,.6)',marginBottom:20,fontWeight:600}}>EXPLORE</div>
+
           {/* Mock card */}
           <div ref={tutCardRef} style={{
-            width:'72vw', maxWidth:300, background:'var(--surface)', borderRadius:20,
-            boxShadow:'0 14px 44px rgba(0,0,0,.5)', position:'relative',
-            border:'4px solid transparent', transition:'border-color .2s',
+            width:'68vw',maxWidth:280,background:'#fefcf8',borderRadius:18,overflow:'hidden',
+            boxShadow:'0 14px 48px rgba(0,0,0,.65)',position:'relative',
+            transition:'box-shadow .2s',
           }}>
-            {/* image placeholder */}
-            <div style={{width:'100%',aspectRatio:'1/1',background:'#f0ede8',borderRadius:'16px 16px 0 0',
+            <div style={{width:'100%',aspectRatio:'1/1',background:'#f0ede8',
               display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-              <span style={{fontSize:60,opacity:.15}}>💎</span>
+              <span style={{fontSize:52,opacity:.12,filter:'grayscale(1)'}}>💎</span>
             </div>
-            {/* centered label on tutorial card */}
             <div ref={tutLblRef} className="swipe-lbl" />
-            <div style={{padding:'10px 14px 14px',display:'flex',gap:8}}>
-              <span style={{fontSize:12,background:'var(--bg)',borderRadius:6,padding:'3px 8px',color:'var(--text3)'}}>戒指</span>
-              <span style={{fontSize:12,background:'var(--bg)',borderRadius:6,padding:'3px 8px',color:'var(--text3)'}}>藍寶石</span>
+            <div style={{padding:'9px 13px 13px',display:'flex',gap:7,background:'#fefcf8'}}>
+              <span style={{fontSize:11,background:'#f0ede8',borderRadius:5,padding:'3px 8px',color:'#aaa'}}>戒指</span>
+              <span style={{fontSize:11,background:'#f0ede8',borderRadius:5,padding:'3px 8px',color:'#aaa'}}>藍寶石</span>
             </div>
           </div>
 
-          {/* Hint row */}
-          <div style={{display:'flex',justifyContent:'space-around',width:'72vw',maxWidth:300,marginTop:22,gap:4}}>
-            {[['←','不愛','#e53935'],['↓ ','收藏','#4caf77'],['→','不錯','#b8935a']].map(([arrow,text,color])=>(
+          {/* Gesture hints */}
+          <div style={{display:'flex',justifyContent:'space-around',width:'68vw',maxWidth:280,marginTop:20,gap:4}}>
+            {[['←','不愛','#c04040'],['↓','收藏','rgba(76,175,100,.9)'],['→','不錯','#b8935a']].map(([arrow,text,color])=>(
               <div key={text} style={{flex:1,textAlign:'center'}}>
-                <div style={{fontSize:20,color,marginBottom:3}}>{arrow}</div>
-                <div style={{fontSize:12,color,fontWeight:700}}>{text}</div>
+                <div style={{fontSize:18,color,marginBottom:3,fontWeight:700}}>{arrow}</div>
+                <div style={{fontSize:11,color,fontWeight:700,letterSpacing:1}}>{text}</div>
               </div>
             ))}
           </div>
 
-          {/* Heart that glows during down demo */}
-          <div ref={tutHeartRef} style={{fontSize:34,color:'var(--text3)',marginTop:18,display:'inline-block'}}>♥</div>
+          {/* Heart target */}
+          <div ref={tutHeartRef} style={{fontSize:28,color:'rgba(184,147,90,.35)',marginTop:16,display:'inline-block',
+            padding:'8px 22px 7px',borderRadius:12,border:'1px solid rgba(184,147,90,.2)',
+            background:'rgba(184,147,90,.05)'}}>♥</div>
 
           <button onClick={() => setShowTutorial(false)}
-            style={{marginTop:20,padding:'9px 30px',borderRadius:22,border:'1px solid rgba(255,255,255,.2)',
-              background:'rgba(255,255,255,.1)',color:'rgba(255,255,255,.7)',fontSize:14,cursor:'pointer',letterSpacing:1}}>
+            style={{marginTop:22,padding:'9px 32px',borderRadius:22,
+              border:'1px solid rgba(184,147,90,.35)',
+              background:'rgba(184,147,90,.12)',
+              color:'rgba(220,195,140,.8)',fontSize:13,cursor:'pointer',letterSpacing:2,fontWeight:600}}>
             知道了
           </button>
         </div>
