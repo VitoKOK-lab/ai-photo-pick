@@ -5818,7 +5818,7 @@ function GuestLinksPanel() {
 
 /* ──────────────────────────────────────────────────────── */
 function App() {
-  const [splash,         setSplash]         = useState(true);
+  const [splash,         setSplash]         = useState(() => !localStorage.getItem('userRole'));
   const [tab,            setTab]            = useState('browse');
   const [favs,           setFavs]           = useState(loadFavs);
   const [showDarkBg,     setShowDarkBg]     = useState(false);
@@ -5925,7 +5925,7 @@ function App() {
           )}
           {isStaff && (
             <button className={'nav-tab' + (tab === 'guest' ? ' on' : '')} onClick={() => setTab('guest')}>
-              客人收藏夾
+              臨時網址
             </button>
           )}
           {isAdmin && (
@@ -5964,7 +5964,7 @@ function App() {
         )}
         {isStaff && (
           <button className={'tab-btn' + (tab === 'guest' ? ' on' : '')} onClick={() => setTab('guest')}>
-            收藏夾
+            臨時網址
           </button>
         )}
         {isAdmin && (
