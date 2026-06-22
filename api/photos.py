@@ -202,6 +202,7 @@ def filter_counts(
     gemstone:    Optional[str] = None,
     stone_shape: Optional[str] = None,
     stone_size:  Optional[str] = None,
+    photo_type:  Optional[str] = None,
 ):
     """根據目前已選篩選器，回傳各維度每個值的照片數量（faceted counts）。"""
     CFG_VALS = {
@@ -213,7 +214,10 @@ def filter_counts(
         "color":       ['紅','粉','黃','綠','藍','紫','白','彩'],
         "metal_color": ['金','銀'],
     }
+    # photo_type 不列入 facet，但納入每個欄位的計數條件
+    base_filter = {"photo_type": photo_type} if photo_type else {}
     active = {
+        **base_filter,
         "category": category, "style": style, "color": color, "metal_color": metal_color,
         "gemstone": gemstone, "stone_shape": stone_shape, "stone_size": stone_size,
     }

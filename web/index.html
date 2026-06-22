@@ -1263,6 +1263,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   useEffect(() => {
     const qs = new URLSearchParams();
     if (catFilter) qs.set('category', catFilter);
+    qs.set('photo_type', photoMode);
     Object.entries(filters).forEach(([k, v]) => v && qs.set(k, v));
     fetch('/api/photos/filter-counts?' + qs)
       .then(r => r.json())
