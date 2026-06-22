@@ -27,13 +27,32 @@
   .row2{display:flex;gap:10px;align-items:center;justify-content:center}
   .lbl{font-size:14px;color:var(--ink2);font-weight:700}
   .note{margin-top:22px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 20px;font-size:16px;color:var(--ink2);text-align:center;font-weight:500}
+  .cs1{border-color:#2f9e6a;background:#E7F4EC;color:#1f5c3d}
+  .phase{font-size:16px;font-weight:900;letter-spacing:.04em;padding:7px 18px;border-radius:999px;margin:8px 0 14px}
+  .phase.a{background:#E7F4EC;color:#2c7a52;border:2px solid #2f9e6a}
+  .phase.b{background:#FBF0E8;color:#A67A50;border:2px solid #C4956A}
+  .handoff{font-size:18px;font-weight:800;color:#2c7a52;background:#fff;border:2px dashed #2f9e6a;border-radius:12px;padding:11px 22px;margin:8px 0}
 </style></head><body>
 <div class="wrap">
-  <h1>客服訂單流程（含分類與分支）</h1>
-  <div class="sub">🟫台灣做　🟦深圳做　⬜系統/客戶　🟨判斷　🟥退貨/修改　·　每關都記「時間＋經手人」</div>
+  <h1>客服訂單流程（一般客服 → 售後客服）</h1>
+  <div class="sub">① 一般客服(售前詢問) → 成交 → ② 售後客服(已下單，跑製作出貨)　·　🟩一般客服　🟫台灣　🟦深圳　🟨判斷　🟥退貨/修改　·　每關記「時間＋人」</div>
 
+  <span class="phase a">① 一般客服（售前 · 詢問）</span>
   <div class="col">
-    <div class="box sys">客戶下單<span class="s">SHOPLINE 自動匯入</span></div>
+    <div class="box cs1">客人來詢問<span class="s">官網 / LINE / 私訊</span></div>
+    <div class="ar">▼</div>
+    <div class="box cs1">一般客服：回答・報價・推薦</div>
+    <div class="ar">▼</div>
+    <div class="box dec">有下單付款嗎？</div>
+    <div class="row2" style="margin-top:8px;gap:46px;align-items:flex-start">
+      <div class="col"><div class="lbl">沒買</div><div class="ar">▼</div><div class="box small">持續追蹤 / 未成交<span class="s">記下原因，之後再追</span></div></div>
+      <div class="col"><div class="lbl">有買 = 成交</div><div class="ar">▼</div><div class="handoff">交棒給 ② 售後客服 ↓</div></div>
+    </div>
+  </div>
+
+  <span class="phase b">② 售後客服（已下單付款 · 跑流程）</span>
+  <div class="col">
+    <div class="box sys">客戶下單付款<span class="s">SHOPLINE 自動匯入</span></div>
     <div class="ar">▼</div>
     <div class="box tw">台灣會計：確認入帳<span class="s">記 會計人＋時間</span></div>
     <div class="ar">▼</div>
