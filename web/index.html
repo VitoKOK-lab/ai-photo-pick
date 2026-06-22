@@ -580,17 +580,25 @@ button { font-family: inherit; cursor: pointer; }
 .swipe-dir-left  { border: 4px solid #e53935; }
 .swipe-dir-right { border: 4px solid var(--gold); }
 .swipe-dir-down  { border: 4px solid #4caf77; }
-.swipe-lbl-left  { position:absolute;top:18px;left:16px;background:#e53935;color:#fff;border-radius:8px;padding:6px 14px;font-size:18px;font-weight:700;transform:rotate(-15deg);opacity:0;transition:opacity .12s; }
-.swipe-lbl-right { position:absolute;top:18px;right:16px;background:var(--gold);color:#fff;border-radius:8px;padding:6px 14px;font-size:18px;font-weight:700;transform:rotate(15deg);opacity:0;transition:opacity .12s; }
-.swipe-lbl-down  { position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:#4caf77;color:#fff;border-radius:8px;padding:6px 14px;font-size:18px;font-weight:700;opacity:0;transition:opacity .12s; }
-@keyframes heartPop {
-  0%   { transform: scale(1);    filter: drop-shadow(0 0 0px #e53935); }
-  30%  { transform: scale(1.55) rotate(-12deg); filter: drop-shadow(0 0 8px #e53935); }
-  55%  { transform: scale(1.4)  rotate(8deg);  filter: drop-shadow(0 0 12px #e53935); }
-  75%  { transform: scale(1.5)  rotate(-5deg); filter: drop-shadow(0 0 10px #e53935); }
-  100% { transform: scale(1);    filter: drop-shadow(0 0 0px #e53935); }
+/* Single centered swipe label that follows the card */
+.swipe-lbl {
+  position: absolute; top: 38%; left: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  opacity: 0; transition: opacity .08s;
+  pointer-events: none; z-index: 5;
+  font-size: 28px; font-weight: 800; letter-spacing: 3px;
+  padding: 7px 22px; border-radius: 8px; border: 3px solid currentColor;
+  background: rgba(255,255,255,0.88); white-space: nowrap;
 }
-.tut-heart-pop { animation: heartPop 0.7s ease forwards; }
+@keyframes heartBeat {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(229,57,53,0)); }
+  22%  { transform: scale(1.75); filter: drop-shadow(0 0 10px #e53935); }
+  45%  { transform: scale(1.4);  filter: drop-shadow(0 0 6px #e53935); }
+  65%  { transform: scale(1.7);  filter: drop-shadow(0 0 12px #e53935); }
+  85%  { transform: scale(1.45); filter: drop-shadow(0 0 8px #e53935); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(229,57,53,0)); }
+}
+.heart-beat { animation: heartBeat 0.65s ease forwards; color: #e53935 !important; }
   </style>
 </head>
 <body>
@@ -1278,21 +1286,18 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
   const [detail,      setDetail]      = useState(null);
   const [showTutorial,setShowTutorial]= useState(true);
 
-  const pageRef    = useRef(1);
-  const hasMoreRef = useRef(true);
-  const loadingRef = useRef(false);
-  const cardRef    = useRef(null);
-  const lblLeftRef = useRef(null);
-  const lblRightRef= useRef(null);
-  const lblDownRef = useRef(null);
-  const dragRef    = useRef({ active:false, x0:0, y0:0, dx:0, dy:0 });
+  const pageRef     = useRef(1);
+  const hasMoreRef  = useRef(true);
+  const loadingRef  = useRef(false);
+  const cardRef     = useRef(null);
+  const lblRef      = useRef(null);       // single centered label
+  const heartRef    = useRef(null);       // persistent heart at bottom
+  const dragRef     = useRef({ active:false, x0:0, y0:0, dx:0, dy:0, vx:0, vy:0, lastT:0 });
 
   /* tutorial refs */
-  const tutCardRef    = useRef(null);
-  const tutLblLRef    = useRef(null);
-  const tutLblRRef    = useRef(null);
-  const tutLblDRef    = useRef(null);
-  const tutHeartRef   = useRef(null);
+  const tutCardRef  = useRef(null);
+  const tutLblRef   = useRef(null);
+  const tutHeartRef = useRef(null);
 
   const loadMore = React.useCallback(async () => {
     if (loadingRef.current || !hasMoreRef.current) return;
@@ -1312,61 +1317,75 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
 
   useEffect(() => { loadMore(); }, []);
 
-  /* tutorial animation sequence */
+  /* ── tutorial animation: human throw feel ── */
   useEffect(() => {
     if (!showTutorial) return;
     const card  = tutCardRef.current;
-    const lblL  = tutLblLRef.current;
-    const lblR  = tutLblRRef.current;
-    const lblD  = tutLblDRef.current;
+    const lbl   = tutLblRef.current;
     const heart = tutHeartRef.current;
     if (!card) return;
 
-    const reset = (fast) => {
-      card.style.transition = `transform ${fast?'.2s':'.35s'} ease, border-color .2s`;
+    const setLbl = (text, color, rot = '0deg') => {
+      if (!lbl) return;
+      lbl.textContent = text;
+      lbl.style.color = color;
+      lbl.style.borderColor = color;
+      lbl.style.transform = `translateX(-50%) translateY(-50%) rotate(${rot})`;
+      lbl.style.opacity = '1';
+    };
+    const clearLbl  = () => { if (lbl) lbl.style.opacity = '0'; };
+    const springBack = () => {
+      card.style.transition = 'transform 0.48s cubic-bezier(0.34,1.3,0.64,1), border-color .25s';
       card.style.transform  = '';
-      card.style.borderColor= 'transparent';
-      if (lblL) lblL.style.opacity = '0';
-      if (lblR) lblR.style.opacity = '0';
-      if (lblD) lblD.style.opacity = '0';
-      if (heart) heart.classList.remove('tut-heart-pop');
+      card.style.borderColor = 'transparent';
     };
 
     const timers = [
-      /* step 1 – slide left → 不愛 */
+      /* LEFT – pickup then throw */
       setTimeout(() => {
-        card.style.transition = 'transform .6s ease, border-color .2s';
-        card.style.transform  = 'translateX(-60px) rotate(-7deg)';
-        card.style.borderColor= '#e53935';
-        if (lblL) lblL.style.opacity = '1';
-      }, 600),
-      setTimeout(() => reset(false), 1500),
+        card.style.transition = 'transform 0.22s ease-out';
+        card.style.transform  = 'translateX(-18px) rotate(-2deg)';
+      }, 450),
+      setTimeout(() => {
+        card.style.transition = 'transform 0.52s cubic-bezier(0.1,0.3,0.55,1), border-color .15s';
+        card.style.transform  = 'translateX(-88px) rotate(-19deg)';
+        card.style.borderColor = '#e53935';
+        setLbl('不愛', '#e53935', '-12deg');
+      }, 680),
+      setTimeout(() => { clearLbl(); springBack(); }, 1520),
 
-      /* step 2 – slide right → 不錯 */
+      /* RIGHT – pickup then throw */
       setTimeout(() => {
-        card.style.transition = 'transform .6s ease, border-color .2s';
-        card.style.transform  = 'translateX(60px) rotate(7deg)';
-        card.style.borderColor= 'var(--gold)';
-        if (lblR) lblR.style.opacity = '1';
-      }, 2100),
-      setTimeout(() => reset(false), 3000),
+        card.style.transition = 'transform 0.22s ease-out';
+        card.style.transform  = 'translateX(18px) rotate(2deg)';
+      }, 2200),
+      setTimeout(() => {
+        card.style.transition = 'transform 0.52s cubic-bezier(0.1,0.3,0.55,1), border-color .15s';
+        card.style.transform  = 'translateX(88px) rotate(19deg)';
+        card.style.borderColor = 'var(--gold)';
+        setLbl('不錯', '#b8935a', '12deg');
+      }, 2430),
+      setTimeout(() => { clearLbl(); springBack(); }, 3280),
 
-      /* step 3 – slide down → 收藏 + heart pop */
+      /* DOWN – slow fall, pause, heart glows, spring back */
       setTimeout(() => {
-        card.style.transition = 'transform .6s ease, border-color .2s';
-        card.style.transform  = 'translateY(55px)';
-        card.style.borderColor= '#4caf77';
-        if (lblD) lblD.style.opacity = '1';
+        card.style.transition = 'transform 0.55s cubic-bezier(0.3,0,0.5,0.85), border-color .2s';
+        card.style.transform  = 'translateY(60px) scale(0.88)';
+        card.style.borderColor = '#4caf77';
+        setLbl('♥ 收藏', '#4caf77', '0deg');
+      }, 3900),
+      /* heart glows while card is paused */
+      setTimeout(() => {
         if (heart) {
-          heart.classList.remove('tut-heart-pop');
-          void heart.offsetWidth; // reflow to restart animation
-          heart.classList.add('tut-heart-pop');
+          heart.classList.remove('heart-beat');
+          void heart.offsetWidth;
+          heart.classList.add('heart-beat');
         }
-      }, 3600),
-      setTimeout(() => reset(false), 4500),
+      }, 4520),
+      setTimeout(() => { clearLbl(); springBack(); }, 5050),
 
       /* dismiss */
-      setTimeout(() => setShowTutorial(false), 5100),
+      setTimeout(() => setShowTutorial(false), 5750),
     ];
     return () => timers.forEach(clearTimeout);
   }, [showTutorial]);
@@ -1385,59 +1404,97 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     return null;
   };
 
-  const showLabels = dir => {
-    if (lblLeftRef.current)  lblLeftRef.current.style.opacity  = dir === 'left'  ? '1' : '0';
-    if (lblRightRef.current) lblRightRef.current.style.opacity = dir === 'right' ? '1' : '0';
-    if (lblDownRef.current)  lblDownRef.current.style.opacity  = dir === 'down'  ? '1' : '0';
-    if (cardRef.current) {
-      cardRef.current.classList.remove('swipe-dir-left','swipe-dir-right','swipe-dir-down');
-      if (dir) cardRef.current.classList.add('swipe-dir-' + dir);
+  /* single centered label */
+  const showLabel = dir => {
+    const lbl  = lblRef.current;
+    const card = cardRef.current;
+    if (card) {
+      card.classList.remove('swipe-dir-left','swipe-dir-right','swipe-dir-down');
+      if (dir) card.classList.add('swipe-dir-' + dir);
     }
+    if (!lbl) return;
+    if (!dir) { lbl.style.opacity = '0'; return; }
+    const CFG = {
+      left:  { text:'不愛',   color:'#e53935',     rot:'-13deg' },
+      right: { text:'不錯',   color:'#b8935a',     rot:'13deg'  },
+      down:  { text:'♥ 收藏', color:'#4caf77',     rot:'0deg'   },
+    };
+    const c = CFG[dir];
+    lbl.textContent   = c.text;
+    lbl.style.color   = c.color;
+    lbl.style.borderColor = c.color;
+    lbl.style.transform   = `translateX(-50%) translateY(-50%) rotate(${c.rot})`;
+    lbl.style.opacity     = '1';
   };
 
+  /* physics throw – two-phase for left/right, pause+heartglow for down */
   const advance = dir => {
-    if (!cardRef.current) { setIdx(i => i+1); return; }
-    const tx = dir === 'right' ? '130vw' : dir === 'left' ? '-130vw' : '0';
-    const ty = dir === 'down'  ? '130vh' : '0';
-    const rot= dir === 'right' ? '25deg' : dir === 'left' ? '-25deg' : '0';
-    cardRef.current.style.transition = 'transform 0.28s ease';
-    cardRef.current.style.transform  = `translate(${tx},${ty}) rotate(${rot})`;
-    showLabels(null);
-    setTimeout(() => {
-      if (cardRef.current) { cardRef.current.style.transition=''; cardRef.current.style.transform=''; }
-      setIdx(i => i+1);
-    }, 280);
+    const card = cardRef.current;
+    showLabel(null);
+    if (!card) { setIdx(i => i+1); return; }
+
+    if (dir === 'down') {
+      /* Phase 1: fall toward heart */
+      card.style.transition = 'transform 0.38s cubic-bezier(0.4,0,0.7,0.5), opacity .38s';
+      card.style.transform  = 'translateY(46vh) scale(0.68)';
+      /* Phase 2: heart glows, card shrinks away */
+      setTimeout(() => {
+        const h = heartRef.current;
+        if (h) { h.classList.remove('heart-beat'); void h.offsetWidth; h.classList.add('heart-beat'); }
+        card.style.transition = 'transform 0.22s ease-in, opacity 0.22s';
+        card.style.transform  = 'translateY(48vh) scale(0.1)';
+        card.style.opacity    = '0';
+      }, 400);
+      setTimeout(() => {
+        card.style.cssText = '';
+        setIdx(i => i+1);
+      }, 650);
+    } else {
+      const tx  = dir === 'right' ? '115vw' : '-115vw';
+      const ty  = '-18px';
+      const rot = dir === 'right' ? '26deg' : '-26deg';
+      /* velocity-boosted throw */
+      card.style.transition = `transform 0.4s cubic-bezier(0.15,0.3,0.65,1)`;
+      card.style.transform  = `translate(${tx},${ty}) rotate(${rot})`;
+      setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 400);
+    }
   };
 
   const onTouchStart = e => {
     const t = e.touches[0];
-    dragRef.current = { active:true, x0:t.clientX, y0:t.clientY, dx:0, dy:0 };
-    if (cardRef.current) cardRef.current.style.transition = 'none';
+    dragRef.current = { active:true, x0:t.clientX, y0:t.clientY, dx:0, dy:0, vx:0, vy:0, lastT:Date.now() };
+    if (cardRef.current) { cardRef.current.style.transition = 'none'; }
   };
 
   const onTouchMove = e => {
     if (!dragRef.current.active) return;
-    const t = e.touches[0];
+    const t  = e.touches[0];
+    const now= Date.now();
+    const dt = now - dragRef.current.lastT;
     const dx = t.clientX - dragRef.current.x0;
     const dy = t.clientY - dragRef.current.y0;
-    dragRef.current.dx = dx;
-    dragRef.current.dy = dy;
+    /* track instantaneous velocity */
+    dragRef.current.vx   = dt > 0 ? (dx - dragRef.current.dx) / dt : 0;
+    dragRef.current.vy   = dt > 0 ? (dy - dragRef.current.dy) / dt : 0;
+    dragRef.current.dx   = dx;
+    dragRef.current.dy   = dy;
+    dragRef.current.lastT= now;
+    const rot = dx * 0.06;
     if (cardRef.current)
-      cardRef.current.style.transform = `translate(${dx}px,${dy}px) rotate(${dx*0.07}deg)`;
-    showLabels(getDir(dx, dy, 40));
+      cardRef.current.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg)`;
+    showLabel(getDir(dx, dy, 40));
   };
 
   const onTouchEnd = () => {
     if (!dragRef.current.active) return;
     dragRef.current.active = false;
-    showLabels(null);
+    showLabel(null);
     const { dx, dy } = dragRef.current;
     const dir = getDir(dx, dy, 80);
     if (dir === 'down') {
       if (current) toggleFav(current);
       advance('down');
     } else if (dir === 'right') {
-      // 插入相似照片到隊列，直接繼續刷
       advance('right');
       if (current) {
         fetch(`/api/photos/${current.id}/similar?limit=6`)
@@ -1445,24 +1502,20 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
           .then(similars => {
             if (Array.isArray(similars) && similars.length > 0) {
               setPhotos(prev => {
-                const curIdx = idx + 1; // after advance
-                return [
-                  ...prev.slice(0, curIdx),
-                  ...similars.filter(s => s.id !== current.id),
-                  ...prev.slice(curIdx),
-                ];
+                const ci = idx + 1;
+                return [...prev.slice(0,ci), ...similars.filter(s=>s.id!==current.id), ...prev.slice(ci)];
               });
             }
-          })
-          .catch(() => {});
+          }).catch(() => {});
       }
     } else if (dir === 'left') {
       advance('left');
     } else {
+      /* snap back with spring */
       if (cardRef.current) {
-        cardRef.current.style.transition = 'transform 0.25s ease';
+        cardRef.current.style.transition = 'transform 0.38s cubic-bezier(0.34,1.3,0.64,1)';
         cardRef.current.style.transform  = '';
-        setTimeout(() => { if (cardRef.current) cardRef.current.style.transition=''; }, 250);
+        setTimeout(() => { if (cardRef.current) cardRef.current.style.transition=''; }, 400);
       }
     }
   };
@@ -1478,8 +1531,8 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         <span style={{width:80,textAlign:'right',fontSize:13,color:'var(--text3)'}}>{photos.length>0?`${idx+1}/${photos.length}`:''}</span>
       </div>
 
-      {/* Card area */}
-      <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden',padding:'20px 16px 24px'}}>
+      {/* Card area – overflow:visible so card can fly off screen */}
+      <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',overflow:'visible',padding:'16px 16px 0'}}>
         {loading && !current && <div style={{color:'var(--text3)',fontSize:14}}>載入中…</div>}
         {done && (
           <div style={{textAlign:'center',color:'var(--text2)'}}>
@@ -1491,14 +1544,12 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         {current && !done && (
           <div ref={cardRef}
             style={{width:'100%',maxWidth:440,background:'var(--surface)',borderRadius:20,overflow:'hidden',
-              boxShadow:'0 8px 32px rgba(0,0,0,.12)',position:'relative',userSelect:'none',touchAction:'none',border:'4px solid transparent',transition:'border-color .1s'}}
+              boxShadow:'0 8px 32px rgba(0,0,0,.12)',position:'relative',userSelect:'none',touchAction:'none',border:'4px solid transparent'}}
             onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
             <img src={current.full_url || current.thumb_url} alt="" draggable={false}
               style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f9f9f9',display:'block',pointerEvents:'none'}} />
-            {/* Direction labels */}
-            <div ref={lblLeftRef}  className="swipe-lbl-left">不愛</div>
-            <div ref={lblRightRef} className="swipe-lbl-right">不錯 ✦</div>
-            <div ref={lblDownRef}  className="swipe-lbl-down">♥ 收藏</div>
+            {/* Single centered label */}
+            <div ref={lblRef} className="swipe-lbl" />
             {/* Tags */}
             <div style={{padding:'10px 14px 14px',display:'flex',flexWrap:'wrap',gap:6}}>
               {[current.category,current.gemstone,current.style,current.stone_size].filter(v=>v&&v!=='未定').map((t,i)=>(
@@ -1509,7 +1560,14 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         )}
       </div>
 
-      {/* PhotoDetail overlay when swiped right */}
+      {/* Heart target at bottom – animate when card falls in */}
+      {!done && (
+        <div style={{textAlign:'center',padding:'10px 0 28px',flexShrink:0}}>
+          <div ref={heartRef} style={{fontSize:32,color:'var(--text3)',display:'inline-block',transition:'color .3s'}}>♥</div>
+        </div>
+      )}
+
+      {/* PhotoDetail overlay */}
       {detail && (
         <div style={{position:'fixed',inset:0,zIndex:850,transform:'translateZ(0)'}}>
           <PhotoDetail photo={detail} onClose={() => { setDetail(null); advance('right'); }}
@@ -1521,42 +1579,42 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
 
       {/* Tutorial overlay */}
       {showTutorial && (
-        <div style={{position:'absolute',inset:0,zIndex:850,background:'rgba(10,8,5,0.82)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'24px 20px'}}>
+        <div style={{position:'absolute',inset:0,zIndex:850,background:'rgba(8,6,3,0.85)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'20px'}}>
           {/* Mock card */}
-          <div ref={tutCardRef} style={{width:'72vw',maxWidth:300,background:'var(--surface)',borderRadius:20,overflow:'visible',
-            boxShadow:'0 12px 40px rgba(0,0,0,.4)',position:'relative',border:'4px solid transparent',transition:'border-color .2s'}}>
-            <div style={{width:'100%',aspectRatio:'1/1',background:'#f0ede8',borderRadius:'16px 16px 0 0',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <span style={{fontSize:56,opacity:.18}}>💎</span>
+          <div ref={tutCardRef} style={{
+            width:'72vw', maxWidth:300, background:'var(--surface)', borderRadius:20,
+            boxShadow:'0 14px 44px rgba(0,0,0,.5)', position:'relative',
+            border:'4px solid transparent', transition:'border-color .2s',
+          }}>
+            {/* image placeholder */}
+            <div style={{width:'100%',aspectRatio:'1/1',background:'#f0ede8',borderRadius:'16px 16px 0 0',
+              display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+              <span style={{fontSize:60,opacity:.15}}>💎</span>
             </div>
+            {/* centered label on tutorial card */}
+            <div ref={tutLblRef} className="swipe-lbl" />
             <div style={{padding:'10px 14px 14px',display:'flex',gap:8}}>
               <span style={{fontSize:12,background:'var(--bg)',borderRadius:6,padding:'3px 8px',color:'var(--text3)'}}>戒指</span>
               <span style={{fontSize:12,background:'var(--bg)',borderRadius:6,padding:'3px 8px',color:'var(--text3)'}}>藍寶石</span>
             </div>
-            {/* Tutorial direction labels (same style as real ones) */}
-            <div ref={tutLblLRef} className="swipe-lbl-left">不愛</div>
-            <div ref={tutLblRRef} className="swipe-lbl-right">不錯 ✦</div>
-            <div ref={tutLblDRef} className="swipe-lbl-down">♥ 收藏</div>
           </div>
 
-          {/* Icon hints row */}
-          <div style={{display:'flex',justifyContent:'space-around',width:'72vw',maxWidth:300,marginTop:28,gap:8}}>
-            <div style={{flex:1,textAlign:'center'}}>
-              <div style={{fontSize:22,color:'#e53935',marginBottom:4}}>←</div>
-              <div style={{fontSize:12,color:'#e53935',fontWeight:600}}>不愛</div>
-            </div>
-            <div style={{flex:1,textAlign:'center'}}>
-              <div ref={tutHeartRef} style={{fontSize:26,color:'#e53935',marginBottom:2,display:'inline-block'}}>♥</div>
-              <div style={{fontSize:12,color:'#4caf77',fontWeight:600}}>↓ 收藏</div>
-            </div>
-            <div style={{flex:1,textAlign:'center'}}>
-              <div style={{fontSize:22,color:'var(--gold)',marginBottom:4}}>→</div>
-              <div style={{fontSize:12,color:'var(--gold)',fontWeight:600}}>不錯</div>
-            </div>
+          {/* Hint row */}
+          <div style={{display:'flex',justifyContent:'space-around',width:'72vw',maxWidth:300,marginTop:22,gap:4}}>
+            {[['←','不愛','#e53935'],['↓ ','收藏','#4caf77'],['→','不錯','#b8935a']].map(([arrow,text,color])=>(
+              <div key={text} style={{flex:1,textAlign:'center'}}>
+                <div style={{fontSize:20,color,marginBottom:3}}>{arrow}</div>
+                <div style={{fontSize:12,color,fontWeight:700}}>{text}</div>
+              </div>
+            ))}
           </div>
+
+          {/* Heart that glows during down demo */}
+          <div ref={tutHeartRef} style={{fontSize:34,color:'var(--text3)',marginTop:18,display:'inline-block'}}>♥</div>
 
           <button onClick={() => setShowTutorial(false)}
-            style={{marginTop:28,padding:'10px 32px',borderRadius:22,border:'1px solid rgba(255,255,255,.25)',
-              background:'rgba(255,255,255,.1)',color:'rgba(255,255,255,.75)',fontSize:14,cursor:'pointer',letterSpacing:1}}>
+            style={{marginTop:20,padding:'9px 30px',borderRadius:22,border:'1px solid rgba(255,255,255,.2)',
+              background:'rgba(255,255,255,.1)',color:'rgba(255,255,255,.7)',fontSize:14,cursor:'pointer',letterSpacing:1}}>
             知道了
           </button>
         </div>
