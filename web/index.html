@@ -1484,9 +1484,9 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
       const tx = heartRect ? (heartRect.left + heartRect.width  / 2) - cardCx : 0;
       const ty = heartRect ? (heartRect.top  + heartRect.height / 2) - cardCy : window.innerHeight * 0.45;
 
-      /* Single fluid motion: shrink + fall into heart simultaneously */
+      /* Single fluid motion: shrink + fall straight down into heart */
       card.style.transition = 'transform .48s cubic-bezier(.5,0,.8,.6), opacity .38s ease-in .1s';
-      card.style.transform  = `translate(${tx}px,${ty}px) scale(0.05)`;
+      card.style.transform  = `translateY(${ty}px) scale(0.05)`;
       card.style.opacity    = '0';
 
       /* Heart glows when card arrives */
