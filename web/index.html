@@ -1362,8 +1362,25 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
       if (current) toggleFav(current);
       advance('down');
     } else if (dir === 'right') {
-      if (cardRef.current) { cardRef.current.style.transition=''; cardRef.current.style.transform=''; }
-      setDetail(current);
+      // 插入相似照片到隊列，直接繼續刷
+      advance('right');
+      if (current) {
+        fetch(`/api/photos/${current.id}/similar?limit=6`)
+          .then(r => r.json())
+          .then(similars => {
+            if (Array.isArray(similars) && similars.length > 0) {
+              setPhotos(prev => {
+                const curIdx = idx + 1; // after advance
+                return [
+                  ...prev.slice(0, curIdx),
+                  ...similars.filter(s => s.id !== current.id),
+                  ...prev.slice(curIdx),
+                ];
+              });
+            }
+          })
+          .catch(() => {});
+      }
     } else if (dir === 'left') {
       advance('left');
     } else {
@@ -1502,7 +1519,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   return (
     <>
       <div className="browse-hdr">
-        {/* 去背 / 情境 切換 + 批量編輯按鈕 */}
+        {/* 去背 / 情境 切換 */}
         <div style={{display:'flex',alignItems:'center',gap:8,margin:'8px 14px 0'}}>
           <div style={{display:'flex',gap:0,background:'var(--s3)',borderRadius:10,padding:3}}>
             {['去背','情境'].map(mode => (
@@ -1515,10 +1532,16 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
               }}>{mode}</button>
             ))}
           </div>
+          <div style={{flex:1}} />
           {isStaff && (
             batchMode
               ? <button onClick={exitBatch} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>取消</button>
-              : <button onClick={() => setBatchMode(true)} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>批量編輯</button>
+              : <>
+                  <button onClick={() => setBatchMode(true)} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>批量編輯</button>
+                  <button className="swipe-launch-btn" onClick={() => setSwipeMode(true)} style={{padding:'6px 14px',border:'1px solid var(--gold)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
+                    <span style={{fontSize:14}}>✦</span> 探索
+                  </button>
+                </>
           )}
         </div>
         <CategoryTabs active={catFilter} onSelect={v => { if (!batchMode) setCatFilter(v); }} />
@@ -1531,13 +1554,6 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
             <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
           )}
         </div>
-        {isStaff && !batchMode && (
-          <div className="swipe-launch-btn" style={{display:'flex',justifyContent:'center',padding:'6px 0 4px'}}>
-            <button className="swipe-mode-btn" onClick={() => setSwipeMode(true)}>
-              <span style={{fontSize:18}}>✦</span> 探索模式
-            </button>
-          </div>
-        )}
       </div>
       <div className="body-row">
         <div className="main">
