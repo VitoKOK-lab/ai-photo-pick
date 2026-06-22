@@ -576,6 +576,13 @@ button { font-family: inherit; cursor: pointer; }
   cursor: pointer; margin: 8px auto; transition: all .15s;
 }
 .swipe-mode-btn:active { transform: scale(.97); }
+@media (min-width: 768px) { .swipe-launch-btn { display: none !important; } }
+.swipe-dir-left  { border: 4px solid #e53935; }
+.swipe-dir-right { border: 4px solid var(--gold); }
+.swipe-dir-down  { border: 4px solid #4caf77; }
+.swipe-lbl-left  { position:absolute;top:18px;left:16px;background:#e53935;color:#fff;border-radius:8px;padding:6px 14px;font-size:18px;font-weight:700;transform:rotate(-15deg);opacity:0;transition:opacity .1s; }
+.swipe-lbl-right { position:absolute;top:18px;right:16px;background:var(--gold);color:#fff;border-radius:8px;padding:6px 14px;font-size:18px;font-weight:700;transform:rotate(15deg);opacity:0;transition:opacity .1s; }
+.swipe-lbl-down  { position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:#4caf77;color:#fff;border-radius:8px;padding:6px 14px;font-size:18px;font-weight:700;opacity:0;transition:opacity .1s; }
   </style>
 </head>
 <body>
@@ -1254,12 +1261,192 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
   );
 }
 
+/* ── SwipeMode ───────────────────────────────────────── */
+function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
+  const [photos,  setPhotos]  = useState([]);
+  const [idx,     setIdx]     = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [done,    setDone]    = useState(false);
+  const [detail,  setDetail]  = useState(null);
+
+  const pageRef    = useRef(1);
+  const hasMoreRef = useRef(true);
+  const loadingRef = useRef(false);
+  const cardRef    = useRef(null);
+  const lblLeftRef = useRef(null);
+  const lblRightRef= useRef(null);
+  const lblDownRef = useRef(null);
+  const dragRef    = useRef({ active:false, x0:0, y0:0, dx:0, dy:0 });
+
+  const loadMore = React.useCallback(async () => {
+    if (loadingRef.current || !hasMoreRef.current) return;
+    loadingRef.current = true;
+    const qs = new URLSearchParams({ page: pageRef.current, sort: 'random' });
+    Object.entries(initFilters || {}).forEach(([k,v]) => v && qs.set(k, v));
+    try {
+      const r = await fetch('/api/photos?' + qs);
+      const data = await r.json();
+      setPhotos(prev => [...prev, ...(data.photos || [])]);
+      hasMoreRef.current = !!data.has_more;
+      pageRef.current++;
+    } catch {}
+    loadingRef.current = false;
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { loadMore(); }, []);
+
+  useEffect(() => {
+    if (idx >= photos.length - 3 && hasMoreRef.current) loadMore();
+    if (idx >= photos.length && !hasMoreRef.current && photos.length > 0) setDone(true);
+  }, [idx, photos.length]);
+
+  const current = photos[idx];
+
+  const getDir = (dx, dy, thr = 50) => {
+    if (dy > thr && Math.abs(dy) > Math.abs(dx) * 1.2) return 'down';
+    if (dx > thr) return 'right';
+    if (dx < -thr) return 'left';
+    return null;
+  };
+
+  const showLabels = dir => {
+    if (lblLeftRef.current)  lblLeftRef.current.style.opacity  = dir === 'left'  ? '1' : '0';
+    if (lblRightRef.current) lblRightRef.current.style.opacity = dir === 'right' ? '1' : '0';
+    if (lblDownRef.current)  lblDownRef.current.style.opacity  = dir === 'down'  ? '1' : '0';
+    if (cardRef.current) {
+      cardRef.current.classList.remove('swipe-dir-left','swipe-dir-right','swipe-dir-down');
+      if (dir) cardRef.current.classList.add('swipe-dir-' + dir);
+    }
+  };
+
+  const advance = dir => {
+    if (!cardRef.current) { setIdx(i => i+1); return; }
+    const tx = dir === 'right' ? '130vw' : dir === 'left' ? '-130vw' : '0';
+    const ty = dir === 'down'  ? '130vh' : '0';
+    const rot= dir === 'right' ? '25deg' : dir === 'left' ? '-25deg' : '0';
+    cardRef.current.style.transition = 'transform 0.28s ease';
+    cardRef.current.style.transform  = `translate(${tx},${ty}) rotate(${rot})`;
+    showLabels(null);
+    setTimeout(() => {
+      if (cardRef.current) { cardRef.current.style.transition=''; cardRef.current.style.transform=''; }
+      setIdx(i => i+1);
+    }, 280);
+  };
+
+  const onTouchStart = e => {
+    const t = e.touches[0];
+    dragRef.current = { active:true, x0:t.clientX, y0:t.clientY, dx:0, dy:0 };
+    if (cardRef.current) cardRef.current.style.transition = 'none';
+  };
+
+  const onTouchMove = e => {
+    if (!dragRef.current.active) return;
+    const t = e.touches[0];
+    const dx = t.clientX - dragRef.current.x0;
+    const dy = t.clientY - dragRef.current.y0;
+    dragRef.current.dx = dx;
+    dragRef.current.dy = dy;
+    if (cardRef.current)
+      cardRef.current.style.transform = `translate(${dx}px,${dy}px) rotate(${dx*0.07}deg)`;
+    showLabels(getDir(dx, dy, 40));
+  };
+
+  const onTouchEnd = () => {
+    if (!dragRef.current.active) return;
+    dragRef.current.active = false;
+    showLabels(null);
+    const { dx, dy } = dragRef.current;
+    const dir = getDir(dx, dy, 80);
+    if (dir === 'down') {
+      if (current) toggleFav(current);
+      advance('down');
+    } else if (dir === 'right') {
+      if (cardRef.current) { cardRef.current.style.transition=''; cardRef.current.style.transform=''; }
+      setDetail(current);
+    } else if (dir === 'left') {
+      advance('left');
+    } else {
+      if (cardRef.current) {
+        cardRef.current.style.transition = 'transform 0.25s ease';
+        cardRef.current.style.transform  = '';
+        setTimeout(() => { if (cardRef.current) cardRef.current.style.transition=''; }, 250);
+      }
+    }
+  };
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:800,background:'var(--bg)',display:'flex',flexDirection:'column',touchAction:'none'}}>
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',padding:'12px 16px',background:'var(--surface)',borderBottom:'1px solid var(--border)',flexShrink:0}}>
+        <button onClick={onClose} style={{border:'none',background:'none',fontSize:20,cursor:'pointer',padding:'4px 8px 4px 0',color:'var(--text)'}}>←</button>
+        <span style={{flex:1,textAlign:'center',fontWeight:600,fontSize:15,color:'var(--text)'}}>
+          {current?.category ? `${current.category} · 探索` : '探索模式'}
+        </span>
+        <span style={{width:40,textAlign:'right',fontSize:13,color:'var(--text3)'}}>{idx+1}/{photos.length}</span>
+      </div>
+
+      {/* Card area */}
+      <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden',padding:'20px 16px 8px'}}>
+        {loading && !current && <div style={{color:'var(--text3)',fontSize:14}}>載入中…</div>}
+        {done && (
+          <div style={{textAlign:'center',color:'var(--text2)'}}>
+            <div style={{fontSize:40,marginBottom:12}}>✓</div>
+            <div style={{fontSize:15}}>已瀏覽完所有照片</div>
+            <button onClick={onClose} style={{marginTop:20,padding:'10px 28px',borderRadius:10,border:'1px solid var(--border)',background:'var(--surface)',fontSize:14,cursor:'pointer'}}>返回</button>
+          </div>
+        )}
+        {current && !done && (
+          <div ref={cardRef}
+            style={{width:'100%',maxWidth:440,background:'var(--surface)',borderRadius:20,overflow:'hidden',
+              boxShadow:'0 8px 32px rgba(0,0,0,.12)',position:'relative',userSelect:'none',touchAction:'none',border:'4px solid transparent',transition:'border-color .1s'}}
+            onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+            <img src={current.full_url || current.thumb_url} alt="" draggable={false}
+              style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f9f9f9',display:'block',pointerEvents:'none'}} />
+            {/* Direction labels */}
+            <div ref={lblLeftRef}  className="swipe-lbl-left">✕ 不喜歡</div>
+            <div ref={lblRightRef} className="swipe-lbl-right">找相似 ✦</div>
+            <div ref={lblDownRef}  className="swipe-lbl-down">♥ 收藏</div>
+            {/* Tags */}
+            <div style={{padding:'10px 14px 14px',display:'flex',flexWrap:'wrap',gap:6}}>
+              {[current.category,current.gemstone,current.style,current.stone_size].filter(v=>v&&v!=='未定').map((t,i)=>(
+                <span key={i} style={{fontSize:12,background:'var(--bg)',borderRadius:6,padding:'3px 8px',color:'var(--text2)'}}>{t}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Hint bar */}
+      <div style={{display:'flex',justifyContent:'space-around',padding:'14px 24px 36px',background:'var(--surface)',borderTop:'1px solid var(--border)',flexShrink:0}}>
+        {[['←','✕','不喜歡','#e53935'],['↓','♥','收藏','#4caf77'],['→','✦','找相似','var(--gold)']].map(([arrow,icon,label,color])=>(
+          <div key={label} style={{textAlign:'center',color,fontSize:12}}>
+            <div style={{fontSize:20,marginBottom:2}}>{icon}</div>
+            <div style={{fontSize:11,color:'var(--text3)'}}>{arrow} {label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* PhotoDetail overlay when swiped right */}
+      {detail && (
+        <div style={{position:'fixed',inset:0,zIndex:850,transform:'translateZ(0)'}}>
+          <PhotoDetail photo={detail} onClose={() => { setDetail(null); advance('right'); }}
+            isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p=>setDetail(p)} role={role}
+            onDeleted={() => { setDetail(null); advance('right'); }}
+            onUpdated={updated => setDetail(updated)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Browse tab ─────────────────────────────────────── */
 function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [photoMode, setPhotoMode] = useState('去背'); // '去背' | '情境'
   const [catFilter, setCatFilter]  = useState(null);
   const [filters,   setFilters]    = useState({});
   const [counts,    setCounts]     = useState({});
+  const [swipeMode, setSwipeMode]  = useState(false);
   const [batchMode,  setBatchMode]  = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchPicker, setBatchPicker] = useState(false);
@@ -1344,9 +1531,9 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
             <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
           )}
         </div>
-        {role === 'agent' && onStartSwipe && !batchMode && (
-          <div style={{display:'flex',justifyContent:'center',padding:'6px 0 4px'}}>
-            <button className="swipe-mode-btn" onClick={() => onStartSwipe(allFilters)}>
+        {isStaff && !batchMode && (
+          <div className="swipe-launch-btn" style={{display:'flex',justifyContent:'center',padding:'6px 0 4px'}}>
+            <button className="swipe-mode-btn" onClick={() => setSwipeMode(true)}>
               <span style={{fontSize:18}}>✦</span> 探索模式
             </button>
           </div>
@@ -1408,6 +1595,17 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
             {batchSaving && <div style={{textAlign:'center',marginTop:16,color:'var(--text2)',fontSize:13}}>儲存中…</div>}
           </div>
         </div>
+      )}
+
+      {/* 探索滑動模式 */}
+      {swipeMode && (
+        <SwipeMode
+          initFilters={allFilters}
+          onClose={() => setSwipeMode(false)}
+          isFav={isFav}
+          toggleFav={toggleFav}
+          role={role}
+        />
       )}
     </>
   );
