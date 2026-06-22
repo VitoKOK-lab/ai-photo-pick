@@ -1475,25 +1475,21 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     if (!card) { setIdx(i => i+1); return; }
 
     if (dir === 'down') {
-      /* Calculate target: shrink card center into heart box center */
+      /* Calculate drop target: card center → heart box center */
       const cardRect  = card.getBoundingClientRect();
       const heartEl   = heartRef.current;
       const heartRect = heartEl ? heartEl.getBoundingClientRect() : null;
       const cardCx = cardRect.left + cardRect.width  / 2;
       const cardCy = cardRect.top  + cardRect.height / 2;
       const tx = heartRect ? (heartRect.left + heartRect.width  / 2) - cardCx : 0;
-      const ty = heartRect ? (heartRect.top  + heartRect.height / 2) - cardCy : window.innerHeight * 0.5;
+      const ty = heartRect ? (heartRect.top  + heartRect.height / 2) - cardCy : window.innerHeight * 0.45;
 
-      /* Phase 1: micro-lift */
-      card.style.transition = 'transform .1s ease-out';
-      card.style.transform  = 'translateY(-10px) scale(1.03) rotate(-3deg)';
-      /* Phase 2: fly into heart box and shrink to nothing */
-      setTimeout(() => {
-        card.style.transition = 'transform .42s cubic-bezier(0.4,0,0.7,0.7), opacity .42s';
-        card.style.transform  = `translate(${tx}px,${ty}px) scale(0.04) rotate(12deg)`;
-        card.style.opacity    = '0';
-      }, 110);
-      /* Phase 3: heart glows + count (timed to match card arriving) */
+      /* Single fluid motion: shrink + fall into heart simultaneously */
+      card.style.transition = 'transform .48s cubic-bezier(.5,0,.8,.6), opacity .38s ease-in .1s';
+      card.style.transform  = `translate(${tx}px,${ty}px) scale(0.05)`;
+      card.style.opacity    = '0';
+
+      /* Heart glows when card arrives */
       setTimeout(() => {
         const h = heartRef.current;
         if (h) { h.classList.remove('heart-beat'); void h.offsetWidth; h.classList.add('heart-beat'); }
@@ -1502,8 +1498,8 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
           const num = heartNumRef.current;
           if (num) { num.classList.remove('score-pop'); void num.offsetWidth; num.classList.add('score-pop'); }
         }, 50);
-      }, 420);
-      setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 580);
+      }, 380);
+      setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 540);
     } else {
       const tx  = dir === 'right' ? '118vw' : '-118vw';
       const rot = dir === 'right' ? '28deg' : '-28deg';
@@ -1624,7 +1620,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         )}
         {current && !done && (
           <div ref={cardRef}
-            style={{width:'100%',maxWidth:420,background:'#fefcf8',borderRadius:22,overflow:'hidden',
+            style={{width:'100%',maxWidth:420,background:'#fefcf8',borderRadius:28,overflow:'hidden',
               boxShadow:'0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4)',
               border:'1px solid rgba(255,255,255,0.09)',
               position:'relative',userSelect:'none',touchAction:'none'}}
@@ -1672,7 +1668,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
 
           {/* Mock card */}
           <div ref={tutCardRef} style={{
-            width:'68vw',maxWidth:280,background:'#fefcf8',borderRadius:22,overflow:'hidden',
+            width:'68vw',maxWidth:280,background:'#fefcf8',borderRadius:28,overflow:'hidden',
             boxShadow:'0 14px 48px rgba(0,0,0,.65)',position:'relative',
             border:'1px solid rgba(255,255,255,0.08)', transition:'box-shadow .2s',
           }}>
@@ -1717,45 +1713,24 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
 
 /* ── QR Code Modal ───────────────────────────────────── */
 function QRModal({ onClose }) {
-  const url   = window.location.origin;
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=6&data=${encodeURIComponent(url)}`;
   return (
     <div onClick={onClose} style={{
       position:'fixed',inset:0,zIndex:1000,
-      background:'rgba(0,0,0,.52)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',
+      background:'rgba(0,0,0,.72)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
       display:'flex',alignItems:'center',justifyContent:'center',
     }}>
       <div onClick={e=>e.stopPropagation()} style={{
-        background:'#fff',borderRadius:4,textAlign:'center',
-        padding:'36px 40px 30px',boxShadow:'0 28px 80px rgba(0,0,0,.28)',
-        width:320,position:'relative',
+        position:'relative',borderRadius:12,overflow:'hidden',
+        boxShadow:'0 32px 90px rgba(0,0,0,.5)',
+        maxWidth:'90vw',maxHeight:'90vh',
       }}>
-        {/* close */}
         <button onClick={onClose} style={{
-          position:'absolute',top:12,right:14,border:'none',background:'none',
-          fontSize:18,color:'#ccc',cursor:'pointer',lineHeight:1,
+          position:'absolute',top:10,right:14,border:'none',background:'rgba(0,0,0,.35)',
+          fontSize:20,color:'#fff',cursor:'pointer',lineHeight:1,padding:'2px 6px',
+          borderRadius:6,zIndex:1,
         }}>×</button>
-
-        {/* Brand title */}
-        <div style={{
-          fontSize:11,letterSpacing:6,color:'#b8935a',fontWeight:400,
-          marginBottom:26,whiteSpace:'nowrap',
-        }}>TAHIR ZAINAB SELECTION</div>
-
-        {/* QR code */}
-        <img src={qrSrc} alt="QR" width={240} height={240}
-          style={{display:'block',margin:'0 auto',imageRendering:'pixelated'}} />
-
-        {/* Brand subtitle */}
-        <div style={{
-          fontSize:14,color:'#b8935a',marginTop:22,
-          fontStyle:'italic',fontWeight:300,letterSpacing:1,
-        }}>Tahir Zainab Selection</div>
-
-        {/* Instruction */}
-        <div style={{
-          fontSize:11,color:'#c8c0b0',marginTop:10,letterSpacing:1,
-        }}>用手機掃描，開啟 Like or Not</div>
+        <img src="/assets/qrcard.jpg" alt="QR Code"
+          style={{display:'block',maxWidth:'90vw',maxHeight:'90vh',objectFit:'contain'}} />
       </div>
     </div>
   );
