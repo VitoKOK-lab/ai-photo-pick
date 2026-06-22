@@ -199,15 +199,24 @@ def filter_counts(
     style:       Optional[str] = None,
     color:       Optional[str] = None,
     metal_color: Optional[str] = None,
+    gemstone:    Optional[str] = None,
+    stone_shape: Optional[str] = None,
+    stone_size:  Optional[str] = None,
 ):
     """根據目前已選篩選器，回傳各維度每個值的照片數量（faceted counts）。"""
     CFG_VALS = {
         "category":    ['戒指','手鏈','項鍊','耳釘','胸針','其他'],
         "style":       ['無鑽','簡約','輕奢','奢華'],
+        "gemstone":    ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','紫水晶','黃水晶','月光石','歐泊','橄欖石','石榴石','珍珠','翡翠','托帕石','其他彩寶','無寶石'],
+        "stone_shape": ['橢圓形','圓形','水滴形','心形','方形','長方形','馬眼形','枕形','梨形','三角形','花形','不規則','無主石'],
+        "stone_size":  ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉','10克拉以上'],
         "color":       ['紅','粉','黃','綠','藍','紫','白','彩'],
         "metal_color": ['金','銀'],
     }
-    active = {"category": category, "style": style, "color": color, "metal_color": metal_color}
+    active = {
+        "category": category, "style": style, "color": color, "metal_color": metal_color,
+        "gemstone": gemstone, "stone_shape": stone_shape, "stone_size": stone_size,
+    }
     conn = _conn()
     result = {}
     for field, values in CFG_VALS.items():
