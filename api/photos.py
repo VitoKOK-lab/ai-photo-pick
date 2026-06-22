@@ -339,7 +339,31 @@ def update_photo(photo_id: int, body: dict, _user=Depends(require_editor)):
             _save_label(photo_id, field, updates[field])
     return _row_to_dict(row)
 
-@router.delete("/{photo_id}")
+
+class BatchUpdateBody(BaseModel):
+    ids: list
+    updates: dict
+
+
+@router.patch("/batch/update")
+def batch_update_photos(body: BatchUpdateBody, _user=Depends(require_editor)):
+    allowed = {"category", "style", "setting_amount", "craft_complexity", "metal_color", "color", "gemstone", "material", "price_band"}
+    updates = {k: v for k, v in body.updates.items() if k in allowed}
+    if not updates or not body.ids:
+        raise HTTPException(status_code=400, detail="No valid fields or ids")
+    set_clause = ", ".join(f"{k}=?" for k in updates)
+    placeholders = ",".join("?" * len(body.ids))
+    values = list(updates.values()) + list(body.ids)
+    conn = _conn()
+    conn.execute(
+        f"UPDATE photos SET {set_clause}, updated_at=CURRENT_TIMESTAMP WHERE id IN ({placeholders})",
+        values
+    )
+    conn.commit()
+    conn.close()
+    return {"updated": len(body.ids)}
+
+
 def delete_photo(photo_id: int, _user=Depends(require_admin)):
     conn = _conn()
     cur = conn.cursor()

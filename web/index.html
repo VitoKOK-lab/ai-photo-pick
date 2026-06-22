@@ -139,6 +139,8 @@ button { font-family: inherit; cursor: pointer; }
 .card-fav { position: absolute; top: 7px; right: 7px; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.85); border: none; font-size: 15px; display: flex; align-items: center; justify-content: center; color: var(--text3); box-shadow: var(--shadow); transition: transform .2s, color .2s; }
 .card-fav:active { transform: scale(1.3); }
 .card-fav.on { color: var(--gold); }
+.card-selected { outline: 3px solid var(--gold); outline-offset: -2px; }
+.card-check { position: absolute; top: 7px; right: 7px; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); border: none; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: var(--shadow); border: 2px solid rgba(255,255,255,.8); }
 .card-lbl { padding: 6px 9px 8px; font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sentinel { height: 1px; }
 
@@ -1086,7 +1088,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
 }
 
 /* ── Photo grid ─────────────────────────────────────── */
-function PhotoGrid({ isFav, toggleFav, filters, role }) {
+function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, onToggleSelect }) {
   const [photos,     setPhotos]     = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [detail,     setDetail]     = useState(null);
@@ -1183,14 +1185,20 @@ function PhotoGrid({ isFav, toggleFav, filters, role }) {
                 </div>
               );
             }
+            const isSel = batchMode && selectedIds?.has(p.id);
             acc.push(
-              <div key={p.id} className="card" style={{animationDelay:`${(i % 9) * 0.19}s`}}>
-                <img src={p.thumb_url} alt="" loading="lazy" onClick={() => setDetail(p)} />
-                <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
-                  onClick={e => { e.stopPropagation(); toggleFav(p); }}>
-                  {isFav(p.id) ? '♥' : '♡'}
-                </button>
-                <div className="card-lbl" onClick={() => setDetail(p)}>
+              <div key={p.id} className={'card' + (isSel ? ' card-selected' : '')}
+                style={{animationDelay:`${(i % 9) * 0.19}s`}}
+                onClick={() => batchMode ? onToggleSelect(p.id) : setDetail(p)}>
+                <img src={p.thumb_url} alt="" loading="lazy" />
+                {batchMode
+                  ? <div className="card-check">{isSel ? '✓' : ''}</div>
+                  : <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
+                      onClick={e => { e.stopPropagation(); toggleFav(p); }}>
+                      {isFav(p.id) ? '♥' : '♡'}
+                    </button>
+                }
+                <div className="card-lbl">
                   {[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}
                 </div>
               </div>
@@ -1253,6 +1261,34 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [catFilter, setCatFilter]  = useState(null);
   const [filters,   setFilters]    = useState({});
   const [counts,    setCounts]     = useState({});
+  const [batchMode,  setBatchMode]  = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [batchPicker, setBatchPicker] = useState(false);
+  const [batchSaving, setBatchSaving] = useState(false);
+  const isStaff = role === 'admin' || role === 'editor';
+
+  const toggleSelect = id => setSelectedIds(prev => {
+    const s = new Set(prev);
+    s.has(id) ? s.delete(id) : s.add(id);
+    return s;
+  });
+
+  const exitBatch = () => { setBatchMode(false); setSelectedIds(new Set()); setBatchPicker(false); };
+
+  const batchUpdate = async (field, value) => {
+    if (!selectedIds.size) return;
+    setBatchSaving(true);
+    await fetch('/api/photos/batch/update', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [...selectedIds], updates: { [field]: value } }),
+    });
+    setBatchSaving(false);
+    setBatchPicker(false);
+    exitBatch();
+    // 重新觸發篩選器讓照片格刷新
+    setFilters(f => ({ ...f }));
+  };
 
   const allFilters = {
     ...(catFilter ? { category: catFilter } : {}),
@@ -1280,19 +1316,26 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   return (
     <>
       <div className="browse-hdr">
-        {/* 去背 / 情境 切換 */}
-        <div style={{display:'flex',gap:0,margin:'8px 14px 0',background:'var(--s3)',borderRadius:10,padding:3,width:'fit-content'}}>
-          {['去背','情境'].map(mode => (
-            <button key={mode} onClick={() => setPhotoMode(mode)} style={{
-              padding:'6px 22px', border:'none', borderRadius:8, fontSize:13, fontWeight:600,
-              cursor:'pointer', transition:'all .18s',
-              background: photoMode===mode ? 'var(--surface)' : 'transparent',
-              color: photoMode===mode ? 'var(--text)' : 'var(--text3)',
-              boxShadow: photoMode===mode ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-            }}>{mode}</button>
-          ))}
+        {/* 去背 / 情境 切換 + 批量編輯按鈕 */}
+        <div style={{display:'flex',alignItems:'center',gap:8,margin:'8px 14px 0'}}>
+          <div style={{display:'flex',gap:0,background:'var(--s3)',borderRadius:10,padding:3}}>
+            {['去背','情境'].map(mode => (
+              <button key={mode} onClick={() => setPhotoMode(mode)} style={{
+                padding:'6px 22px', border:'none', borderRadius:8, fontSize:13, fontWeight:600,
+                cursor:'pointer', transition:'all .18s',
+                background: photoMode===mode ? 'var(--surface)' : 'transparent',
+                color: photoMode===mode ? 'var(--text)' : 'var(--text3)',
+                boxShadow: photoMode===mode ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+              }}>{mode}</button>
+            ))}
+          </div>
+          {isStaff && (
+            batchMode
+              ? <button onClick={exitBatch} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>取消</button>
+              : <button onClick={() => setBatchMode(true)} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>批量編輯</button>
+          )}
         </div>
-        <CategoryTabs active={catFilter} onSelect={setCatFilter} />
+        <CategoryTabs active={catFilter} onSelect={v => { if (!batchMode) setCatFilter(v); }} />
         <div className="chips-bar">
           {Object.entries(CFG).map(([field]) => (
             <FilterDropdown key={field} field={field} cur={filters[field] || null}
@@ -1302,7 +1345,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
             <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
           )}
         </div>
-        {role === 'agent' && onStartSwipe && (
+        {role === 'agent' && onStartSwipe && !batchMode && (
           <div style={{display:'flex',justifyContent:'center',padding:'6px 0 4px'}}>
             <button className="swipe-mode-btn" onClick={() => onStartSwipe(allFilters)}>
               <span style={{fontSize:18}}>✦</span> 探索模式
@@ -1312,9 +1355,61 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
       </div>
       <div className="body-row">
         <div className="main">
-          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role} />
+          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role}
+            batchMode={batchMode} selectedIds={selectedIds} onToggleSelect={toggleSelect} />
         </div>
       </div>
+
+      {/* 批量操作浮動列 */}
+      {batchMode && (
+        <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:500,
+          background:'var(--surface)',borderTop:'1px solid var(--border)',
+          padding:'12px 16px 24px',display:'flex',alignItems:'center',gap:10,boxShadow:'0 -2px 12px rgba(0,0,0,.08)'}}>
+          <span style={{fontSize:14,color:'var(--text2)',flex:1}}>
+            {selectedIds.size > 0 ? `已選 ${selectedIds.size} 張` : '點選照片以選取'}
+          </span>
+          {selectedIds.size > 0 && (
+            <>
+              <button onClick={() => setBatchPicker(true)} style={{
+                padding:'9px 20px',borderRadius:8,border:'none',
+                background:'var(--accent)',color:'#fff',fontSize:14,fontWeight:600,cursor:'pointer'}}>
+                修改品項
+              </button>
+              <button onClick={() => setSelectedIds(new Set())} style={{
+                padding:'9px 14px',borderRadius:8,border:'1px solid var(--border)',
+                background:'var(--surface)',fontSize:13,cursor:'pointer',color:'var(--text2)'}}>
+                清除選取
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 品項選擇 bottom sheet */}
+      {batchPicker && (
+        <div style={{position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,.4)'}}
+          onClick={() => setBatchPicker(false)}>
+          <div style={{position:'absolute',bottom:0,left:0,right:0,
+            background:'var(--surface)',borderRadius:'16px 16px 0 0',padding:'20px 16px 40px'}}
+            onClick={e => e.stopPropagation()}>
+            <div style={{fontWeight:600,fontSize:15,marginBottom:16,color:'var(--text)'}}>
+              將 {selectedIds.size} 張照片的品項改為：
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
+              {CATS.map(cat => (
+                <button key={cat} disabled={batchSaving} onClick={() => batchUpdate('category', cat)} style={{
+                  padding:'12px 8px',borderRadius:10,border:'1px solid var(--border)',
+                  background:'var(--bg)',fontSize:14,cursor:'pointer',
+                  opacity: batchSaving ? 0.5 : 1,
+                }}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+            {batchSaving && <div style={{textAlign:'center',marginTop:16,color:'var(--text2)',fontSize:13}}>儲存中…</div>}
+          </div>
+        </div>
+      )}
     </>
   );
 }
