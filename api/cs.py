@@ -46,6 +46,9 @@ DEFAULT_PRODUCT_TYPE = WORKFLOW.get("default_product_type", "規格")
 TRACK_STATUSES = WORKFLOW.get("stages", ["下單待入帳", "已完成結案"])
 # 每關「員工該做什麼」一句話提示（今日待辦用）
 STAGE_ACTIONS = WORKFLOW.get("stage_actions", {})
+# 角色 與 售前詢問階段
+ROLES = WORKFLOW.get("roles", ["一般客服", "售後客服", "主管"])
+INQUIRY_STAGES = WORKFLOW.get("inquiry_stages", ["詢問中", "已報價", "待客人決定", "成交", "未成交"])
 # 客戶追蹤通知天數（從下單日起算）
 CUSTOMER_NOTIFY_DAYS = WORKFLOW.get("customer_notify_days", [7, 14, 21])
 # 已完成後幾天自動封存（退換貨期）
@@ -135,6 +138,13 @@ def _migrate(c):
         kind TEXT DEFAULT 'note', content TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     c.execute("CREATE INDEX IF NOT EXISTS idx_cs_events_order ON cs_order_events(order_id)")
+    c.execute("""CREATE TABLE IF NOT EXISTS cs_inquiries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_name TEXT, phone TEXT, line_id TEXT, source TEXT, summary TEXT,
+        quote TEXT, status TEXT DEFAULT '詢問中', owner TEXT, last_handler TEXT,
+        next_action TEXT, order_number TEXT, lost_reason TEXT, notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     c.execute("""CREATE TABLE IF NOT EXISTS cs_import_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -240,6 +250,37 @@ class ReturnAction(BaseModel):
 class NotifyDone(BaseModel):
     day: int                            # 7 / 14 / 21（客戶追蹤通知里程碑）
     by: Optional[str] = None            # 通知的客服
+
+
+# ── 售前詢問（一般客服）──
+class InquiryCreate(BaseModel):
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    line_id: Optional[str] = None
+    source: Optional[str] = None
+    summary: Optional[str] = None
+    quote: Optional[str] = None
+    owner: Optional[str] = None
+
+
+class InquiryUpdate(BaseModel):
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    line_id: Optional[str] = None
+    source: Optional[str] = None
+    summary: Optional[str] = None
+    quote: Optional[str] = None
+    status: Optional[str] = None
+    owner: Optional[str] = None
+    next_action: Optional[str] = None
+    notes: Optional[str] = None
+    lost_reason: Optional[str] = None
+    handler: Optional[str] = None
+
+
+class InquiryConvert(BaseModel):
+    order_number: str                   # 成交連到的訂單號（交給售後客服）
+    by: Optional[str] = None
 
 
 class HandoverCreate(BaseModel):
@@ -1118,6 +1159,8 @@ def meta():
     return {
         "track_statuses": TRACK_STATUSES,
         "stages": TRACK_STATUSES,
+        "roles": ROLES,
+        "inquiry_stages": INQUIRY_STAGES,
         "risk_types": RISK_TYPES,
         "return_statuses": RETURN_STATUSES,
         "product_types": {k: _sla_days(k) for k in PRODUCT_TYPES},
@@ -1127,6 +1170,105 @@ def meta():
         "shopline_order_url": SHOPLINE_ORDER_URL,
         "shopline_handle": SHOPLINE_HANDLE,
     }
+
+
+# ─── 售前詢問（一般客服）────────────────────────────────────────────────────
+
+@router.get("/inquiries")
+def list_inquiries(status: Optional[str] = Query(None), owner: Optional[str] = Query(None),
+                   active: bool = Query(True)):
+    """詢問單列表。active=True 只看還沒結束的（排除 成交/未成交）。"""
+    conn = _conn()
+    where, args = [], []
+    if status:
+        where.append("status=?"); args.append(status)
+    elif active:
+        where.append("status NOT IN ('成交','未成交')")
+    if owner:
+        where.append("owner=?"); args.append(owner)
+    sql = "SELECT * FROM cs_inquiries"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY updated_at DESC"
+    rows = conn.execute(sql, args).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+@router.post("/inquiries", status_code=201)
+def create_inquiry(body: InquiryCreate):
+    conn = _conn()
+    cur = conn.execute(
+        """INSERT INTO cs_inquiries(customer_name, phone, line_id, source, summary, quote, owner, last_handler)
+           VALUES(?,?,?,?,?,?,?,?)""",
+        (body.customer_name, body.phone, body.line_id, body.source, body.summary,
+         body.quote, body.owner, body.owner),
+    )
+    conn.commit()
+    row = conn.execute("SELECT * FROM cs_inquiries WHERE id=?", (cur.lastrowid,)).fetchone()
+    conn.close()
+    return dict(row)
+
+
+@router.get("/inquiries/{inquiry_id}")
+def get_inquiry(inquiry_id: int):
+    conn = _conn()
+    row = conn.execute("SELECT * FROM cs_inquiries WHERE id=?", (inquiry_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(404, "Inquiry not found")
+    return dict(row)
+
+
+@router.put("/inquiries/{inquiry_id}")
+def update_inquiry(inquiry_id: int, body: InquiryUpdate):
+    conn = _conn()
+    row = conn.execute("SELECT * FROM cs_inquiries WHERE id=?", (inquiry_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Inquiry not found")
+    fields = ["customer_name", "phone", "line_id", "source", "summary", "quote",
+              "status", "owner", "next_action", "notes", "lost_reason"]
+    sets, args = [], []
+    for f in fields:
+        v = getattr(body, f)
+        if v is not None:
+            sets.append(f"{f}=?"); args.append(v)
+    handler = (body.handler or "").strip()
+    if handler:
+        sets.append("last_handler=?"); args.append(handler)
+    if sets:
+        sets.append("updated_at=CURRENT_TIMESTAMP")
+        conn.execute(f"UPDATE cs_inquiries SET {', '.join(sets)} WHERE id=?", (*args, inquiry_id))
+        conn.commit()
+    out = dict(conn.execute("SELECT * FROM cs_inquiries WHERE id=?", (inquiry_id,)).fetchone())
+    conn.close()
+    return out
+
+
+@router.post("/inquiries/{inquiry_id}/convert")
+def convert_inquiry(inquiry_id: int, body: InquiryConvert):
+    """詢問成交：標記成交、連到訂單號（交給售後客服）。"""
+    order_number = _clean_order_no(body.order_number)
+    conn = _conn()
+    row = conn.execute("SELECT * FROM cs_inquiries WHERE id=?", (inquiry_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Inquiry not found")
+    who = (body.by or "").strip() or row["owner"] or "一般客服"
+    conn.execute(
+        "UPDATE cs_inquiries SET status='成交', order_number=?, last_handler=?, "
+        "updated_at=CURRENT_TIMESTAMP WHERE id=?", (order_number, who, inquiry_id))
+    # 若該訂單已在系統（已匯入），在購物旅程記一筆售前轉售後
+    o = conn.execute("SELECT id FROM cs_orders WHERE order_number=?", (order_number,)).fetchone()
+    if o:
+        _log_event(conn, o["id"], "staff", who, "note",
+                   f"售前詢問成交轉入（一般客服 {who} → 售後客服）")
+    conn.commit()
+    out = dict(conn.execute("SELECT * FROM cs_inquiries WHERE id=?", (inquiry_id,)).fetchone())
+    out["order_linked"] = bool(o)
+    conn.close()
+    return out
 
 
 # ─── 交接班 ──────────────────────────────────────────────────────────────────

@@ -566,6 +566,50 @@ class TestCSReport:
             assert k in rpt["complaint_risk"]
 
 
+class TestCSInquiry:
+    def test_create_list_and_active_filter(self, client):
+        r = client.post("/api/cs/inquiries", json={
+            "customer_name": "林小姐", "line_id": "lin123", "source": "LINE",
+            "summary": "想問藍寶石戒指能不能訂製", "owner": "售前-小芳"})
+        assert r.status_code == 201
+        iid = r.json()["id"]
+        assert r.json()["status"] == "詢問中"
+        # active 列表看得到
+        act = client.get("/api/cs/inquiries").json()
+        assert any(i["id"] == iid for i in act)
+
+    def test_update_quote_and_lost(self, client):
+        iid = client.post("/api/cs/inquiries", json={"customer_name": "陳先生"}).json()["id"]
+        client.put(f"/api/cs/inquiries/{iid}", json={
+            "status": "已報價", "quote": "NT$58,000", "handler": "售前-小芳"})
+        o = client.get(f"/api/cs/inquiries/{iid}").json()
+        assert o["status"] == "已報價" and o["quote"] == "NT$58,000"
+        assert o["last_handler"] == "售前-小芳"
+        # 標未成交 → 從 active 消失
+        client.put(f"/api/cs/inquiries/{iid}", json={"status": "未成交", "lost_reason": "嫌貴"})
+        assert all(i["id"] != iid for i in client.get("/api/cs/inquiries").json())
+
+    def test_convert_links_to_order(self, client):
+        _import(client, WORKFLOW_CSV)            # 系統裡有訂單 S1
+        iid = client.post("/api/cs/inquiries", json={"customer_name": "王小明"}).json()["id"]
+        r = client.post(f"/api/cs/inquiries/{iid}/convert",
+                        json={"order_number": "S1", "by": "售前-小芳"})
+        o = r.json()
+        assert o["status"] == "成交"
+        assert o["order_number"] == "S1"
+        assert o["order_linked"] is True
+        # 訂單購物旅程留下「售前成交轉售後」記錄
+        oid = client.get("/api/cs/orders?view=all&q=S1").json()[0]["id"]
+        tl = client.get(f"/api/cs/orders/{oid}").json()["timeline"]
+        assert any("售前" in e["content"] and "成交" in e["content"] for e in tl)
+
+    def test_meta_has_roles_and_inquiry_stages(self, client):
+        m = client.get("/api/cs/meta").json()
+        assert "一般客服" in m["roles"] and "售後客服" in m["roles"]
+        assert m["inquiry_stages"][0] == "詢問中"
+        assert "成交" in m["inquiry_stages"]
+
+
 class TestCSHandover:
     def test_create_and_ack(self, client):
         r = client.post("/api/cs/handover", json={

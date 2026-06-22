@@ -277,6 +277,27 @@ CREATE TABLE IF NOT EXISTS cs_import_log (
     message TEXT
 );
 
+-- 售前詢問（一般客服）：客人來問、還沒下單；成交時連到訂單交給售後客服
+CREATE TABLE IF NOT EXISTS cs_inquiries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_name TEXT,                  -- 客人稱呼
+    phone TEXT,                          -- 電話/手機
+    line_id TEXT,                        -- LINE / 私訊帳號
+    source TEXT,                         -- 來源：LINE/官網/私訊/電話…
+    summary TEXT,                        -- 問什麼／想要什麼
+    quote TEXT,                          -- 報價金額
+    status TEXT DEFAULT '詢問中',         -- 詢問中/已報價/待客人決定/成交/未成交（見 config）
+    owner TEXT,                          -- 負責的一般客服
+    last_handler TEXT,                   -- 最後處理人
+    next_action TEXT,                    -- 下一步
+    order_number TEXT,                   -- 成交後連到的訂單號（交給售後客服）
+    lost_reason TEXT,                    -- 未成交原因
+    notes TEXT,                          -- 對話/備註
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_cs_inquiries_status ON cs_inquiries(status);
+
 CREATE TABLE IF NOT EXISTS cs_handovers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     shift_date TEXT,                     -- 交班日期

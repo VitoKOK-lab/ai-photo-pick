@@ -27,6 +27,8 @@
     "已出貨給客人": "確認客人簽收、邀好評/送電子保卡",
     "已完成結案": ""
   },
+  "roles": ["一般客服", "售後客服", "主管"],
+  "inquiry_stages": ["詢問中", "已報價", "待客人決定", "成交", "未成交"],
   "customer_notify_days": [7, 14, 21],
   "archive_after_complete_days": 7,
   "return_statuses": ["待簽核", "已核准", "已駁回"],
