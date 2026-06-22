@@ -586,10 +586,9 @@ button { font-family: inherit; cursor: pointer; }
   transform: translateX(-50%) translateY(-50%);
   opacity: 0; transition: opacity .08s;
   pointer-events: none; z-index: 5;
-  font-size: 30px; font-weight: 900; letter-spacing: 5px;
-  padding: 9px 26px; border-radius: 6px; border: 3px solid currentColor;
-  background: rgba(255,255,255,0.92); white-space: nowrap;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+  font-size: 18px; font-weight: 300; letter-spacing: 3px;
+  padding: 6px 18px; border-radius: 4px; border: 1px solid currentColor;
+  background: rgba(255,255,255,0.88); white-space: nowrap;
 }
 @keyframes particleFly {
   0%   { transform: translate(0,0) scale(1.1) rotate(0deg);   opacity:1; }
@@ -1372,7 +1371,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         card.style.transition = 'transform .54s cubic-bezier(.1,.3,.55,1), box-shadow .18s';
         card.style.transform  = 'translateX(-92px) rotate(-20deg)';
         card.style.boxShadow  = `0 0 32px rgba(200,50,50,.55), ${SHADOW_BASE}`;
-        setLbl('不愛', '#e53935', '-12deg');
+        setLbl('unlike', '#e53935', '-12deg');
       }, 680),
       setTimeout(() => { clearLbl(); spring(); }, 1530),
 
@@ -1382,7 +1381,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         card.style.transition = 'transform .54s cubic-bezier(.1,.3,.55,1), box-shadow .18s';
         card.style.transform  = 'translateX(92px) rotate(20deg)';
         card.style.boxShadow  = `0 0 36px rgba(184,147,90,.65), ${SHADOW_BASE}`;
-        setLbl('不錯', '#b8935a', '12deg');
+        setLbl('like', '#b8935a', '12deg');
       }, 2430),
       setTimeout(() => { clearLbl(); spring(); }, 3290),
 
@@ -1459,7 +1458,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     }
     if (!lbl) return;
     if (!dir) { lbl.style.opacity = '0'; return; }
-    const C = { left:['不愛','#e53935','-13deg'], right:['不錯','#b8935a','13deg'], down:['♥ 收藏','#4caf77','0deg'] }[dir];
+    const C = { left:['unlike','#e53935','-13deg'], right:['like','#b8935a','13deg'], down:['♥ 收藏','#4caf77','0deg'] }[dir];
     lbl.textContent = C[0]; lbl.style.color = C[1]; lbl.style.borderColor = C[1];
     lbl.style.transform = `translateX(-50%) translateY(-50%) rotate(${C[2]})`;
     lbl.style.opacity = '1';
@@ -1605,17 +1604,22 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         )}
         {current && !done && (
           <div ref={cardRef}
-            style={{width:'100%',maxWidth:430,background:'#fefcf8',borderRadius:18,overflow:'hidden',
+            style={{width:'100%',maxWidth:420,background:'#fefcf8',borderRadius:22,overflow:'hidden',
               boxShadow:'0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4)',
+              border:'1px solid rgba(255,255,255,0.09)',
               position:'relative',userSelect:'none',touchAction:'none'}}
             onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
             <img src={current.full_url || current.thumb_url} alt="" draggable={false}
-              style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f5f2ed',display:'block',pointerEvents:'none'}} />
+              style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f4f1ec',display:'block',pointerEvents:'none'}} />
             <div ref={lblRef} className="swipe-lbl" />
-            <div style={{padding:'10px 14px 13px',display:'flex',flexWrap:'wrap',gap:6,background:'#fefcf8'}}>
-              {[current.category,current.gemstone,current.style,current.stone_size].filter(v=>v&&v!=='未定').map((t,i)=>(
-                <span key={i} style={{fontSize:12,background:'#f0ede8',borderRadius:6,padding:'3px 9px',color:'#888'}}>{t}</span>
-              ))}
+            {/* Info strip */}
+            <div style={{padding:'10px 16px 14px',background:'#fefcf8',borderTop:'1px solid #f0ede8'}}>
+              <div style={{fontSize:13,fontWeight:500,color:'#3a3530',marginBottom:3}}>
+                {current.category || '—'}
+              </div>
+              <div style={{fontSize:11,color:'#b0a898',fontWeight:300,letterSpacing:.5}}>
+                {[current.gemstone,current.style,current.stone_size].filter(v=>v&&v!=='未定').join('  ·  ')}
+              </div>
             </div>
           </div>
         )}
@@ -1648,24 +1652,24 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
 
           {/* Mock card */}
           <div ref={tutCardRef} style={{
-            width:'68vw',maxWidth:280,background:'#fefcf8',borderRadius:18,overflow:'hidden',
+            width:'68vw',maxWidth:280,background:'#fefcf8',borderRadius:22,overflow:'hidden',
             boxShadow:'0 14px 48px rgba(0,0,0,.65)',position:'relative',
-            transition:'box-shadow .2s',
+            border:'1px solid rgba(255,255,255,0.08)', transition:'box-shadow .2s',
           }}>
-            <div style={{width:'100%',aspectRatio:'1/1',background:'#f0ede8',
+            <div style={{width:'100%',aspectRatio:'1/1',background:'#f4f1ec',
               display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-              <span style={{fontSize:52,opacity:.12,filter:'grayscale(1)'}}>💎</span>
+              <span style={{fontSize:52,opacity:.1,filter:'grayscale(1)'}}>💎</span>
             </div>
             <div ref={tutLblRef} className="swipe-lbl" />
-            <div style={{padding:'9px 13px 13px',display:'flex',gap:7,background:'#fefcf8'}}>
-              <span style={{fontSize:11,background:'#f0ede8',borderRadius:5,padding:'3px 8px',color:'#aaa'}}>戒指</span>
-              <span style={{fontSize:11,background:'#f0ede8',borderRadius:5,padding:'3px 8px',color:'#aaa'}}>藍寶石</span>
+            <div style={{padding:'10px 16px 13px',background:'#fefcf8',borderTop:'1px solid #f0ede8'}}>
+              <div style={{fontSize:12,fontWeight:500,color:'#3a3530'}}>戒指</div>
+              <div style={{fontSize:10,color:'#b0a898',fontWeight:300,letterSpacing:.5}}>藍寶石  ·  輕奢</div>
             </div>
           </div>
 
           {/* Gesture hints */}
           <div style={{display:'flex',justifyContent:'space-around',width:'68vw',maxWidth:280,marginTop:20,gap:4}}>
-            {[['←','不愛','#c04040'],['↓','收藏','rgba(76,175,100,.9)'],['→','不錯','#b8935a']].map(([arrow,text,color])=>(
+            {[['←','unlike','#c04040'],['↓','收藏','rgba(76,175,100,.9)'],['→','like','#b8935a']].map(([arrow,text,color])=>(
               <div key={text} style={{flex:1,textAlign:'center'}}>
                 <div style={{fontSize:18,color,marginBottom:3,fontWeight:700}}>{arrow}</div>
                 <div style={{fontSize:11,color,fontWeight:700,letterSpacing:1}}>{text}</div>
