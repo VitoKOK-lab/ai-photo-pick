@@ -576,7 +576,7 @@ button { font-family: inherit; cursor: pointer; }
   cursor: pointer; margin: 8px auto; transition: all .15s;
 }
 .swipe-mode-btn:active { transform: scale(.97); }
-@media (min-width: 768px) { .swipe-launch-btn { display: none !important; } }
+/* like-or-not button visible on all screen sizes */
 /* ── Swipe explore dark-luxury theme ── */
 .swipe-dir-left  { box-shadow: 0 0 28px rgba(180,60,60,0.55),  0 20px 50px rgba(0,0,0,.55) !important; }
 .swipe-dir-right { box-shadow: 0 0 32px rgba(184,147,90,0.65), 0 20px 50px rgba(0,0,0,.55) !important; }
@@ -1715,6 +1715,52 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
   );
 }
 
+/* ── QR Code Modal ───────────────────────────────────── */
+function QRModal({ onClose }) {
+  const url   = window.location.origin;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=6&data=${encodeURIComponent(url)}`;
+  return (
+    <div onClick={onClose} style={{
+      position:'fixed',inset:0,zIndex:1000,
+      background:'rgba(0,0,0,.52)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',
+      display:'flex',alignItems:'center',justifyContent:'center',
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:'#fff',borderRadius:4,textAlign:'center',
+        padding:'36px 40px 30px',boxShadow:'0 28px 80px rgba(0,0,0,.28)',
+        width:320,position:'relative',
+      }}>
+        {/* close */}
+        <button onClick={onClose} style={{
+          position:'absolute',top:12,right:14,border:'none',background:'none',
+          fontSize:18,color:'#ccc',cursor:'pointer',lineHeight:1,
+        }}>×</button>
+
+        {/* Brand title */}
+        <div style={{
+          fontSize:11,letterSpacing:6,color:'#b8935a',fontWeight:400,
+          marginBottom:26,whiteSpace:'nowrap',
+        }}>TAHIR ZAINAB SELECTION</div>
+
+        {/* QR code */}
+        <img src={qrSrc} alt="QR" width={240} height={240}
+          style={{display:'block',margin:'0 auto',imageRendering:'pixelated'}} />
+
+        {/* Brand subtitle */}
+        <div style={{
+          fontSize:14,color:'#b8935a',marginTop:22,
+          fontStyle:'italic',fontWeight:300,letterSpacing:1,
+        }}>Tahir Zainab Selection</div>
+
+        {/* Instruction */}
+        <div style={{
+          fontSize:11,color:'#c8c0b0',marginTop:10,letterSpacing:1,
+        }}>用手機掃描，開啟 Like or Not</div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Browse tab ─────────────────────────────────────── */
 function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [photoMode, setPhotoMode] = useState('去背'); // '去背' | '情境'
@@ -1722,6 +1768,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [filters,   setFilters]    = useState({});
   const [counts,    setCounts]     = useState({});
   const [swipeMode, setSwipeMode]  = useState(false);
+  const [showQR,    setShowQR]     = useState(false);
   const [batchMode,  setBatchMode]  = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchPicker, setBatchPicker] = useState(false);
@@ -1796,8 +1843,8 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
               ? <button onClick={exitBatch} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>取消</button>
               : <>
                   <button onClick={() => setBatchMode(true)} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>批量編輯</button>
-                  <button className="swipe-launch-btn" onClick={() => setSwipeMode(true)} style={{padding:'6px 14px',border:'1px solid var(--gold)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
-                    <span style={{fontSize:14}}>✦</span> 探索
+                  <button className="swipe-launch-btn" onClick={() => window.innerWidth < 768 ? setSwipeMode(true) : setShowQR(true)} style={{padding:'6px 14px',border:'1px solid var(--gold)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
+                    <span style={{fontSize:13}}>✦</span> like or not
                   </button>
                 </>
           )}
@@ -1871,7 +1918,10 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
         </div>
       )}
 
-      {/* 探索滑動模式 */}
+      {/* QR code modal – desktop only */}
+      {showQR && <QRModal onClose={() => setShowQR(false)} />}
+
+      {/* Like or Not swipe mode – mobile */}
       {swipeMode && (
         <SwipeMode
           initFilters={allFilters}
