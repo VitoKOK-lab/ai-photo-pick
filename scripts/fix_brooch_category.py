@@ -9,6 +9,7 @@ import sqlite3
 import sys
 import torch
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH, PROCESSED_DIR, BASE_DIR
@@ -20,7 +21,7 @@ CLASSIFIED_DIR = BASE_DIR / "data" / "02_classified"
 _device = "mps" if torch.backends.mps.is_available() else "cpu"
 
 
-def get_image_path(row) -> Path | None:
+def get_image_path(row) -> Optional[Path]:
     full_path = Path(row["full_path"]) if row["full_path"] else None
     if full_path and full_path.exists():
         return full_path
