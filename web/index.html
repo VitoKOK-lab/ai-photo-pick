@@ -1385,13 +1385,17 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
       }, 2430),
       setTimeout(() => { clearLbl(); spring(); }, 3290),
 
-      /* DOWN – slow fall → pause → heart glows → spring back */
+      /* DOWN – lift → throw demo → stop at 65px (pause), heart glows → spring back */
       setTimeout(() => {
-        card.style.transition = 'transform .58s cubic-bezier(.3,0,.5,.88), box-shadow .2s';
-        card.style.transform  = 'translateY(62px) scale(.87)';
+        card.style.transition = 'transform .11s ease-out';
+        card.style.transform  = 'translateY(-10px) scale(1.03) rotate(-3deg)';
         card.style.boxShadow  = `0 0 28px rgba(76,175,100,.5), ${SHADOW_BASE}`;
         setLbl('♥ 收藏', '#4caf77', '0deg');
       }, 3900),
+      setTimeout(() => {
+        card.style.transition = 'transform .45s cubic-bezier(.4,0,.6,.9), box-shadow .2s';
+        card.style.transform  = 'translateY(65px) rotate(8deg)';
+      }, 4015),
       setTimeout(() => {
         if (heart) { heart.classList.remove('heart-beat'); void heart.offsetWidth; heart.classList.add('heart-beat'); }
       }, 4530),
@@ -1471,22 +1475,25 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     if (!card) { setIdx(i => i+1); return; }
 
     if (dir === 'down') {
-      card.style.transition = 'transform .4s cubic-bezier(.4,0,.7,.55)';
-      card.style.transform  = 'translateY(44vh) scale(.65)';
+      /* Phase 1: micro-lift (like winding up to throw) */
+      card.style.transition = 'transform .1s ease-out';
+      card.style.transform  = 'translateY(-10px) scale(1.03) rotate(-3deg)';
+      /* Phase 2: fly down fast with rotation – feels like throwing, not pressing */
+      setTimeout(() => {
+        card.style.transition = 'transform .36s cubic-bezier(0.5,0,0.9,0.8)';
+        card.style.transform  = 'translateY(105vh) rotate(18deg)';
+      }, 105);
+      /* Phase 3: heart glows + count */
       setTimeout(() => {
         const h = heartRef.current;
         if (h) { h.classList.remove('heart-beat'); void h.offsetWidth; h.classList.add('heart-beat'); }
-        /* bump favCount + animate number */
         setFavCount(n => n + 1);
         setTimeout(() => {
           const num = heartNumRef.current;
           if (num) { num.classList.remove('score-pop'); void num.offsetWidth; num.classList.add('score-pop'); }
         }, 50);
-        card.style.transition = 'transform .22s ease-in, opacity .22s';
-        card.style.transform  = 'translateY(46vh) scale(.08)';
-        card.style.opacity    = '0';
-      }, 420);
-      setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 670);
+      }, 320);
+      setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 520);
     } else {
       const tx  = dir === 'right' ? '118vw' : '-118vw';
       const rot = dir === 'right' ? '28deg' : '-28deg';
@@ -1515,8 +1522,11 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     const dx = t.clientX - dragRef.current.x0;
     const dy = t.clientY - dragRef.current.y0;
     dragRef.current.dx = dx; dragRef.current.dy = dy;
-    if (cardRef.current)
-      cardRef.current.style.transform = `translate(${dx}px,${dy}px) rotate(${dx*0.055}deg)`;
+    if (cardRef.current) {
+      /* amplify downward pull so it feels like throwing, not pressing */
+      const visualDy = dy > 0 ? dy * 1.5 : dy;
+      cardRef.current.style.transform = `translate(${dx}px,${visualDy}px) rotate(${dx*0.055}deg)`;
+    }
     showLabel(getDir(dx, dy, 40));
   };
   const onTouchEnd = () => {
