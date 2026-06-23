@@ -1738,14 +1738,242 @@ function QRModal({ onClose }) {
   );
 }
 
+/* ── Budget Flow ─────────────────────────────────────── */
+const PRICE_BANDS = ['< 1萬','1-3萬','3-6萬','6-10萬','10-15萬','> 15萬'];
+const COLOR_OPTS  = [
+  {label:'紅', hex:'#e05050'}, {label:'粉', hex:'#f2a0b8'},
+  {label:'黃', hex:'#e8c84a'}, {label:'綠', hex:'#5cb85c'},
+  {label:'藍', hex:'#5090e0'}, {label:'紫', hex:'#9b59b6'},
+  {label:'白', hex:'#e8e4de'}, {label:'彩', hex:'linear-gradient(135deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f)'},
+];
+const GEMSTONE_ORDER = ['鑽石','藍寶石','紅寶石','祖母綠','坦桑石','珍珠','翡翠','海藍寶','碧璽','紫水晶','黃水晶','月光石','歐泊','橄欖石','石榴石','托帕石','其他彩寶','無寶石'];
+
+function BudgetFlow({ onClose, onApplyFilters }) {
+  const [step,      setStep]      = useState(1);
+  const [band,      setBand]      = useState(null);
+  const [color,     setColor]     = useState(null);
+  const [counts,    setCounts]    = useState({});
+  const [photos,    setPhotos]    = useState([]);
+  const [total,     setTotal]     = useState(0);
+  const [loading,   setLoading]   = useState(false);
+  const [gemFilter, setGemFilter] = useState(null);
+
+  const goResults = (b, c) => {
+    setStep(3);
+    setLoading(true);
+    const q = new URLSearchParams({ price_band: b });
+    if (c) q.set('color', c);
+    Promise.all([
+      fetch(`/api/photos/filter-counts?${q}`).then(r => r.json()),
+      fetch(`/api/photos?${q}&page=1&sort=popular`).then(r => r.json()),
+    ]).then(([cnts, ph]) => {
+      setCounts(cnts);
+      setPhotos(ph.photos || []);
+      setTotal(ph.total || 0);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  };
+
+  const applyAndClose = (extraFilters = {}) => {
+    const f = { price_band: band };
+    if (color) f.color = color;
+    if (gemFilter) f.gemstone = gemFilter;
+    onApplyFilters({ ...f, ...extraFilters });
+    onClose();
+  };
+
+  /* gem chips for step 3 */
+  const gemCounts = counts.gemstone || {};
+  const gems = GEMSTONE_ORDER.filter(g => (gemCounts[g] || 0) > 0)
+    .sort((a, b) => (gemCounts[b] || 0) - (gemCounts[a] || 0));
+
+  const catCounts = counts.category || {};
+  const cats = Object.entries(catCounts).filter(([,n]) => n > 0).sort((a,b) => b[1]-a[1]);
+
+  const OVERLAY = {position:'fixed',inset:0,zIndex:900,background:'rgba(10,7,5,.92)',
+    backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',
+    display:'flex',flexDirection:'column',overflowY:'auto'};
+
+  const HDR = {display:'flex',alignItems:'center',padding:'14px 18px',
+    borderBottom:'1px solid rgba(184,147,90,.15)',flexShrink:0};
+
+  return (
+    <div style={OVERLAY}>
+      {/* Header */}
+      <div style={HDR}>
+        {step > 1
+          ? <button onClick={() => setStep(s => s-1)} style={{border:'none',background:'none',
+              color:'rgba(184,147,90,.7)',fontSize:13,cursor:'pointer',padding:'4px 8px 4px 0',letterSpacing:.5}}>
+              ← 返回
+            </button>
+          : <div style={{width:40}} />
+        }
+        <div style={{flex:1,textAlign:'center',fontSize:12,letterSpacing:4,
+          color:'rgba(184,147,90,.65)',fontWeight:600}}>
+          {step === 1 ? '選擇預算' : step === 2 ? '選擇顏色' : '為您推薦'}
+        </div>
+        <button onClick={onClose} style={{border:'none',background:'none',
+          color:'rgba(255,255,255,.4)',fontSize:20,cursor:'pointer',padding:'0 0 0 8px',lineHeight:1}}>
+          ×
+        </button>
+      </div>
+
+      {/* Progress dots */}
+      <div style={{display:'flex',justifyContent:'center',gap:6,padding:'14px 0 0'}}>
+        {[1,2,3].map(s => (
+          <div key={s} style={{width: s===step?20:6, height:6, borderRadius:3,
+            background: s<=step ? 'rgba(184,147,90,.8)' : 'rgba(255,255,255,.12)',
+            transition:'all .3s'}} />
+        ))}
+      </div>
+
+      {/* Step 1: Budget */}
+      {step === 1 && (
+        <div style={{padding:'28px 20px',flex:1}}>
+          <div style={{fontSize:22,color:'rgba(220,195,140,.9)',fontWeight:300,
+            letterSpacing:1,marginBottom:8,textAlign:'center'}}>
+            預算大概是？
+          </div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,.3)',textAlign:'center',marginBottom:32}}>
+            新台幣
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,maxWidth:360,margin:'0 auto'}}>
+            {PRICE_BANDS.map(b => (
+              <button key={b} onClick={() => { setBand(b); setStep(2); }}
+                style={{padding:'20px 10px',borderRadius:16,border:'1px solid rgba(184,147,90,.25)',
+                  background:'rgba(184,147,90,.07)',color:'rgba(220,195,140,.85)',
+                  fontSize:18,fontWeight:500,cursor:'pointer',letterSpacing:.5,
+                  transition:'all .15s'}}>
+                {b}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Color */}
+      {step === 2 && (
+        <div style={{padding:'28px 20px',flex:1}}>
+          <div style={{fontSize:22,color:'rgba(220,195,140,.9)',fontWeight:300,
+            letterSpacing:1,marginBottom:6,textAlign:'center'}}>
+            偏好哪種顏色？
+          </div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,.3)',textAlign:'center',marginBottom:32}}>
+            寶石的顏色
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,
+            maxWidth:360,margin:'0 auto 28px'}}>
+            {COLOR_OPTS.map(({label, hex}) => (
+              <button key={label} onClick={() => { setColor(label); goResults(band, label); }}
+                style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,
+                  border:'none',background:'none',cursor:'pointer',padding:4}}>
+                <div style={{width:52,height:52,borderRadius:'50%',
+                  background:hex.startsWith('linear') ? hex : hex,
+                  border:'2px solid rgba(255,255,255,.15)',
+                  boxShadow:'0 4px 14px rgba(0,0,0,.35)'}} />
+                <span style={{fontSize:13,color:'rgba(255,255,255,.6)',letterSpacing:.5}}>{label}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{textAlign:'center'}}>
+            <button onClick={() => { setColor(null); goResults(band, null); }}
+              style={{border:'1px solid rgba(255,255,255,.15)',background:'none',
+                color:'rgba(255,255,255,.4)',fontSize:13,padding:'10px 32px',
+                borderRadius:24,cursor:'pointer',letterSpacing:1}}>
+              不限顏色
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Results */}
+      {step === 3 && (
+        <div style={{flex:1,padding:'20px'}}>
+          {loading ? (
+            <div style={{textAlign:'center',padding:'60px 0',color:'rgba(184,147,90,.5)',
+              fontSize:14,letterSpacing:2}}>搜尋中…</div>
+          ) : (
+            <>
+              {/* Gemstone recommendations */}
+              {gems.length > 0 && (
+                <div style={{marginBottom:24}}>
+                  <div style={{fontSize:11,letterSpacing:3,color:'rgba(184,147,90,.55)',
+                    marginBottom:12,fontWeight:600}}>推薦寶石</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                    {gems.slice(0,8).map(g => (
+                      <button key={g}
+                        onClick={() => setGemFilter(gemFilter === g ? null : g)}
+                        style={{padding:'7px 16px',borderRadius:20,fontSize:13,cursor:'pointer',
+                          border:`1px solid ${gemFilter===g ? 'rgba(184,147,90,.8)' : 'rgba(255,255,255,.15)'}`,
+                          background: gemFilter===g ? 'rgba(184,147,90,.18)' : 'rgba(255,255,255,.04)',
+                          color: gemFilter===g ? 'rgba(220,195,140,.9)' : 'rgba(255,255,255,.55)',
+                          transition:'all .15s'}}>
+                        {g}
+                        <span style={{fontSize:11,opacity:.6,marginLeft:5}}>{gemCounts[g]}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Category chips */}
+              {cats.length > 0 && (
+                <div style={{marginBottom:24}}>
+                  <div style={{fontSize:11,letterSpacing:3,color:'rgba(184,147,90,.55)',
+                    marginBottom:12,fontWeight:600}}>可選品項</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                    {cats.map(([cat, n]) => (
+                      <div key={cat} style={{padding:'6px 14px',borderRadius:20,fontSize:13,
+                        border:'1px solid rgba(255,255,255,.12)',
+                        background:'rgba(255,255,255,.04)',color:'rgba(255,255,255,.5)'}}>
+                        {cat} <span style={{opacity:.5,fontSize:11}}>{n}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Photo sample grid */}
+              {photos.length > 0 && (
+                <div style={{marginBottom:24}}>
+                  <div style={{fontSize:11,letterSpacing:3,color:'rgba(184,147,90,.55)',
+                    marginBottom:12,fontWeight:600}}>符合款式</div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:4,
+                    borderRadius:16,overflow:'hidden'}}>
+                    {photos.slice(0,9).map(p => (
+                      <img key={p.id} src={p.thumb_url || p.micro_url} alt=""
+                        style={{width:'100%',aspectRatio:'1',objectFit:'cover',
+                          background:'rgba(255,255,255,.06)',display:'block'}} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CTA */}
+              <button onClick={() => applyAndClose()}
+                style={{width:'100%',padding:'15px',borderRadius:14,border:'none',
+                  background:'linear-gradient(135deg,rgba(184,147,90,.9),rgba(210,175,110,.9))',
+                  color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',letterSpacing:1,
+                  boxShadow:'0 8px 24px rgba(184,147,90,.3)'}}>
+                看全部 {total} 件
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Browse tab ─────────────────────────────────────── */
 function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [photoMode, setPhotoMode] = useState('去背'); // '去背' | '情境'
   const [catFilter, setCatFilter]  = useState(null);
   const [filters,   setFilters]    = useState({});
   const [counts,    setCounts]     = useState({});
-  const [swipeMode, setSwipeMode]  = useState(false);
-  const [showQR,    setShowQR]     = useState(false);
+  const [swipeMode,   setSwipeMode]   = useState(false);
+  const [showQR,      setShowQR]      = useState(false);
+  const [budgetFlow,  setBudgetFlow]  = useState(false);
   const [batchMode,  setBatchMode]  = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchPicker, setBatchPicker] = useState(false);
@@ -1820,6 +2048,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
               ? <button onClick={exitBatch} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>取消</button>
               : <>
                   <button onClick={() => setBatchMode(true)} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>批量編輯</button>
+                  <button onClick={() => setBudgetFlow(true)} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap'}}>以預算找款</button>
                   <button className="swipe-launch-btn" onClick={() => window.innerWidth < 768 ? setSwipeMode(true) : setShowQR(true)} style={{padding:'6px 14px',border:'1px solid var(--gold)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
                     <span style={{fontSize:13}}>✦</span> like or not
                   </button>
@@ -1893,6 +2122,14 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
             {batchSaving && <div style={{textAlign:'center',marginTop:16,color:'var(--text2)',fontSize:13}}>儲存中…</div>}
           </div>
         </div>
+      )}
+
+      {/* Budget flow */}
+      {budgetFlow && (
+        <BudgetFlow
+          onClose={() => setBudgetFlow(false)}
+          onApplyFilters={f => { setFilters(f); setCatFilter(f.category || null); }}
+        />
       )}
 
       {/* QR code modal – desktop only */}
