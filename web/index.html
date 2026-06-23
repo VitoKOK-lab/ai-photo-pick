@@ -3075,7 +3075,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 
   // ── Step 4: 配石 ────────────────────────────────────
   const renderStep4 = () => {
-    const SIDE_TYPES = ['無配石','天然碎鑽','莫桑鑽','彩色配石','合成培育鑽'];
+    const SIDE_TYPES = ['無配石','天然碎鑽','莫桑鑽','彩色配石','鋯石'];
     const QTY_BANDS  = ['1–5顆','6–15顆','16–30顆','31–50顆','50顆以上'];
     return (
       <div style={{padding:'12px 16px',paddingBottom:120}}>
@@ -3828,7 +3828,7 @@ function QuoteTab() {
                   '天然碎鑽 1–5顆','天然碎鑽 6–15顆','天然碎鑽 16–30顆','天然碎鑽 31–50顆','天然碎鑽 50顆以上',
                   '莫桑鑽 1–5顆','莫桑鑽 6–15顆','莫桑鑽 16–30顆','莫桑鑽 31–50顆','莫桑鑽 50顆以上',
                   '彩色配石 1–5顆','彩色配石 6–15顆','彩色配石 16–30顆','彩色配石 31–50顆','彩色配石 50顆以上',
-                  '合成培育鑽 1–5顆','合成培育鑽 6–15顆','合成培育鑽 16–30顆','合成培育鑽 31–50顆','合成培育鑽 50顆以上',
+                  '鋯石 1–5顆','鋯石 6–15顆','鋯石 16–30顆','鋯石 31–50顆','鋯石 50顆以上',
                 ].map(s => React.createElement('option', { key: s, value: s }, s))
               )
             ),
@@ -4323,6 +4323,8 @@ function PricingParamsPanel() {
   const [weights,        setWeights]        = useState({});
   const [invest,         setInvest]         = useState({});
   const [commercialCarat,setCommercialCarat]= useState({});
+  const [newInvestName,  setNewInvestName]  = useState('');
+  const [newCommName,    setNewCommName]    = useState('');
   const [showWtEdit,     setShowWtEdit]     = useState(false);
   const [loaded,         setLoaded]         = useState(false);
   const [saving,         setSaving]         = useState(false);
@@ -4528,62 +4530,92 @@ function PricingParamsPanel() {
         </div>
 
         {/* 投資型寶石：矩陣 stones × B1-B5 */}
-        {investKeys.length > 0 && <>
+        <>
           <div style={hdSt}>投資型寶石單價 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>每顆總價 NT$（下限／上限）</span></div>
-          <div style={{overflowX:'auto',marginBottom:28}}>
-            <table style={{borderCollapse:'collapse',fontSize:12}}>
-              <thead><tr>
-                <th style={{...thSt,textAlign:'left',minWidth:60,position:'sticky',left:0,background:'var(--surface)'}}>寶石</th>
-                {BANDS.map(b => (
-                  <th key={b} style={{...thSt,textAlign:'center',minWidth:120,paddingBottom:2}}>{BAND_LBL[b]}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
-                ))}
-              </tr></thead>
-              <tbody>
-                {investKeys.map(skey => (
-                  <tr key={skey} style={{borderTop:'1px solid var(--border)'}}>
-                    <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:12,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)'}}>{invest[skey].name}</td>
-                    {BANDS.map(band => matrixCell(
-                      (invest[skey].floor||{})[band],
-                      (invest[skey].ceil||{})[band],
-                      e => setInvest(prev => ({...prev,[skey]:{...prev[skey],floor:{...prev[skey].floor,[band]:e.target.value}}})),
-                      e => setInvest(prev => ({...prev,[skey]:{...prev[skey],ceil:{...prev[skey].ceil,[band]:e.target.value}}}))
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {investKeys.length > 0 && (
+            <div style={{overflowX:'auto',marginBottom:12}}>
+              <table style={{borderCollapse:'collapse',fontSize:12}}>
+                <thead><tr>
+                  <th style={{...thSt,textAlign:'left',minWidth:60,position:'sticky',left:0,background:'var(--surface)'}}>寶石</th>
+                  {BANDS.map(b => (
+                    <th key={b} style={{...thSt,textAlign:'center',minWidth:120,paddingBottom:2}}>{BAND_LBL[b]}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {investKeys.map(skey => (
+                    <tr key={skey} style={{borderTop:'1px solid var(--border)'}}>
+                      <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:12,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)'}}>{invest[skey].name}</td>
+                      {BANDS.map(band => matrixCell(
+                        (invest[skey].floor||{})[band],
+                        (invest[skey].ceil||{})[band],
+                        e => setInvest(prev => ({...prev,[skey]:{...prev[skey],floor:{...prev[skey].floor,[band]:e.target.value}}})),
+                        e => setInvest(prev => ({...prev,[skey]:{...prev[skey],ceil:{...prev[skey].ceil,[band]:e.target.value}}}))
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:28}}>
+            <input placeholder="新增寶石名稱…" value={newInvestName} onChange={e=>setNewInvestName(e.target.value)}
+              style={{...iS,flex:1,maxWidth:200,fontWeight:400,textAlign:'left'}} />
+            <button onClick={() => {
+              const n = newInvestName.trim(); if (!n) return;
+              const k = 'CUSTOM_' + Date.now();
+              setInvest(prev => ({...prev,[k]:{name:n,floor:{},ceil:{}}}));
+              setNewInvestName('');
+            }} style={{padding:'7px 18px',borderRadius:8,border:'1px solid var(--gold)',
+              background:'none',color:'var(--gold)',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>
+              + 新增
+            </button>
           </div>
-        </>}
+        </>
 
         {/* 輕奢級寶石：矩陣 stones × 1-5ct */}
-        {commCaratKeys.length > 0 && <>
+        <>
           <div style={hdSt}>輕奢級寶石單價 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>NT$/克拉，依大小分級（下／上）</span></div>
-          <div style={{overflowX:'auto',marginBottom:28}}>
-            <table style={{borderCollapse:'collapse',fontSize:12}}>
-              <thead><tr>
-                <th style={{...thSt,textAlign:'left',minWidth:64,position:'sticky',left:0,background:'var(--surface)'}}>寶石</th>
-                {CT_LABELS.map(ct => (
-                  <th key={ct} style={{...thSt,textAlign:'center',minWidth:116,paddingBottom:2}}>{ct}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
-                ))}
-              </tr></thead>
-              <tbody>
-                {commCaratKeys.map(skey => (
-                  <tr key={skey} style={{borderTop:'1px solid var(--border)'}}>
-                    <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:12,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)'}}>{commercialCarat[skey]?.name}</td>
-                    {CT_LABELS.map(ct => {
-                      const vals = (commercialCarat[skey]||{})[ct] || [0,0];
-                      return matrixCell(
-                        vals[0], vals[1],
-                        e => setCommercialCarat(prev => ({...prev,[skey]:{...prev[skey],[ct]:[e.target.value,(prev[skey]?.[ct]||[0,0])[1]]}})),
-                        e => setCommercialCarat(prev => ({...prev,[skey]:{...prev[skey],[ct]:[(prev[skey]?.[ct]||[0,0])[0],e.target.value]}}))
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {commCaratKeys.length > 0 && (
+            <div style={{overflowX:'auto',marginBottom:12}}>
+              <table style={{borderCollapse:'collapse',fontSize:12}}>
+                <thead><tr>
+                  <th style={{...thSt,textAlign:'left',minWidth:64,position:'sticky',left:0,background:'var(--surface)'}}>寶石</th>
+                  {CT_LABELS.map(ct => (
+                    <th key={ct} style={{...thSt,textAlign:'center',minWidth:116,paddingBottom:2}}>{ct}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {commCaratKeys.map(skey => (
+                    <tr key={skey} style={{borderTop:'1px solid var(--border)'}}>
+                      <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:12,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)'}}>{commercialCarat[skey]?.name}</td>
+                      {CT_LABELS.map(ct => {
+                        const vals = (commercialCarat[skey]||{})[ct] || [0,0];
+                        return matrixCell(
+                          vals[0], vals[1],
+                          e => setCommercialCarat(prev => ({...prev,[skey]:{...prev[skey],[ct]:[e.target.value,(prev[skey]?.[ct]||[0,0])[1]]}})),
+                          e => setCommercialCarat(prev => ({...prev,[skey]:{...prev[skey],[ct]:[(prev[skey]?.[ct]||[0,0])[0],e.target.value]}}))
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:28}}>
+            <input placeholder="新增寶石名稱…" value={newCommName} onChange={e=>setNewCommName(e.target.value)}
+              style={{...iS,flex:1,maxWidth:200,fontWeight:400,textAlign:'left'}} />
+            <button onClick={() => {
+              const n = newCommName.trim(); if (!n) return;
+              const k = 'CUSTOM_' + Date.now();
+              setCommercialCarat(prev => ({...prev,[k]:{name:n}}));
+              setNewCommName('');
+            }} style={{padding:'7px 18px',borderRadius:8,border:'1px solid var(--gold)',
+              background:'none',color:'var(--gold)',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>
+              + 新增
+            </button>
           </div>
-        </>}
+        </>
 
         {/* 師傅工錢：日薪 × 天數 */}
         <div style={hdSt}>師傅工錢 <span style={{fontWeight:400,fontSize:12,color:'var(--text3)'}}>深圳珠寶廠行情 · 日薪 × 天數</span></div>
@@ -4632,7 +4664,7 @@ function PricingParamsPanel() {
           <table style={{borderCollapse:'collapse',fontSize:11}}>
             <thead><tr>
               <th style={{...thSt,textAlign:'left',minWidth:70,position:'sticky',left:0,background:'var(--surface)'}}>數量</th>
-              {['天然碎鑽','莫桑鑽','彩色配石','合成培育鑽'].map(t=>(
+              {['天然碎鑽','莫桑鑽','彩色配石','鋯石'].map(t=>(
                 <th key={t} style={{...thSt,textAlign:'center',minWidth:130}}>{t}<br/><span style={{fontWeight:400,fontSize:10,color:'var(--text3)'}}>下／上</span></th>
               ))}
             </tr></thead>
@@ -4640,7 +4672,7 @@ function PricingParamsPanel() {
               {['1–5顆','6–15顆','16–30顆','31–50顆','50顆以上'].map(band=>(
                 <tr key={band} style={{borderTop:'1px solid var(--border)'}}>
                   <td style={{padding:'6px 8px',fontWeight:600,color:'var(--text)',fontSize:11,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--surface)'}}>{band}</td>
-                  {['天然碎鑽','莫桑鑽','彩色配石','合成培育鑽'].map(t=>{
+                  {['天然碎鑽','莫桑鑽','彩色配石','鋯石'].map(t=>{
                     const vals = (sidestonesV2[t]||{})[band] || [0,0];
                     return matrixCell(
                       vals[0], vals[1],
