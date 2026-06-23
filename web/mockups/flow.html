@@ -11,7 +11,8 @@
   h1{font-size:34px;font-weight:900;text-align:center}
   .sub{text-align:center;color:var(--ink2);font-size:18px;font-weight:500;margin:8px 0 24px}
   .col{display:flex;flex-direction:column;align-items:center;gap:0}
-  .box{border:3px solid var(--line);background:#fff;border-radius:14px;padding:13px 20px;font-size:21px;font-weight:700;text-align:center;min-width:230px}
+  .box{position:relative;border:3px solid var(--line);background:#fff;border-radius:14px;padding:13px 20px;font-size:21px;font-weight:700;text-align:center;min-width:230px}
+  .stepno{position:absolute;top:-13px;left:-13px;width:28px;height:28px;border-radius:50%;background:#A67A50;color:#fff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.25);z-index:2}
   .box .s{display:block;font-size:14px;font-weight:500;color:var(--ink2);margin-top:3px}
   .tw{border-color:var(--gold);background:var(--twbg)} .sz{border-color:#8fb8e6;background:var(--szbg)}
   .sys{border-color:#bbb;background:var(--sysbg)} .dec{border-color:#e0c558;background:var(--decbg)}
@@ -109,4 +110,12 @@
   </div>
 
   <div class="note">🔔 防客訴：下單後 <b>7／14／21 天</b> 系統提醒客服主動通知客人進度　·　全程記進購物旅程（誰/何時/做了什麼）</div>
-</div></body></html>
+  <div class="note" style="margin-top:10px;">＊ 步驟編號依流程順序；<b>規格與訂製是「二選一」</b>（同一張單只走其中一邊）。</div>
+</div>
+<script>
+  // 依流程順序自動為每個步驟方塊加編號
+  document.querySelectorAll('.box').forEach(function(b,i){
+    var s=document.createElement('span'); s.className='stepno'; s.textContent=i+1; b.prepend(s);
+  });
+</script>
+</body></html>
