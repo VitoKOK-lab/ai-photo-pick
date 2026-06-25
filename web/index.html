@@ -4307,13 +4307,16 @@ const FIELD_LABELS = {
 };
 
 function StagingQueuePanel() {
-  const [items,     setItems]     = useState([]);
-  const [scanning,  setScanning]  = useState(false);
-  const [scanMsg,   setScanMsg]   = useState('');
-  const [importing, setImporting] = useState(new Set());
+  const [items,      setItems]      = useState([]);
+  const [scanning,   setScanning]   = useState(false);
+  const [scanMsg,    setScanMsg]    = useState('');
+  const [importing,  setImporting]  = useState(new Set());
+  const [selected,   setSelected]   = useState(new Set()); // selected item ids
+  const [batchField, setBatchField] = useState('');
+  const [batchValue, setBatchValue] = useState('');
 
   const load = () =>
-    fetch('/api/staging/queue', {headers: authHeaders()}).then(r=>r.json()).then(setItems).catch(()=>{});
+    fetch('/api/staging/queue', {headers: authHeaders()}).then(r=>r.json()).then(d=>{setItems(d); setSelected(new Set());}).catch(()=>{});
 
   useEffect(() => { load(); }, []);
 
@@ -4323,7 +4326,6 @@ function StagingQueuePanel() {
       .then(r=>r.json())
       .then(d => {
         setScanMsg(d.message || '');
-        // poll until done
         const poll = () => {
           fetch('/api/staging/queue/scan-status', {headers: authHeaders()}).then(r=>r.json()).then(s => {
             setScanMsg(`${s.step} (${s.done}/${s.total})`);
@@ -4344,12 +4346,26 @@ function StagingQueuePanel() {
     setItems(prev => prev.map(it => it.id === id ? {...it, [field]: value} : it));
   };
 
+  const applyBatch = () => {
+    if (!batchField || !selected.size) return;
+    const val = batchValue || null;
+    selected.forEach(id => patch(id, batchField, val));
+    setScanMsg(`已套用「${FIELD_LABELS[batchField] || batchField}=${val || '—'}」到 ${selected.size} 張`);
+    setTimeout(() => setScanMsg(''), 3000);
+  };
+
   const importOne = (id) => {
     setImporting(prev => new Set([...prev, id]));
     fetch(`/api/staging/queue/${id}/import`, {method:'POST', headers: authHeaders()})
       .then(r=>r.json())
       .then(() => { load(); setImporting(prev => { const s=new Set(prev); s.delete(id); return s; }); })
       .catch(()=>setImporting(prev => { const s=new Set(prev); s.delete(id); return s; }));
+  };
+
+  const importSelected = () => {
+    if (!selected.size) return;
+    const ids = [...selected].filter(id => items.find(it=>it.id===id && it.filename));
+    ids.forEach(id => importOne(id));
   };
 
   const importAll = () => {
@@ -4366,6 +4382,15 @@ function StagingQueuePanel() {
       .then(()=>load()).catch(()=>{});
   };
 
+  const toggleSelect = (id) => setSelected(prev => {
+    const s = new Set(prev);
+    s.has(id) ? s.delete(id) : s.add(id);
+    return s;
+  });
+
+  const allSelected = items.length > 0 && items.every(it => selected.has(it.id));
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(items.map(it=>it.id)));
+
   const sel = (id, field, val) => (
     <select value={val || ''} onChange={e=>patch(id, field, e.target.value)}
       style={{fontSize:11,padding:'2px 4px',border:'1px solid var(--border)',borderRadius:6,
@@ -4378,7 +4403,7 @@ function StagingQueuePanel() {
   return (
     <div style={{flex:1,overflowY:'auto',padding:'16px 14px 32px'}}>
       {/* Top bar */}
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap'}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8,flexWrap:'wrap'}}>
         <div style={{fontSize:12,color:'var(--text3)',flex:1}}>
           照片放入 <code style={{background:'var(--s3)',padding:'1px 6px',borderRadius:4}}>data/00_staging/</code>，按掃描後在此確認標籤再匯入
         </div>
@@ -4397,6 +4422,57 @@ function StagingQueuePanel() {
         </button>
       </div>
 
+      {/* Batch action bar */}
+      {selected.size > 0 && (
+        <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',marginBottom:8,
+          background:'rgba(184,147,90,.12)',border:'1px solid rgba(184,147,90,.3)',
+          borderRadius:8,flexWrap:'wrap'}}>
+          <span style={{fontSize:12,fontWeight:700,color:'var(--gold)',whiteSpace:'nowrap'}}>
+            已選 {selected.size} 張
+          </span>
+          <select value={batchField} onChange={e=>{setBatchField(e.target.value);setBatchValue('');}}
+            style={{fontSize:12,padding:'4px 8px',border:'1px solid var(--border)',borderRadius:6,
+              background:'var(--surface)',color:'var(--text)'}}>
+            <option value="">選欄位…</option>
+            {STAGING_FIELDS.map(f=><option key={f} value={f}>{FIELD_LABELS[f]}</option>)}
+            <option value="is_custom_order">客製</option>
+          </select>
+          {batchField === 'is_custom_order' ? (
+            <select value={batchValue} onChange={e=>setBatchValue(e.target.value)}
+              style={{fontSize:12,padding:'4px 8px',border:'1px solid var(--border)',borderRadius:6,
+                background:'var(--surface)',color:'var(--text)'}}>
+              <option value="">選值…</option>
+              <option value="1">是</option>
+              <option value="0">否</option>
+            </select>
+          ) : batchField ? (
+            <select value={batchValue} onChange={e=>setBatchValue(e.target.value)}
+              style={{fontSize:12,padding:'4px 8px',border:'1px solid var(--border)',borderRadius:6,
+                background:'var(--surface)',color:'var(--text)'}}>
+              <option value="">— 清空 —</option>
+              {(STAGING_OPTS[batchField]||[]).map(o=><option key={o} value={o}>{o}</option>)}
+            </select>
+          ) : null}
+          <button onClick={applyBatch} disabled={!batchField}
+            style={{padding:'4px 14px',borderRadius:6,border:'none',
+              background: batchField ? 'var(--gold)' : 'var(--border)',
+              color:'#fff',fontSize:12,fontWeight:700,cursor: batchField ? 'pointer':'default'}}>
+            套用到選取
+          </button>
+          <button onClick={importSelected}
+            style={{padding:'4px 14px',borderRadius:6,border:'none',
+              background:'#2e7d32',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+            匯入選取
+          </button>
+          <button onClick={()=>setSelected(new Set())}
+            style={{padding:'4px 10px',borderRadius:6,border:'1px solid var(--border)',
+              background:'none',color:'var(--text2)',fontSize:12,cursor:'pointer'}}>
+            取消選取
+          </button>
+          {scanMsg && <span style={{fontSize:11,color:'var(--gold)'}}>{scanMsg}</span>}
+        </div>
+      )}
+
       {items.length === 0 && !scanning && (
         <div style={{textAlign:'center',padding:'60px 20px',color:'var(--text3)',fontSize:14,lineHeight:2}}>
           佇列是空的<br/>
@@ -4410,6 +4486,10 @@ function StagingQueuePanel() {
           <table style={{borderCollapse:'collapse',fontSize:12,minWidth:900,width:'100%'}}>
             <thead>
               <tr style={{background:'var(--s3)'}}>
+                <th style={{padding:'8px 6px',textAlign:'center'}}>
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                    style={{width:15,height:15,cursor:'pointer'}} />
+                </th>
                 <th style={{padding:'8px 6px',textAlign:'left',fontWeight:700,whiteSpace:'nowrap'}}>縮圖</th>
                 <th style={{padding:'8px 6px',textAlign:'left',fontWeight:700}}>檔名</th>
                 {STAGING_FIELDS.map(f => (
@@ -4423,8 +4503,14 @@ function StagingQueuePanel() {
             </thead>
             <tbody>
               {items.map(it => (
-                <tr key={it.id} style={{borderTop:'1px solid var(--border)'}}>
-                  <td style={{padding:'6px'}}>
+                <tr key={it.id} onClick={()=>toggleSelect(it.id)}
+                  style={{borderTop:'1px solid var(--border)',cursor:'pointer',
+                    background: selected.has(it.id) ? 'rgba(184,147,90,.08)' : 'transparent'}}>
+                  <td style={{padding:'6px',textAlign:'center'}} onClick={e=>{e.stopPropagation();toggleSelect(it.id);}}>
+                    <input type="checkbox" checked={selected.has(it.id)} onChange={()=>toggleSelect(it.id)}
+                      style={{width:15,height:15,cursor:'pointer'}} />
+                  </td>
+                  <td style={{padding:'6px'}} onClick={e=>e.stopPropagation()}>
                     <img src={`/api/staging/queue/thumb/${it.id}`}
                       style={{width:56,height:56,objectFit:'cover',borderRadius:6,background:'var(--s3)',display:'block'}} />
                   </td>
@@ -4432,14 +4518,16 @@ function StagingQueuePanel() {
                     {it.original_filename}
                   </td>
                   {STAGING_FIELDS.map(f => (
-                    <td key={f} style={{padding:'4px 2px',textAlign:'center'}}>{sel(it.id, f, it[f])}</td>
+                    <td key={f} style={{padding:'4px 2px',textAlign:'center'}} onClick={e=>e.stopPropagation()}>
+                      {sel(it.id, f, it[f])}
+                    </td>
                   ))}
-                  <td style={{padding:'4px 8px',textAlign:'center'}}>
+                  <td style={{padding:'4px 8px',textAlign:'center'}} onClick={e=>e.stopPropagation()}>
                     <input type="checkbox" checked={!!it.is_custom_order}
                       onChange={e=>patch(it.id,'is_custom_order', e.target.checked ? 1 : 0)}
                       style={{width:16,height:16,cursor:'pointer'}} />
                   </td>
-                  <td style={{padding:'4px 8px',textAlign:'center',whiteSpace:'nowrap'}}>
+                  <td style={{padding:'4px 8px',textAlign:'center',whiteSpace:'nowrap'}} onClick={e=>e.stopPropagation()}>
                     <button onClick={()=>importOne(it.id)} disabled={importing.has(it.id)||!it.filename}
                       style={{padding:'4px 10px',borderRadius:6,border:'none',
                         background: it.filename ? 'var(--gold)' : 'var(--border)',

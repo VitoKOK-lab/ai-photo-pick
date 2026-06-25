@@ -153,7 +153,7 @@ def queue_list(_user=Depends(require_admin)):
 
 
 @router.get("/queue/thumb/{item_id}")
-def queue_thumb(item_id: int, _user=Depends(require_admin)):
+def queue_thumb(item_id: int):
     conn = _db()
     row = conn.execute("SELECT thumb_path, source_path FROM staging_queue WHERE id=?", (item_id,)).fetchone()
     conn.close()
