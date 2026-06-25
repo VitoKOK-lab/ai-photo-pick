@@ -5455,10 +5455,12 @@ function QuoteHistoryPage({ role }) {
 
 /* ── Quote History Detail ────────────────────────────── */
 function QuoteHistoryDetail({ quote: q, onClose }) {
-  const [finalInput, setFinalInput] = useState('');
-  const [saving,     setSaving]     = useState(false);
-  const [saved,      setSaved]      = useState(false);
-  const [cardMode,   setCardMode]   = useState(null); // null | 'ai' | 'final'
+  const [finalInput,   setFinalInput]   = useState('');
+  const [saving,       setSaving]       = useState(false);
+  const [saved,        setSaved]        = useState(false);
+  const [cardMode,     setCardMode]     = useState(null); // null | 'ai' | 'final'
+  const [confirmLock,  setConfirmLock]  = useState(false);
+  const [locked,       setLocked]       = useState(!!q.locked_at);
 
   const adj = (() => { try { return JSON.parse(q.adjusted_data||'{}'); } catch { return {}; } })();
   const CHAIN_TO_WEIGHT_MAP = {'少':'輕 (1.5–3g)','正常':'中 (3–5g)','多':'偏重 (5–8g)'};
@@ -5492,12 +5494,12 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
   const finalNum  = parseInt(String(finalInput).replace(/[^0-9]/g,'')) || 0;
 
   async function doSave() {
-    if (!finalNum) return;
+    if (!finalNum || locked) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/quotes/${q.id}`, {
         method: 'PATCH',
-        headers: {'Content-Type':'application/json'},
+        headers: {'Content-Type':'application/json', ...authHeaders()},
         body: JSON.stringify({ final_price: finalNum }),
       });
       if (res.ok) { setSaved(true); }
@@ -5506,6 +5508,25 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
         let detail = raw;
         try { const j = JSON.parse(raw); detail = JSON.stringify(j.detail || j); } catch {}
         alert('儲存失敗 ' + res.status + (detail ? '\n' + detail : ''));
+      }
+    } catch(e) { alert('網路錯誤：' + e.message); }
+    setSaving(false);
+  }
+
+  async function doLockAndShow() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/quotes/${q.id}`, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json', ...authHeaders()},
+        body: JSON.stringify({ final_price: finalNum, lock: true }),
+      });
+      if (res.ok) {
+        setLocked(true);
+        setConfirmLock(false);
+        setCardMode('final');
+      } else {
+        alert('鎖定失敗，請重試');
       }
     } catch(e) { alert('網路錯誤：' + e.message); }
     setSaving(false);
@@ -5550,34 +5571,92 @@ function QuoteHistoryDetail({ quote: q, onClose }) {
             </div>
           </div>
 
-          {/* Final price input — always editable */}
+          {/* Final price input */}
           <div style={{background:'var(--s3)',borderRadius:12,padding:'14px 16px',marginBottom:12}}>
-            <div style={{fontSize:11,fontWeight:700,color:'var(--text3)',marginBottom:8,letterSpacing:0.5}}>最終報價（可修改）</div>
-            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:10}}>
-              <div style={{display:'flex',alignItems:'center',flex:1,background:'var(--surface)',border:'1.5px solid var(--border)',borderRadius:8,overflow:'hidden'}}>
-                <span style={{padding:'0 6px 0 10px',color:'var(--text3)',fontSize:13,fontWeight:600,flexShrink:0}}>NT$</span>
-                <input type="text" inputMode="numeric" placeholder="輸入最終成交金額" value={finalInput}
-                  onChange={e => setFinalInput(e.target.value.replace(/[^0-9]/g,''))}
-                  style={{flex:1,border:'none',padding:'11px 10px 11px 2px',fontSize:16,fontWeight:700,color:'var(--text)',outline:'none',background:'none',fontFamily:'inherit',minWidth:0}}
-                />
+            <div style={{display:'flex',alignItems:'center',marginBottom:8}}>
+              <div style={{fontSize:11,fontWeight:700,color: locked ? '#c0392b' : 'var(--text3)',letterSpacing:0.5,flex:1}}>
+                {locked ? '🔒 最終報價（已鎖定）' : '最終報價（可修改）'}
               </div>
-              <button onClick={doSave} disabled={saving || !finalNum}
-                style={{background:finalNum?'var(--accent)':'var(--s3)',color:finalNum?'#fff':'var(--text3)',border:'none',borderRadius:8,padding:'11px 16px',fontSize:13,fontWeight:700,cursor:finalNum?'pointer':'default',flexShrink:0}}>
-                {saving ? '…' : '儲存'}
-              </button>
+              {locked && <div style={{fontSize:10,color:'rgba(192,57,43,.7)'}}>報價已送出，無法再更改</div>}
             </div>
-            {saved && <div style={{fontSize:11,color:'#4caf77',marginBottom:8}}>✓ 已儲存</div>}
+            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:10}}>
+              <div style={{display:'flex',alignItems:'center',flex:1,
+                background: locked ? 'var(--s2)' : 'var(--surface)',
+                border:`1.5px solid ${locked ? '#f5c6c6' : 'var(--border)'}`,
+                borderRadius:8,overflow:'hidden'}}>
+                <span style={{padding:'0 6px 0 10px',color:'var(--text3)',fontSize:13,fontWeight:600,flexShrink:0}}>NT$</span>
+                {locked ? (
+                  <span style={{flex:1,padding:'11px 10px 11px 2px',fontSize:16,fontWeight:700,color:'var(--text)'}}>
+                    {(finalNum || q.final_price || 0).toLocaleString()}
+                  </span>
+                ) : (
+                  <input type="text" inputMode="numeric" placeholder="輸入最終成交金額" value={finalInput}
+                    onChange={e => setFinalInput(e.target.value.replace(/[^0-9]/g,''))}
+                    style={{flex:1,border:'none',padding:'11px 10px 11px 2px',fontSize:16,fontWeight:700,
+                      color:'var(--text)',outline:'none',background:'none',fontFamily:'inherit',minWidth:0}}
+                  />
+                )}
+              </div>
+              {!locked && (
+                <button onClick={doSave} disabled={saving || !finalNum}
+                  style={{background:finalNum?'var(--accent)':'var(--s3)',color:finalNum?'#fff':'var(--text3)',
+                    border:'none',borderRadius:8,padding:'11px 16px',fontSize:13,fontWeight:700,
+                    cursor:finalNum?'pointer':'default',flexShrink:0}}>
+                  {saving ? '…' : '儲存'}
+                </button>
+              )}
+            </div>
+            {saved && !locked && <div style={{fontSize:11,color:'#4caf77',marginBottom:8}}>✓ 已儲存</div>}
             <div style={{display:'flex',gap:8}}>
               <button onClick={() => setCardMode('ai')}
-                style={{flex:1,background:'var(--s2)',color:'var(--text)',border:'1.5px solid var(--border)',borderRadius:10,padding:'11px 8px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+                style={{flex:1,background:'var(--s2)',color:'var(--text)',border:'1.5px solid var(--border)',
+                  borderRadius:10,padding:'11px 8px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
                 📊 AI估價截圖
               </button>
-              <button onClick={() => setCardMode('final')} disabled={!finalNum}
-                style={{flex:1,background:finalNum?'var(--gold)':'var(--s3)',color:finalNum?'#fff':'var(--text3)',border:'none',borderRadius:10,padding:'11px 8px',fontSize:13,fontWeight:700,cursor:finalNum?'pointer':'default'}}>
+              <button
+                onClick={() => locked ? setCardMode('final') : setConfirmLock(true)}
+                disabled={!finalNum && !locked}
+                style={{flex:1,background:(finalNum||locked)?'var(--gold)':'var(--s3)',
+                  color:(finalNum||locked)?'#fff':'var(--text3)',border:'none',borderRadius:10,
+                  padding:'11px 8px',fontSize:13,fontWeight:700,
+                  cursor:(finalNum||locked)?'pointer':'default'}}>
                 📤 最終報價截圖
               </button>
             </div>
           </div>
+
+          {/* Lock confirmation modal */}
+          {confirmLock && (
+            <div onClick={()=>setConfirmLock(false)} style={{
+              position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,.5)',
+              display:'flex',alignItems:'center',justifyContent:'center',
+            }}>
+              <div onClick={e=>e.stopPropagation()} style={{
+                background:'var(--surface)',borderRadius:18,padding:'28px 24px 22px',
+                boxShadow:'0 20px 60px rgba(0,0,0,.25)',maxWidth:320,width:'90%',
+              }}>
+                <div style={{fontSize:20,textAlign:'center',marginBottom:10}}>🔒</div>
+                <div style={{fontSize:15,fontWeight:700,marginBottom:10,textAlign:'center'}}>確認送出報價？</div>
+                <div style={{fontSize:13,color:'var(--text2)',lineHeight:1.8,marginBottom:22,textAlign:'center'}}>
+                  送出後給客人看就<strong>不能再改</strong>了<br/>
+                  最終報價：<strong>NT$ {finalNum.toLocaleString()}</strong><br/>
+                  請確認是否正確。
+                </div>
+                <div style={{display:'flex',gap:10}}>
+                  <button onClick={()=>setConfirmLock(false)}
+                    style={{flex:1,padding:'11px',borderRadius:10,border:'1px solid var(--border)',
+                      background:'none',fontSize:14,cursor:'pointer',color:'var(--text2)'}}>
+                    返回修改
+                  </button>
+                  <button onClick={doLockAndShow} disabled={saving}
+                    style={{flex:1,padding:'11px',borderRadius:10,border:'none',
+                      background:'var(--gold)',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer'}}>
+                    {saving ? '…' : '確認報價正確'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Detail rows */}
           {q.notes && (

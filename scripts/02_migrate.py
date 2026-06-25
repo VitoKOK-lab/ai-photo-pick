@@ -36,6 +36,14 @@ def migrate():
     # 2. 建立所有缺少的資料表（CREATE TABLE IF NOT EXISTS → 安全）
     conn.executescript(SCHEMA)
 
+    # 3. quotes 表新增欄位
+    for col, typ in [("locked_at", "TEXT"), ("updated_at", "TIMESTAMP")]:
+        try:
+            cur.execute(f"ALTER TABLE quotes ADD COLUMN {col} {typ}")
+            print(f"  + quotes.{col}")
+        except Exception:
+            pass  # already exists
+
     conn.commit()
     conn.close()
     print("[OK] Migration complete")

@@ -117,6 +117,7 @@ class QuoteUpdate(BaseModel):
     quote_date: Optional[str] = None
     notes: Optional[str] = None
     customer_name: Optional[str] = None
+    lock: Optional[bool] = None  # set True to lock the quote
 
 
 # ─── CRUD ──────────────────────────────────────────────────
@@ -194,6 +195,10 @@ def update_quote(quote_id: int, body: QuoteUpdate, _user=Depends(require_editor)
         conn.close()
         raise HTTPException(status_code=404, detail="Quote not found")
     r = dict(row)
+    # reject edits if already locked
+    if r.get("locked_at") and body.lock is not True:
+        conn.close()
+        raise HTTPException(403, "此報價已鎖定，無法修改")
     fields: dict = {}
     if body.final_price is not None:
         if body.final_price < 0:
@@ -203,6 +208,9 @@ def update_quote(quote_id: int, body: QuoteUpdate, _user=Depends(require_editor)
         val = getattr(body, attr)
         if val is not None:
             fields[attr] = val
+    if body.lock is True and not r.get("locked_at"):
+        from datetime import datetime
+        fields["locked_at"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
     if not fields:
         conn.close()
         return dict(r)
