@@ -44,6 +44,14 @@ def migrate():
         except Exception:
             pass  # already exists
 
+    # 4. staging_queue 表新增欄位
+    for col, typ in [("folder_name", "TEXT"), ("is_custom_order", "INTEGER DEFAULT 0")]:
+        try:
+            cur.execute(f"ALTER TABLE staging_queue ADD COLUMN {col} {typ}")
+            print(f"  + staging_queue.{col}")
+        except Exception:
+            pass  # already exists
+
     conn.commit()
     conn.close()
     print("[OK] Migration complete")

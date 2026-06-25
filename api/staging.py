@@ -291,7 +291,7 @@ def _do_import(row: dict):
         row.get("style"), row.get("setting_amount"), row.get("craft_complexity"),
         row.get("photo_type"), row.get("file_hash"), row.get("file_size"),
         row.get("width"), row.get("height"),
-        date.today().isoformat(),
+        _get_exif_date(row.get("source_path") or row.get("full_path", "")),
         row.get("is_custom_order", 0),
     ))
     photo_id = cur.lastrowid
@@ -353,6 +353,23 @@ def queue_scan(_user=Depends(require_admin)):
     return {"message": f"開始掃描 {len(new_files)} 張", "total": len(new_files)}
 
 
+def _get_exif_date(path) -> str:
+    """Return EXIF DateTimeOriginal as YYYY-MM-DD, or today's date as fallback."""
+    try:
+        from PIL import Image
+        from PIL.ExifTags import TAGS
+        img = Image.open(path)
+        exif = img._getexif()
+        if exif:
+            for tag_id, val in exif.items():
+                if TAGS.get(tag_id) == "DateTimeOriginal" and isinstance(val, str):
+                    return val[:10].replace(":", "-")
+    except Exception:
+        pass
+    from datetime import date as _date
+    return _date.today().isoformat()
+
+
 def _run_scan(files: list):
     try:
         from scripts.process_image import process_one, file_hash
@@ -370,6 +387,11 @@ def _run_scan(files: list):
                     _scan_status["done"] += 1
                     continue
 
+                # detect custom order: files in a subdirectory = custom order
+                rel_parent = src.parent.relative_to(STAGING_DIR)
+                folder_name = str(rel_parent) if str(rel_parent) != "." else None
+                is_custom = 1 if folder_name else 0
+
                 metadata = process_one(src)
                 full_path = Path(metadata["full_path"])
                 classification, embedding = classify_one(full_path)
@@ -382,8 +404,9 @@ def _run_scan(files: list):
                         file_hash, file_size, width, height,
                         category, color, gemstone, stone_shape, stone_size,
                         material, metal_color, style, setting_amount,
-                        craft_complexity, photo_type, embedding_json
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        craft_complexity, photo_type, embedding_json,
+                        folder_name, is_custom_order
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """, (
                     str(src), metadata["original_filename"], metadata["filename"],
                     metadata["full_path"], metadata["thumb_path"], metadata["micro_path"],
@@ -401,6 +424,7 @@ def _run_scan(files: list):
                     classification.get("craft_complexity", {}).get("label"),
                     classification.get("photo_type", {}).get("label"),
                     json.dumps(embedding),
+                    folder_name, is_custom,
                 ))
                 conn.commit()
                 conn.close()
