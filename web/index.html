@@ -6298,7 +6298,7 @@ function StagingSection() {
   }, [polling]);
 
   function del(rel) {
-    fetch(`/api/staging/${encodeURIComponent(rel)}`, { method: 'DELETE' })
+    fetch(`/api/staging/files/${encodeURIComponent(rel)}`, { method: 'DELETE' })
       .then(() => setFiles(f => f.filter(x => x.rel !== rel)));
   }
 

@@ -62,7 +62,7 @@ def staging_thumb(rel_path: str, size: int = 300):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/{rel_path:path}")
+@router.delete("/files/{rel_path:path}")
 def delete_staging(rel_path: str, _user=Depends(require_admin)):
     p = (UNSORTED_DIR / rel_path).resolve()
     if not p.is_relative_to(UNSORTED_DIR.resolve()):
