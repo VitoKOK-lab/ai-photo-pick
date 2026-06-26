@@ -4567,9 +4567,17 @@ function UploadPanel() {
             待確認 {results.length} 張
             {needsReviewCount > 0 && <span style={{color:'#dc2626',marginLeft:6}}>⚠ {needsReviewCount} 張標紅</span>}
           </span>
+          <button onClick={async () => {
+            await Promise.all(results.map(r => fetch(`/api/staging/queue/${r.id}`, {method:'DELETE', headers:authHeaders()}).catch(()=>{})));
+            setResults([]);
+            flash('已清空');
+          }} style={{padding:'6px 14px',borderRadius:8,border:'1px solid #f5c6c6',
+            background:'none',color:'#c0392b',fontSize:13,cursor:'pointer', marginLeft:'auto'}}>
+            清空
+          </button>
           <button onClick={importAll} disabled={uploading}
             style={{padding:'6px 18px',borderRadius:8,border:'none',fontWeight:700,fontSize:13,cursor:'pointer',
-              background: allGreen ? 'var(--gold)' : '#f59e0b', color:'#fff', marginLeft:'auto'}}>
+              background: allGreen ? 'var(--gold)' : '#f59e0b', color:'#fff'}}>
             {allGreen ? `✓ 全部匯入 (${results.length})` : `仍要全部匯入 (${results.length})`}
           </button>
         </div>
