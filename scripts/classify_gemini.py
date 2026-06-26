@@ -82,7 +82,7 @@ def _get_client():
         _client = genai.Client(api_key=api_key)
     return _client
 
-GEMINI_MODEL = "gemini-1.5-flash-002"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 
 def _open_image(path: Path):
