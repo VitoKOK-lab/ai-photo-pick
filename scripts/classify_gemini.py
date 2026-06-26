@@ -82,6 +82,8 @@ def _get_client():
         _client = genai.Client(api_key=api_key)
     return _client
 
+GEMINI_MODEL = "gemini-2.5-flash"
+
 
 def _open_image(path: Path):
     """壓縮到 1024px 後回傳 PIL Image。"""
@@ -107,7 +109,7 @@ def classify_image(image_path: Path, extra_images: list = None) -> dict:
             contents.append(_open_image(p))
 
     response = client.models.generate_content(
-        model="gemini-2.0-flash", contents=contents
+        model=GEMINI_MODEL, contents=contents
     )
     raw = response.text.strip()
 
