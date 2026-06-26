@@ -27,7 +27,7 @@ FIELDS = {
 CONFIDENCE_THRESHOLDS = {
     "category":         0.90,
     "material":         0.85,
-    "craft_complexity": 0.80,
+    "craft_complexity": 0.70,
     "color":            0.75,
     "stone_shape":      0.75,
     "metal_color":      0.75,
