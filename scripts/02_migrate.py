@@ -45,7 +45,26 @@ def migrate():
             pass  # already exists
 
     # 4. staging_queue 表新增欄位
-    for col, typ in [("folder_name", "TEXT"), ("is_custom_order", "INTEGER DEFAULT 0")]:
+    sq_cols = [
+        ("folder_name",              "TEXT"),
+        ("is_custom_order",          "INTEGER DEFAULT 0"),
+        ("category_confidence",      "REAL"),
+        ("color_confidence",         "REAL"),
+        ("gemstone_confidence",      "REAL"),
+        ("stone_shape_confidence",   "REAL"),
+        ("stone_size_confidence",    "REAL"),
+        ("material_confidence",      "REAL"),
+        ("metal_color_confidence",   "REAL"),
+        ("style_confidence",         "REAL"),
+        ("setting_amount_confidence","REAL"),
+        ("craft_complexity_confidence","REAL"),
+        ("photo_type_confidence",    "REAL"),
+        ("price_band",               "TEXT"),
+        ("price_band_confidence",    "REAL"),
+        ("low_confidence_fields",    "TEXT"),
+        ("needs_review",             "INTEGER DEFAULT 0"),
+    ]
+    for col, typ in sq_cols:
         try:
             cur.execute(f"ALTER TABLE staging_queue ADD COLUMN {col} {typ}")
             print(f"  + staging_queue.{col}")
