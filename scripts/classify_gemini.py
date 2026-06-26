@@ -16,6 +16,7 @@ FIELDS = {
     "stone_size":       ["1克拉以內","1克拉","2克拉","3克拉","5克拉","10克拉","10克拉以上"],
     "material":         ["925銀","18K黃金","18K白金","18K玫瑰金","鉑金","其他"],
     "metal_color":      ["金","銀"],
+    "metal_weight":     ["1克以內","1-3克","3-5克","5-8克","8-15克","15克以上"],
     "style":            ["無鑽","簡約","輕奢","奢華"],
     "setting_amount":   ["少","正常","多"],
     "craft_complexity": ["極簡","普通","複雜","極複雜"],
@@ -28,6 +29,7 @@ CONFIDENCE_THRESHOLDS = {
     "category":         0.90,
     "material":         0.85,
     "craft_complexity": 0.70,
+    "metal_weight":     0.65,
     "color":            0.75,
     "stone_shape":      0.75,
     "metal_color":      0.75,
@@ -39,18 +41,32 @@ CONFIDENCE_THRESHOLDS = {
     "price_band":       0.70,
 }
 
-PROMPT = """你是一位珠寶分類專家。仔細分析這張珠寶照片，嚴格按照下方 JSON schema 分類。
+PROMPT = """你是一位珠寶製作與估價專家。仔細分析這張珠寶照片，嚴格按照下方 JSON schema 分類。
 
 【鐵律】
 1. 只回傳純 JSON，不得有任何其他文字、markdown 標記、說明
 2. 每個欄位只能從「可選值」中選一個，不可自創新值
 3. confidence 是對該答案的把握度（0.0–1.0）
 4. category（品項）是最關鍵欄位，看圖必須判斷正確
-5. craft_complexity 根據可見配鑽/配石數量判斷：
-   - 極簡：無配石
-   - 普通：少量配石（約 1–10 顆）
-   - 複雜：大量配石（10–30 顆）
-   - 極複雜：滿鑽鋪鑲/整圈密鑲/大面積pavé
+
+【判斷說明】
+- craft_complexity（加工難度）根據設計複雜度與鑲嵌量判斷：
+  - 極簡：無配石、光面、幾何極簡
+  - 普通：少量配石（約 1–10 顆）、基本款式
+  - 複雜：大量配石（10–30 顆）、多層次或特殊設計
+  - 極複雜：滿鑽鋪鑲/pavé/整圈密鑲/大面積鑲嵌
+
+- setting_amount（配石量）根據可見小鑽/配石數量：
+  - 少：0–5 顆小配石
+  - 正常：6–20 顆小配石
+  - 多：20 顆以上小配石或密鑲
+
+- metal_weight（金屬用料估計，依品項和體積目測）：
+  - 戒指參考：細圈 1-3克，厚圈 3-5克，寬版 5-8克
+  - 耳釘(一對)參考：小 1克以內，中 1-3克，大 3-5克
+  - 墜子參考：小 1-3克，中 3-5克，大 5-8克
+  - 手鏈參考：細 3-5克，中 5-8克，重 8-15克
+  - 項鍊參考：細 3-5克，中 5-8克，重 8-15克以上
 
 【可選值】
 category: 戒指, 手鏈, 墜子, 項鍊, 耳釘, 胸針, 其他
@@ -60,6 +76,7 @@ stone_shape: 橢圓形, 圓形, 水滴形, 心形, 方形, 長方形, 馬眼形,
 stone_size: 1克拉以內, 1克拉, 2克拉, 3克拉, 5克拉, 10克拉, 10克拉以上
 material: 925銀, 18K黃金, 18K白金, 18K玫瑰金, 鉑金, 其他
 metal_color: 金, 銀
+metal_weight: 1克以內, 1-3克, 3-5克, 5-8克, 8-15克, 15克以上
 style: 無鑽, 簡約, 輕奢, 奢華
 setting_amount: 少, 正常, 多
 craft_complexity: 極簡, 普通, 複雜, 極複雜
@@ -67,7 +84,7 @@ photo_type: 去背, 情境
 price_band: 入門, 中階, 高階, 奢華, 頂級
 
 【回傳格式】
-{"category":"戒指","category_confidence":0.98,"color":"藍","color_confidence":0.92,"gemstone":"藍寶石","gemstone_confidence":0.85,"stone_shape":"橢圓形","stone_shape_confidence":0.88,"stone_size":"3克拉","stone_size_confidence":0.62,"material":"18K白金","material_confidence":0.91,"metal_color":"銀","metal_color_confidence":0.97,"style":"輕奢","style_confidence":0.79,"setting_amount":"正常","setting_amount_confidence":0.81,"craft_complexity":"普通","craft_complexity_confidence":0.74,"photo_type":"去背","photo_type_confidence":0.99,"price_band":"高階","price_band_confidence":0.65}"""
+{"category":"戒指","category_confidence":0.98,"color":"藍","color_confidence":0.92,"gemstone":"藍寶石","gemstone_confidence":0.85,"stone_shape":"橢圓形","stone_shape_confidence":0.88,"stone_size":"3克拉","stone_size_confidence":0.62,"material":"18K白金","material_confidence":0.91,"metal_color":"銀","metal_color_confidence":0.97,"metal_weight":"3-5克","metal_weight_confidence":0.72,"style":"輕奢","style_confidence":0.79,"setting_amount":"正常","setting_amount_confidence":0.81,"craft_complexity":"普通","craft_complexity_confidence":0.74,"photo_type":"去背","photo_type_confidence":0.99,"price_band":"高階","price_band_confidence":0.65}"""
 
 _client = None
 

@@ -4288,11 +4288,11 @@ function DarkBgModal({ onClose, onDeleted }) {
 /* ── 快速上架面板（Gemini Flash + 拖曳上傳）─────────── */
 const CONF_COLORS = { green:'#2e7d32', yellow:'#f59e0b', red:'#dc2626' };
 const CONF_BG     = { green:'rgba(46,125,50,.1)', yellow:'rgba(245,158,11,.1)', red:'rgba(220,38,38,.1)' };
-const UPLOAD_FIELDS = ['category','color','gemstone','stone_shape','stone_size','material','metal_color','style','setting_amount','craft_complexity','photo_type','price_band'];
+const UPLOAD_FIELDS = ['category','color','gemstone','stone_shape','stone_size','material','metal_color','metal_weight','style','setting_amount','craft_complexity','photo_type','price_band'];
 const UPLOAD_FIELD_LABELS = {
   category:'品項', color:'顏色', gemstone:'寶石', stone_shape:'形狀',
-  stone_size:'大小', material:'材質', metal_color:'金工', style:'款式',
-  setting_amount:'配石', craft_complexity:'複雜度', photo_type:'照片類型', price_band:'價格帶',
+  stone_size:'大小', material:'材質', metal_color:'金工色', metal_weight:'用料(g)',
+  style:'款式', setting_amount:'配石', craft_complexity:'複雜度', photo_type:'照片類型', price_band:'價格帶',
 };
 const UPLOAD_OPTS = {
   category: ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'],
@@ -4302,6 +4302,7 @@ const UPLOAD_OPTS = {
   stone_size: ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉','10克拉以上'],
   material: ['925銀','18K黃金','18K白金','18K玫瑰金','鉑金','其他'],
   metal_color: ['金','銀'],
+  metal_weight: ['1克以內','1-3克','3-5克','5-8克','8-15克','15克以上'],
   style: ['無鑽','簡約','輕奢','奢華'],
   setting_amount: ['少','正常','多'],
   craft_complexity: ['極簡','普通','複雜','極複雜'],
@@ -4563,7 +4564,7 @@ function UploadPanel() {
 }
 
 /* ── Staging Queue Panel ─────────────────────────────── */
-const STAGING_FIELDS = ['category','color','gemstone','stone_shape','stone_size','material','metal_color','style','setting_amount','craft_complexity','photo_type'];
+const STAGING_FIELDS = ['category','color','gemstone','stone_shape','stone_size','material','metal_color','metal_weight','style','setting_amount','craft_complexity','photo_type'];
 const STAGING_OPTS = {
   category: ['戒指','手鏈','墜子','項鍊','耳釘','胸針','其他'],
   color: ['紅','粉','黃','綠','藍','紫','白','彩'],
@@ -4572,6 +4573,7 @@ const STAGING_OPTS = {
   stone_size: ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉','10克拉以上'],
   material: ['925銀','18K黃金','18K白金','18K玫瑰金','鉑金','其他'],
   metal_color: ['金','銀'],
+  metal_weight: ['1克以內','1-3克','3-5克','5-8克','8-15克','15克以上'],
   style: ['無鑽','簡約','輕奢','奢華'],
   setting_amount: ['少','正常','多'],
   craft_complexity: ['極簡','普通','複雜','極複雜'],
@@ -4579,8 +4581,8 @@ const STAGING_OPTS = {
 };
 const FIELD_LABELS = {
   category:'品項', color:'顏色', gemstone:'寶石', stone_shape:'形狀',
-  stone_size:'大小', material:'材質', metal_color:'金工', style:'款式',
-  setting_amount:'配石', craft_complexity:'複雜度', photo_type:'照片類型',
+  stone_size:'大小', material:'材質', metal_color:'金工色', metal_weight:'用料(g)',
+  style:'款式', setting_amount:'配石', craft_complexity:'複雜度', photo_type:'照片類型',
 };
 
 function FolderGroupCard({ folderName, items, selected, onToggleGroup, patch, importOne, discard, importing }) {

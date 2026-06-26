@@ -24,6 +24,8 @@ def migrate():
         ("metal_color",            "TEXT"),
         ("diamond_status",         "TEXT"),
         ("photo_type",             "TEXT"),
+        ("metal_weight",           "TEXT"),
+        ("metal_weight_confidence","REAL"),
         ("updated_at",             "TIMESTAMP"),
     ]
     for col, typ in missing_cols:
@@ -61,6 +63,8 @@ def migrate():
         ("photo_type_confidence",    "REAL"),
         ("price_band",               "TEXT"),
         ("price_band_confidence",    "REAL"),
+        ("metal_weight",              "TEXT"),
+        ("metal_weight_confidence",  "REAL"),
         ("low_confidence_fields",    "TEXT"),
         ("needs_review",             "INTEGER DEFAULT 0"),
     ]

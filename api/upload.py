@@ -112,13 +112,14 @@ async def upload_and_classify(
                         stone_size,       stone_size_confidence,
                         material,         material_confidence,
                         metal_color,      metal_color_confidence,
+                        metal_weight,     metal_weight_confidence,
                         style,            style_confidence,
                         setting_amount,   setting_amount_confidence,
                         craft_complexity, craft_complexity_confidence,
                         photo_type,       photo_type_confidence,
                         price_band,       price_band_confidence,
                         low_confidence_fields, needs_review
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """, (
                     meta.get("original_path", str(tmp_path)), orig_name, meta["filename"],
                     meta["full_path"], meta["thumb_path"], meta["micro_path"],
@@ -131,6 +132,7 @@ async def upload_and_classify(
                     classification["stone_size"],       classification["stone_size_confidence"],
                     classification["material"],         classification["material_confidence"],
                     classification["metal_color"],      classification["metal_color_confidence"],
+                    classification["metal_weight"],     classification["metal_weight_confidence"],
                     classification["style"],            classification["style_confidence"],
                     classification["setting_amount"],   classification["setting_amount_confidence"],
                     classification["craft_complexity"], classification["craft_complexity_confidence"],
@@ -147,7 +149,7 @@ async def upload_and_classify(
                 # 回傳給前端的分類結果（含信心顏色）
                 fields_info = {}
                 for field in ["category","color","gemstone","stone_shape","stone_size",
-                               "material","metal_color","style","setting_amount",
+                               "material","metal_color","metal_weight","style","setting_amount",
                                "craft_complexity","photo_type","price_band"]:
                     conf = classification.get(f"{field}_confidence", 0)
                     fields_info[field] = {

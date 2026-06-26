@@ -67,12 +67,13 @@ def main(limit=None, skip_done=True, dry_run=False):
                     stone_shape=?,       stone_shape_confidence=?,
                     stone_size=?,        stone_size_confidence=?,
                     material=?,          material_confidence=?,
-                    metal_color=?,
+                    metal_color=?,       metal_color_confidence=?,
+                    metal_weight=?,      metal_weight_confidence=?,
                     style=?,             style_confidence=?,
-                    setting_amount=?,
-                    craft_complexity=?,
-                    photo_type=?,
-                    price_band=?,
+                    setting_amount=?,    setting_amount_confidence=?,
+                    craft_complexity=?,  craft_complexity_confidence=?,
+                    photo_type=?,        photo_type_confidence=?,
+                    price_band=?,        price_band_confidence=?,
                     updated_at=CURRENT_TIMESTAMP
                 WHERE id=?
             """, (
@@ -82,12 +83,13 @@ def main(limit=None, skip_done=True, dry_run=False):
                 result["stone_shape"],     result["stone_shape_confidence"],
                 result["stone_size"],      result["stone_size_confidence"],
                 result["material"],        result["material_confidence"],
-                result["metal_color"],
+                result["metal_color"],     result["metal_color_confidence"],
+                result["metal_weight"],    result["metal_weight_confidence"],
                 result["style"],           result["style_confidence"],
-                result["setting_amount"],
-                result["craft_complexity"],
-                result["photo_type"],
-                result["price_band"],
+                result["setting_amount"],  result["setting_amount_confidence"],
+                result["craft_complexity"],result["craft_complexity_confidence"],
+                result["photo_type"],      result["photo_type_confidence"],
+                result["price_band"],      result["price_band_confidence"],
                 photo_id,
             ))
             conn.commit()
