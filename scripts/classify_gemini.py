@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import config.settings  # 載入 .env → 設定環境變數
 
 FIELDS = {
     "category":         ["戒指","手鏈","墜子","項鍊","耳釘","胸針","其他"],
@@ -68,29 +69,26 @@ price_band: 入門, 中階, 高階, 奢華, 頂級
 【回傳格式】
 {"category":"戒指","category_confidence":0.98,"color":"藍","color_confidence":0.92,"gemstone":"藍寶石","gemstone_confidence":0.85,"stone_shape":"橢圓形","stone_shape_confidence":0.88,"stone_size":"3克拉","stone_size_confidence":0.62,"material":"18K白金","material_confidence":0.91,"metal_color":"銀","metal_color_confidence":0.97,"style":"輕奢","style_confidence":0.79,"setting_amount":"正常","setting_amount_confidence":0.81,"craft_complexity":"普通","craft_complexity_confidence":0.74,"photo_type":"去背","photo_type_confidence":0.99,"price_band":"高階","price_band_confidence":0.65}"""
 
-_model = None
+_client = None
 
 
-def _get_model():
-    global _model
-    if _model is None:
-        import google.generativeai as genai
+def _get_client():
+    global _client
+    if _client is None:
+        from google import genai
         api_key = os.environ.get("GEMINI_API_KEY", "")
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY 未設定，請在 .env 加入 GEMINI_API_KEY=...")
-        genai.configure(api_key=api_key)
-        _model = genai.GenerativeModel("gemini-2.0-flash")
-    return _model
+        _client = genai.Client(api_key=api_key)
+    return _client
 
 
-def _load_image_part(path: Path):
-    """壓縮到 1024px 以控制 token 用量。"""
+def _open_image(path: Path):
+    """壓縮到 1024px 後回傳 PIL Image。"""
     from PIL import Image
     img = Image.open(path).convert("RGB")
     img.thumbnail((1024, 1024), Image.LANCZOS)
-    buf = io.BytesIO()
-    img.save(buf, "JPEG", quality=85)
-    return {"mime_type": "image/jpeg", "data": buf.getvalue()}
+    return img
 
 
 def classify_image(image_path: Path, extra_images: list = None) -> dict:
@@ -100,15 +98,17 @@ def classify_image(image_path: Path, extra_images: list = None) -> dict:
     extra_images: 同一件的其他角度路徑列表（客製訂單用）
     回傳: 各欄位 label + confidence，以及 needs_review / low_confidence_fields
     """
-    model = _get_model()
+    client = _get_client()
 
-    parts = [PROMPT]
+    contents = [PROMPT]
     for p in [image_path] + (extra_images or []):
         p = Path(p)
         if p.exists():
-            parts.append(_load_image_part(p))
+            contents.append(_open_image(p))
 
-    response = model.generate_content(parts)
+    response = client.models.generate_content(
+        model="gemini-2.0-flash", contents=contents
+    )
     raw = response.text.strip()
 
     # 去掉可能的 markdown code block

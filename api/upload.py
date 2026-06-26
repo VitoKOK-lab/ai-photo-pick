@@ -38,7 +38,7 @@ async def upload_and_classify(
     folder_name 非空 → 視為同一件客製品的多角度（is_custom_order=1）。
     """
     from scripts.process_image import process_one, file_hash
-    from scripts.classify_gemini import classify_image, confidence_color, CONFIDENCE_THRESHOLDS
+    from scripts.classify_gemini import classify_image, confidence_color
 
     is_custom = 1 if folder_name else 0
     results = []
