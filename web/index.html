@@ -4312,88 +4312,107 @@ const UPLOAD_OPTS = {
 
 function UploadResultCard({ item, onUpdate, onImport, onDiscard, importing }) {
   const [fields, setFields] = useState(item.fields || {});
-  const [expanded, setExpanded] = useState(item.needs_review);
+  const [showEdit, setShowEdit] = useState(false);
 
   const patch = (field, value) => {
-    const newConf = 1.0;
-    const newFields = { ...fields, [field]: { ...fields[field], label: value, confidence: newConf, color: 'green' } };
+    const newFields = { ...fields, [field]: { ...fields[field], label: value, confidence: 1.0, color: 'green' } };
     setFields(newFields);
     onUpdate(item.id, field, value);
   };
 
-  const anyRed = Object.entries(fields).some(([,v]) => v.color === 'red');
+  const redFields = Object.entries(fields).filter(([,v]) => v.color === 'red');
+  const anyRed = redFields.length > 0;
+
+  const KEY_FIELDS = ['category','gemstone','material','metal_weight','craft_complexity','style'];
 
   return (
-    <div style={{border: anyRed ? '2px solid #dc2626' : '1px solid rgba(184,147,90,.3)',
-      borderRadius:10, overflow:'hidden', background:'var(--surface)'}}>
-      {/* Header */}
-      <div style={{display:'flex', alignItems:'center', gap:10, padding:'8px 12px',
-        background: anyRed ? 'rgba(220,38,38,.06)' : 'rgba(184,147,90,.06)',
-        cursor:'pointer'}} onClick={() => setExpanded(e => !e)}>
-        <img src={item.thumb_url} style={{width:48,height:48,objectFit:'cover',borderRadius:6,flexShrink:0}} />
-        <div style={{flex:1, minWidth:0}}>
-          <div style={{fontSize:12,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-            {item.original_filename}
-            {item.folder_name && <span style={{fontSize:10,color:'var(--gold)',marginLeft:6}}>客製</span>}
-          </div>
-          {/* Tag preview chips */}
-          <div style={{display:'flex',gap:4,flexWrap:'wrap',marginTop:4}}>
-            {['category','material','craft_complexity','gemstone'].map(f => {
-              const v = fields[f]; if (!v) return null;
-              return (
-                <span key={f} style={{fontSize:10,padding:'1px 6px',borderRadius:10,
-                  background: CONF_BG[v.color], color: CONF_COLORS[v.color],
-                  border: `1px solid ${CONF_COLORS[v.color]}44`, fontWeight:600}}>
-                  {v.label}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0}}>
-          {anyRed && <span style={{fontSize:10,color:'#dc2626',fontWeight:700}}>⚠ 需確認</span>}
-          <span style={{fontSize:11,color:'var(--text3)'}}>{expanded ? '▲' : '▼'}</span>
-        </div>
-      </div>
+    <div style={{border: anyRed ? '2px solid #dc2626' : '1px solid rgba(184,147,90,.25)',
+      borderRadius:10, overflow:'hidden', background:'var(--surface)', display:'flex'}}>
 
-      {/* Expanded tag grid */}
-      {expanded && (
-        <div style={{padding:'10px 12px 4px', display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px 10px'}}>
-          {UPLOAD_FIELDS.map(f => {
-            const v = fields[f];
-            if (!v) return null;
-            const col = v.color || 'green';
+      {/* 大縮圖 */}
+      <img src={item.thumb_url} style={{width:130,height:130,objectFit:'cover',flexShrink:0}} />
+
+      {/* 右側內容 */}
+      <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',padding:'10px 12px'}}>
+
+        {/* 檔名 + 紅色警示 */}
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+          <span style={{fontSize:11,color:'var(--text3)',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+            {item.original_filename}
+          </span>
+          {anyRed && <span style={{fontSize:11,color:'#dc2626',fontWeight:700,flexShrink:0}}>⚠ {redFields.length} 項需確認</span>}
+          {item.folder_name && <span style={{fontSize:10,color:'var(--gold)',flexShrink:0}}>客製</span>}
+        </div>
+
+        {/* 關鍵標籤 chips */}
+        <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:8}}>
+          {KEY_FIELDS.map(f => {
+            const v = fields[f]; if (!v || !v.label) return null;
             return (
-              <div key={f}>
-                <div style={{fontSize:10,color:'var(--text3)',marginBottom:2,display:'flex',alignItems:'center',gap:4}}>
-                  {UPLOAD_FIELD_LABELS[f]}
-                  <span style={{width:7,height:7,borderRadius:'50%',background:CONF_COLORS[col],display:'inline-block'}} />
-                  <span style={{color:CONF_COLORS[col],fontSize:9}}>{Math.round(v.confidence*100)}%</span>
-                </div>
-                <select value={v.label || ''} onChange={e => patch(f, e.target.value)}
-                  style={{fontSize:11,padding:'3px 5px',width:'100%',border:`1px solid ${CONF_COLORS[col]}`,
-                    borderRadius:5,background: col==='red' ? 'rgba(220,38,38,.06)' : 'var(--surface)',color:'var(--text)'}}>
+              <span key={f} style={{fontSize:12,padding:'3px 10px',borderRadius:12,fontWeight:600,
+                background: CONF_BG[v.color], color: CONF_COLORS[v.color],
+                border:`1px solid ${CONF_COLORS[v.color]}55`}}>
+                {v.label}
+              </span>
+            );
+          })}
+        </div>
+
+        {/* 紅色欄位 → 立即顯示下拉修正 */}
+        {anyRed && (
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
+            {redFields.map(([f, v]) => (
+              <div key={f} style={{display:'flex',alignItems:'center',gap:4}}>
+                <span style={{fontSize:11,color:'#dc2626'}}>{UPLOAD_FIELD_LABELS[f]}</span>
+                <select value={v.label||''} onChange={e=>patch(f,e.target.value)}
+                  style={{fontSize:12,padding:'2px 6px',border:'1px solid #dc2626',borderRadius:6,
+                    background:'rgba(220,38,38,.06)',color:'var(--text)'}}>
                   <option value="">—</option>
                   {(UPLOAD_OPTS[f]||[]).map(o=><option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {/* Action row */}
-      <div style={{display:'flex',gap:8,padding:'8px 12px',justifyContent:'flex-end'}}>
-        <button onClick={() => onDiscard(item.id)}
-          style={{padding:'4px 10px',borderRadius:6,border:'1px solid #f5c6c6',
-            background:'none',color:'#c0392b',fontSize:11,cursor:'pointer'}}>
-          移除
-        </button>
-        <button onClick={() => onImport(item.id)} disabled={importing}
-          style={{padding:'4px 14px',borderRadius:6,border:'none',fontSize:11,fontWeight:700,cursor:'pointer',
-            background: anyRed ? '#f59e0b' : 'var(--gold)', color:'#fff'}}>
-          {importing ? '…' : anyRed ? '仍要匯入' : '✓ 確認匯入'}
-        </button>
+        {/* 全部欄位展開編輯 */}
+        {showEdit && (
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'6px 10px',marginBottom:8}}>
+            {UPLOAD_FIELDS.map(f => {
+              const v = fields[f]; if (!v) return null;
+              return (
+                <div key={f}>
+                  <div style={{fontSize:10,color:'var(--text3)',marginBottom:2}}>{UPLOAD_FIELD_LABELS[f]}</div>
+                  <select value={v.label||''} onChange={e=>patch(f,e.target.value)}
+                    style={{fontSize:11,padding:'2px 4px',width:'100%',border:'1px solid var(--border)',
+                      borderRadius:5,background:'var(--surface)',color:'var(--text)'}}>
+                    <option value="">—</option>
+                    {(UPLOAD_OPTS[f]||[]).map(o=><option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 操作按鈕 */}
+        <div style={{display:'flex',gap:6,marginTop:'auto',alignItems:'center'}}>
+          <button onClick={()=>onDiscard(item.id)}
+            style={{padding:'4px 10px',borderRadius:6,border:'1px solid #f5c6c6',
+              background:'none',color:'#c0392b',fontSize:11,cursor:'pointer'}}>
+            移除
+          </button>
+          <button onClick={()=>setShowEdit(e=>!e)}
+            style={{padding:'4px 10px',borderRadius:6,border:'1px solid var(--border)',
+              background:'none',color:'var(--text2)',fontSize:11,cursor:'pointer'}}>
+            {showEdit ? '收起' : '編輯'}
+          </button>
+          <button onClick={()=>onImport(item.id)} disabled={importing}
+            style={{padding:'4px 16px',borderRadius:6,border:'none',fontSize:12,fontWeight:700,cursor:'pointer',
+              background: anyRed ? '#f59e0b' : 'var(--gold)', color:'#fff', marginLeft:'auto'}}>
+            {importing ? '…' : anyRed ? '仍要匯入' : '✓ 匯入'}
+          </button>
+        </div>
       </div>
     </div>
   );
