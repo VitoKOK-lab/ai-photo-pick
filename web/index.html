@@ -4864,6 +4864,17 @@ function StagingQueuePanel() {
               color:'#fff',fontSize:12,fontWeight:700,cursor: batchField ? 'pointer':'default'}}>
             套用到選取
           </button>
+          <button onClick={async () => {
+            const ids = [...selected];
+            await Promise.all(ids.map(id => fetch(`/api/staging/queue/${id}`, {method:'DELETE', headers:authHeaders()}).catch(()=>{})));
+            setItems(prev => prev.filter(it => !selected.has(it.id)));
+            setSelected(new Set());
+            setScanMsg(`已刪除 ${ids.length} 張`);
+            setTimeout(()=>setScanMsg(''), 3000);
+          }} style={{padding:'4px 14px',borderRadius:6,border:'1px solid #f5c6c6',
+            background:'none',color:'#c0392b',fontSize:12,cursor:'pointer',fontWeight:700}}>
+            刪除選取
+          </button>
           <button onClick={()=>setSelected(new Set())}
             style={{padding:'4px 10px',borderRadius:6,border:'1px solid var(--border)',
               background:'none',color:'var(--text2)',fontSize:12,cursor:'pointer'}}>
