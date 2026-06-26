@@ -3379,7 +3379,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 }
 
 /* ── Quote / Estimator tab ──────────────────────────── */
-function QuoteTab() {
+function QuoteTab({ onBack } = {}) {
   const pricing = usePricing();
   /* ── State ── */
   const [stoneKey,    setStoneKey]    = useState('');       // invest key or '' or COMMERCIAL_*
@@ -3571,6 +3571,12 @@ function QuoteTab() {
       React.createElement('div', {
         style: { flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 14px', paddingBottom: (PRICE_H + 16) + 'px' }
       },
+
+        /* Back button (shown when opened from history page) */
+        onBack && React.createElement('button', {
+          onClick: onBack,
+          style: { display:'flex', alignItems:'center', gap:6, background:'none', border:'none', color:'var(--text2)', fontSize:13, fontWeight:600, cursor:'pointer', padding:'4px 0', marginBottom:8 }
+        }, '‹ 返回紀錄'),
 
         /* ── Overdue alert banner ── */
         overdueAlert && React.createElement('div', {
@@ -5886,6 +5892,8 @@ function QuoteHistoryPage({ role }) {
     />
   );
 
+  if (subView === 'estimator') return React.createElement(QuoteTab, { onBack: () => setSubView('list') });
+
   return (
     <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',background:'var(--bg)',paddingTop:'var(--nav-h)'}}>
       {/* Header */}
@@ -5904,6 +5912,9 @@ function QuoteHistoryPage({ role }) {
               清空
             </button>
           )}
+          <button onClick={() => setSubView('estimator')} style={{background:'var(--s3)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
+            估價工具
+          </button>
           {isAdmin && (
             <button onClick={() => setSubView('newquote')} style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
               + 新估價
