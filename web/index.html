@@ -668,13 +668,14 @@ async function logEvent(photo_id, event_type, extra = {}) {
       body: JSON.stringify({ photo_id, event_type, session_id: SESSION_ID, ...extra }) });
   } catch {}
 }
-const CATS = ['戒指','手鏈','項鍊','耳釘','胸針','其他'];
+const CATS = ['戒指','墜子','耳釘','手鏈','項鍊','胸針','其他'];
 const CFG = {
-  style:       { label: '風格', values: ['無鑽','簡約','輕奢','奢華'] },
-  gemstone:    { label: '寶石', values: ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','紫水晶','黃水晶','月光石','歐泊','橄欖石','石榴石','珍珠','翡翠','托帕石','其他彩寶','無寶石'] },
+  gemstone:    { label: '寶石', values: ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','紫水晶','黃水晶','月光石','歐泊','橄欖石','石榴石','珍珠','翡翠','托帕石','尖晶石','其他彩寶','無寶石'] },
+  color:       { label: '色系', values: ['紅','粉','黃','綠','藍','紫','白','彩'] },
+  metal_color: { label: '金工', values: ['金','銀'] },
+  price_band:  { label: '價格', values: ['< 1萬','1-3萬','3-6萬','6-10萬','10-15萬','> 15萬'] },
+  style:       { label: '鑽飾', values: ['無鑽','簡約','輕奢','奢華'] },
   stone_shape: { label: '形狀', values: ['橢圓形','圓形','水滴形','心形','方形','長方形','馬眼形','枕形','梨形','三角形','花形','不規則','無主石'] },
-  color:       { label: '寶石色', values: ['紅','粉','黃','綠','藍','紫','白','彩'] },
-  metal_color: { label: '金工色', values: ['金','銀'] },
 };
 
 /* ── Fav storage ────────────────────────────────────── */
@@ -3379,7 +3380,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 }
 
 /* ── Quote / Estimator tab ──────────────────────────── */
-function QuoteTab({ onBack } = {}) {
+function QuoteTab({ onBack, onHistory } = {}) {
   const pricing = usePricing();
   /* ── State ── */
   const [stoneKey,    setStoneKey]    = useState('');       // invest key or '' or COMMERCIAL_*
@@ -3567,16 +3568,28 @@ function QuoteTab({ onBack } = {}) {
         zIndex: 10, display: 'flex', flexDirection: 'column',
       }
     },
+
+      /* ── Sub-header ── */
+      React.createElement('div', {
+        style: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', background:'var(--surface)', borderBottom:'1px solid var(--border)', flexShrink:0 }
+      },
+        React.createElement('div', { style:{fontSize:15,fontWeight:700,color:'var(--text)',letterSpacing:'0.5px'} }, '互動估價'),
+        React.createElement('div', { style:{display:'flex',gap:8} },
+          onBack && React.createElement('button', {
+            onClick: onBack,
+            style:{background:'none',border:'none',color:'var(--text2)',fontSize:13,fontWeight:600,cursor:'pointer',padding:'6px 10px'}
+          }, '‹ 返回'),
+          onHistory && React.createElement('button', {
+            onClick: onHistory,
+            style:{background:'var(--s3)',border:'1px solid var(--border)',color:'var(--text2)',fontSize:13,fontWeight:600,cursor:'pointer',padding:'6px 14px',borderRadius:8}
+          }, '紀錄 ›')
+        )
+      ),
+
       /* ── Scrollable form area ── */
       React.createElement('div', {
         style: { flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 14px', paddingBottom: (PRICE_H + 16) + 'px' }
       },
-
-        /* Back button (shown when opened from history page) */
-        onBack && React.createElement('button', {
-          onClick: onBack,
-          style: { display:'flex', alignItems:'center', gap:6, background:'none', border:'none', color:'var(--text2)', fontSize:13, fontWeight:600, cursor:'pointer', padding:'4px 0', marginBottom:8 }
-        }, '‹ 返回紀錄'),
 
         /* ── Overdue alert banner ── */
         overdueAlert && React.createElement('div', {
@@ -5000,11 +5013,12 @@ function PricingSettingsTab() {
     <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, paddingTop:'var(--nav-h)' }}>
       {/* 分頁選擇列 */}
       <div style={{ display:'flex', borderBottom:'1px solid var(--border)', background:'var(--surface)', flexShrink:0 }}>
-        <button style={tabBtnSt(settingsTab==='upload')}    onClick={()=>setSettingsTab('upload')}>📤 上傳照片</button>
-        <button style={tabBtnSt(settingsTab==='pricing')}   onClick={()=>setSettingsTab('pricing')}>📊 估價參數</button>
-        <button style={tabBtnSt(settingsTab==='staff')}     onClick={()=>setSettingsTab('staff')}>👥 員工管理</button>
-        <button style={tabBtnSt(settingsTab==='customers')} onClick={()=>setSettingsTab('customers')}>💡 客人分析</button>
-        <button style={tabBtnSt(settingsTab==='staging')}   onClick={()=>setSettingsTab('staging')}>📋 舊佇列</button>
+        <button style={tabBtnSt(settingsTab==='upload')}    onClick={()=>setSettingsTab('upload')}>上傳</button>
+        <button style={tabBtnSt(settingsTab==='pricing')}   onClick={()=>setSettingsTab('pricing')}>估價參數</button>
+        <button style={tabBtnSt(settingsTab==='staff')}     onClick={()=>setSettingsTab('staff')}>員工</button>
+        <button style={tabBtnSt(settingsTab==='links')}     onClick={()=>setSettingsTab('links')}>臨時網址</button>
+        <button style={tabBtnSt(settingsTab==='customers')} onClick={()=>setSettingsTab('customers')}>客人分析</button>
+        <button style={tabBtnSt(settingsTab==='staging')}   onClick={()=>setSettingsTab('staging')}>舊佇列</button>
       </div>
 
       {settingsTab === 'upload'    && <div style={{flex:1, minHeight:0, overflow:'hidden', display:'flex', flexDirection:'column'}}><UploadPanel /></div>}
@@ -5012,6 +5026,7 @@ function PricingSettingsTab() {
         <PricingParamsPanel />
       </div>
       {settingsTab === 'staff'     && <div style={{flex:1, minHeight:0, overflow:'hidden', display:'flex', flexDirection:'column'}}><StaffMgmtPanel /></div>}
+      {settingsTab === 'links'     && <div style={{flex:1, minHeight:0, overflow:'hidden', display:'flex', flexDirection:'column'}}><GuestLinksPanel /></div>}
       {settingsTab === 'customers' && <div style={{flex:1, minHeight:0, overflow:'hidden', display:'flex', flexDirection:'column'}}><CustomerAnalyticsPanel /></div>}
       {settingsTab === 'staging'   && <div style={{flex:1, minHeight:0, overflow:'hidden', display:'flex', flexDirection:'column'}}><StagingQueuePanel /></div>}
     </div>
@@ -5861,7 +5876,7 @@ function UserMgmtSection() {
 
 
 /* ── Quote History Page ──────────────────────────────── */
-function QuoteHistoryPage({ role }) {
+function QuoteHistoryPage({ role, onBack }) {
   const isAdmin = role === 'admin';
   const [quotes,   setQuotes]   = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -5892,15 +5907,19 @@ function QuoteHistoryPage({ role }) {
     />
   );
 
-  if (subView === 'estimator') return React.createElement(QuoteTab, { onBack: () => setSubView('list') });
 
   return (
     <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',background:'var(--bg)',paddingTop:'var(--nav-h)'}}>
       {/* Header */}
       <div style={{padding:'14px 16px 10px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface)',borderBottom:'1px solid var(--border)',flexShrink:0}}>
-        <div>
-          <div style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>估價紀錄</div>
-          <div style={{fontSize:11,color:'var(--text3)',marginTop:1}}>{quotes.length} 筆</div>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          {onBack && (
+            <button onClick={onBack} style={{background:'none',border:'none',color:'var(--text2)',fontSize:20,cursor:'pointer',padding:'0 4px',lineHeight:1}}>‹</button>
+          )}
+          <div>
+            <div style={{fontSize:16,fontWeight:700,color:'var(--text)'}}>估價紀錄</div>
+            <div style={{fontSize:11,color:'var(--text3)',marginTop:1}}>{quotes.length} 筆</div>
+          </div>
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           {isAdmin && quotes.length > 0 && (
@@ -5912,9 +5931,6 @@ function QuoteHistoryPage({ role }) {
               清空
             </button>
           )}
-          <button onClick={() => setSubView('estimator')} style={{background:'var(--s3)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
-            估價工具
-          </button>
           {isAdmin && (
             <button onClick={() => setSubView('newquote')} style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
               + 新估價
@@ -6876,6 +6892,13 @@ function GuestLinksPanel() {
   );
 }
 
+/* ── Quote Section: estimator first, history on demand ─── */
+function QuoteSection({ role }) {
+  const [showHistory, setShowHistory] = useState(false);
+  if (showHistory) return React.createElement(QuoteHistoryPage, { role, onBack: () => setShowHistory(false) });
+  return React.createElement(QuoteTab, { onHistory: () => setShowHistory(true) });
+}
+
 /* ──────────────────────────────────────────────────────── */
 function App() {
   const [splash,         setSplash]         = useState(() => !localStorage.getItem('userRole'));
@@ -6980,12 +7003,7 @@ function App() {
           </button>
           {isStaff && (
             <button className={'nav-tab' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>
-              估價紀錄<QuotePendingBadge />
-            </button>
-          )}
-          {isStaff && (
-            <button className={'nav-tab' + (tab === 'guest' ? ' on' : '')} onClick={() => setTab('guest')}>
-              臨時網址
+              估價<QuotePendingBadge />
             </button>
           )}
           {isAdmin && (
@@ -7008,8 +7026,7 @@ function App() {
       <div className="content">
         {tab === 'browse'    && <BrowseTab isFav={isFav} toggleFav={toggleFav} role={role} />}
         {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
-        {tab === 'quote'     && isStaff  && <QuoteHistoryPage role={role} />}
-        {tab === 'guest'     && isStaff  && <GuestLinksPanel />}
+        {tab === 'quote'     && isStaff  && <QuoteSection role={role} />}
         {tab === 'settings'  && isAdmin  && <PricingSettingsTab />}
       </div>
       <nav className="tab-bar">
@@ -7020,11 +7037,6 @@ function App() {
         {isStaff && (
           <button className={'tab-btn' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>
             估價<QuotePendingBadge />
-          </button>
-        )}
-        {isStaff && (
-          <button className={'tab-btn' + (tab === 'guest' ? ' on' : '')} onClick={() => setTab('guest')}>
-            臨時網址
           </button>
         )}
         {isAdmin && (
