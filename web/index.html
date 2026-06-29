@@ -4999,8 +4999,8 @@ function StagingQueuePanel() {
 }
 
 /* ── Pricing Settings Tab ────────────────────────────── */
-function PricingSettingsTab() {
-  const [settingsTab, setSettingsTab] = useState('upload');
+function PricingSettingsTab({ initialTab = 'upload' }) {
+  const [settingsTab, setSettingsTab] = useState(initialTab);
 
   const tabBtnSt = (active) => ({
     flex: 1, padding: '9px 4px', fontSize: 13, fontWeight: active ? 700 : 500,
@@ -6908,6 +6908,7 @@ function App() {
   const [role,           setRole]           = useState(() => localStorage.getItem('userRole') || 'guest');
   const [metalsLastUpd,  setMetalsLastUpd]  = useState(null);
   const [idleWarning,    setIdleWarning]    = useState(false);
+  const [settingsInitTab,setSettingsInitTab]= useState('upload');
 
   const isAdmin = role === 'admin';
   const isStaff = role === 'admin' || role === 'editor';
@@ -6989,7 +6990,7 @@ function App() {
       {isStaff && (
         <PricingBanner
           metalsLastUpdated={metalsLastUpd}
-          onGotoSettings={isAdmin ? () => setTab('settings') : null}
+          onGotoSettings={isAdmin ? () => { setSettingsInitTab('pricing'); setTab('settings'); } : null}
         />
       )}
 
@@ -7027,7 +7028,7 @@ function App() {
         {tab === 'browse'    && <BrowseTab isFav={isFav} toggleFav={toggleFav} role={role} />}
         {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
         {tab === 'quote'     && isStaff  && <QuoteSection role={role} />}
-        {tab === 'settings'  && isAdmin  && <PricingSettingsTab />}
+        {tab === 'settings'  && isAdmin  && <PricingSettingsTab key={settingsInitTab} initialTab={settingsInitTab} />}
       </div>
       <nav className="tab-bar">
         <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>照片庫</button>
