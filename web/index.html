@@ -1308,10 +1308,12 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
   const [idx,         setIdx]         = useState(0);
   const [loading,     setLoading]     = useState(true);
   const [done,        setDone]        = useState(false);
-  const [showTutorial,setShowTutorial]= useState(true);
+  const [showTutorial,setShowTutorial]= useState(() => !localStorage.getItem('swipeTutSeen'));
   const [favCount,    setFavCount]    = useState(0);
   const [streak,      setStreak]      = useState(0);
+  const [histLen,     setHistLen]     = useState(0);   // 可復原步數
 
+  const histRef     = useRef([]);   // [{i, faved}]
   const pageRef     = useRef(1);
   const hasMoreRef  = useRef(true);
   const loadingRef  = useRef(false);
@@ -1373,7 +1375,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         card.style.transition = 'transform .54s cubic-bezier(.1,.3,.55,1), box-shadow .18s';
         card.style.transform  = 'translateX(-92px) rotate(-20deg)';
         card.style.boxShadow  = `0 0 32px rgba(200,50,50,.55), ${SHADOW_BASE}`;
-        setLbl('unlike', '#e53935', '-12deg');
+        setLbl('略過', '#e53935', '-12deg');
       }, 680),
       setTimeout(() => { clearLbl(); spring(); }, 1530),
 
@@ -1383,7 +1385,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         card.style.transition = 'transform .54s cubic-bezier(.1,.3,.55,1), box-shadow .18s';
         card.style.transform  = 'translateX(92px) rotate(20deg)';
         card.style.boxShadow  = `0 0 36px rgba(184,147,90,.65), ${SHADOW_BASE}`;
-        setLbl('like', '#b8935a', '12deg');
+        setLbl('✦ 更多同款', '#b8935a', '12deg');
       }, 2430),
       setTimeout(() => { clearLbl(); spring(); }, 3290),
 
@@ -1402,7 +1404,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         if (heart) { heart.classList.remove('heart-beat'); void heart.offsetWidth; heart.classList.add('heart-beat'); }
       }, 4530),
       setTimeout(() => { clearLbl(); spring(); }, 5060),
-      setTimeout(() => setShowTutorial(false), 5800),
+      setTimeout(() => { localStorage.setItem('swipeTutSeen', '1'); setShowTutorial(false); }, 5800),
     ];
     return () => timers.forEach(clearTimeout);
   }, [showTutorial]);
@@ -1464,7 +1466,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     }
     if (!lbl) return;
     if (!dir) { lbl.style.opacity = '0'; return; }
-    const C = { left:['unlike','#e53935','-13deg'], right:['like','#b8935a','13deg'], down:['♥ 收藏','#4caf77','0deg'] }[dir];
+    const C = { left:['略過','#e53935','-13deg'], right:['✦ 更多同款','#b8935a','13deg'], down:['♥ 收藏','#4caf77','0deg'] }[dir];
     lbl.textContent = C[0]; lbl.style.color = C[1]; lbl.style.borderColor = C[1];
     lbl.style.transform = `translateX(-50%) translateY(-50%) rotate(${C[2]})`;
     lbl.style.opacity = '1';
@@ -1519,6 +1521,50 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     lastDirRef.current = dir;
   };
 
+  /* ── 三個動作：手勢與底部按鈕共用 ── */
+  const pushHist = (faved) => { histRef.current.push({ i: idx, faved: !!faved }); setHistLen(histRef.current.length); };
+
+  const doSkip = () => {
+    if (!current) return;
+    pushHist(false);
+    advance('left');
+  };
+  const doFav = () => {
+    if (!current) return;
+    pushHist(true);
+    toggleFav(current);
+    advance('down');
+  };
+  const doLike = () => {
+    if (!current) return;
+    pushHist(false);
+    advance('right');
+    fetch(`/api/photos/${current.id}/similar?limit=6`).then(r=>r.json()).then(similars => {
+      if (Array.isArray(similars) && similars.length > 0) {
+        setPhotos(prev => {
+          const ci = idx + 1;
+          return [...prev.slice(0,ci), ...similars.filter(s=>s.id!==current.id), ...prev.slice(ci)];
+        });
+      }
+    }).catch(()=>{});
+  };
+  const undo = () => {
+    const last = histRef.current.pop();
+    if (!last) return;
+    setHistLen(histRef.current.length);
+    const photo = photos[last.i];
+    if (last.faved && photo) {
+      toggleFav(photo);            // 取消剛剛的收藏
+      setFavCount(n => Math.max(0, n - 1));
+    }
+    setStreak(0);
+    lastDirRef.current = null;
+    setDone(false);
+    setIdx(last.i);
+  };
+
+  const dismissTutorial = () => { localStorage.setItem('swipeTutSeen', '1'); setShowTutorial(false); };
+
   const onTouchStart = e => {
     const t = e.touches[0];
     dragRef.current = { active:true, x0:t.clientX, y0:t.clientY, dx:0, dy:0 };
@@ -1544,22 +1590,11 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     const { dx, dy } = dragRef.current;
     const dir = getDir(dx, dy, 80);
     if (dir === 'down') {
-      if (current) toggleFav(current);
-      advance('down');
+      doFav();
     } else if (dir === 'right') {
-      advance('right');
-      if (current) {
-        fetch(`/api/photos/${current.id}/similar?limit=6`).then(r=>r.json()).then(similars => {
-          if (Array.isArray(similars) && similars.length > 0) {
-            setPhotos(prev => {
-              const ci = idx + 1;
-              return [...prev.slice(0,ci), ...similars.filter(s=>s.id!==current.id), ...prev.slice(ci)];
-            });
-          }
-        }).catch(()=>{});
-      }
+      doLike();
     } else if (dir === 'left') {
-      advance('left');
+      doSkip();
     } else {
       if (cardRef.current) {
         cardRef.current.style.transition = 'transform .38s cubic-bezier(.34,1.3,.64,1), box-shadow .25s';
@@ -1594,6 +1629,16 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
           </span>
           <span style={{fontSize:16,color:favCount>0?'#c04060':'rgba(255,255,255,.2)',transition:'color .4s'}}>♥</span>
         </div>
+        <button onClick={() => setShowTutorial(true)} style={{background:'none',cursor:'pointer',
+          marginLeft:10,width:22,height:22,borderRadius:'50%',border:'1px solid rgba(184,147,90,.35)',
+          color:'rgba(184,147,90,.55)',fontSize:12,lineHeight:1,padding:0,flexShrink:0}}>?</button>
+      </div>
+
+      {/* ── 進度條 ── */}
+      <div style={{height:2,background:'rgba(255,255,255,.06)',flexShrink:0}}>
+        <div style={{height:'100%',transition:'width .35s ease',
+          width: photos.length ? Math.min(100, (idx / photos.length) * 100) + '%' : '0%',
+          background:'linear-gradient(90deg, rgba(138,106,58,.8), #c9a86c)'}} />
       </div>
 
       {/* ── Card area ── */}
@@ -1621,40 +1666,89 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
           </div>
         )}
         {current && !done && (
-          <div ref={cardRef}
-            style={{width:'100%',maxWidth:420,background:'#fff5f7',borderRadius:32,overflow:'hidden',
-              boxShadow:'0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4)',
-              border:'1px solid rgba(220,150,165,0.35)',
-              position:'relative',userSelect:'none',touchAction:'none'}}
-            onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-            <img src={current.full_url || current.thumb_url} alt="" draggable={false}
-              style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f4f1ec',display:'block',pointerEvents:'none'}} />
-            <div ref={lblRef} className="swipe-lbl" />
-            {/* Info strip */}
-            <div style={{padding:'10px 16px 14px',background:'#fff5f7',borderTop:'1px solid rgba(220,150,165,0.25)'}}>
-              <div style={{fontSize:13,fontWeight:500,color:'#3a3530',marginBottom:3}}>
-                {current.category || '—'}
-              </div>
-              <div style={{fontSize:11,color:'#b0a898',fontWeight:300,letterSpacing:.5}}>
-                {[current.gemstone,current.style,current.stone_size].filter(v=>v&&v!=='未定').join('  ·  ')}
+          <div style={{position:'relative',width:'100%',maxWidth:420}}>
+            {/* 牌堆：後面墊兩張下一張的卡 */}
+            {[2,1].map(off => {
+              const p = photos[idx + off];
+              if (!p) return null;
+              return (
+                <div key={p.id} style={{position:'absolute',inset:0,zIndex:3-off,
+                  transform:`translateY(${off*13}px) scale(${1 - off*0.05})`,
+                  transition:'transform .35s cubic-bezier(.34,1.2,.64,1)',
+                  background:'#fff5f7',borderRadius:32,overflow:'hidden',
+                  border:'1px solid rgba(220,150,165,0.3)',
+                  boxShadow:'0 10px 28px rgba(0,0,0,.35)',pointerEvents:'none'}}>
+                  <img src={p.thumb_url} alt="" draggable={false}
+                    style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f4f1ec',display:'block'}} />
+                  <div style={{padding:'10px 16px 14px',background:'#fff5f7',borderTop:'1px solid rgba(220,150,165,0.25)'}}>
+                    <div style={{fontSize:13,fontWeight:500,color:'#3a3530',marginBottom:3}}>{p.category || '—'}</div>
+                    <div style={{fontSize:11,color:'#b0a898',fontWeight:300,letterSpacing:.5}}>
+                      {[p.gemstone,p.style,p.stone_size].filter(v=>v&&v!=='未定').join('  ·  ') || ' '}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {/* 當前卡片 */}
+            <div ref={cardRef} key={current.id}
+              style={{width:'100%',background:'#fff5f7',borderRadius:32,overflow:'hidden',
+                boxShadow:'0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4)',
+                border:'1px solid rgba(220,150,165,0.35)',
+                position:'relative',zIndex:3,userSelect:'none',touchAction:'none'}}
+              onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+              <img src={current.full_url || current.thumb_url} alt="" draggable={false}
+                style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f4f1ec',display:'block',pointerEvents:'none'}} />
+              <div ref={lblRef} className="swipe-lbl" />
+              {/* Info strip */}
+              <div style={{padding:'10px 16px 14px',background:'#fff5f7',borderTop:'1px solid rgba(220,150,165,0.25)'}}>
+                <div style={{fontSize:13,fontWeight:500,color:'#3a3530',marginBottom:3}}>
+                  {current.category || '—'}
+                </div>
+                <div style={{fontSize:11,color:'#b0a898',fontWeight:300,letterSpacing:.5}}>
+                  {[current.gemstone,current.style,current.stone_size].filter(v=>v&&v!=='未定').join('  ·  ') || ' '}
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Heart Collection Box ── */}
+      {/* ── 底部操作列：復原 / 略過 / 收藏 / 相似推薦 ── */}
       {!done && (
-        <div style={{flexShrink:0,padding:'14px 0 30px',display:'flex',justifyContent:'center'}}>
-          <div style={{
-            display:'flex',flexDirection:'column',alignItems:'center',gap:3,
-            padding:'10px 28px 9px',borderRadius:14,
-            border:'1px solid rgba(184,147,90,.28)',
-            background:'rgba(184,147,90,.06)',
-            backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
-          }}>
-            <div ref={heartRef} style={{fontSize:24,color:'rgba(184,147,90,.4)',display:'inline-block',lineHeight:1,transition:'color .3s'}}>♥</div>
-            <div style={{fontSize:9,color:'rgba(184,147,90,.4)',letterSpacing:3,marginTop:2}}>收藏</div>
+        <div style={{flexShrink:0,padding:'14px 0 28px',display:'flex',alignItems:'flex-end',justifyContent:'center',gap:20}}>
+          {/* 復原 */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+            <button onClick={undo} disabled={histLen === 0} style={{
+              width:42,height:42,borderRadius:'50%',cursor:histLen?'pointer':'default',
+              border:'1px solid rgba(255,255,255,.16)',background:'rgba(255,255,255,.05)',
+              color: histLen ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.18)',
+              fontSize:17,lineHeight:1,transition:'color .2s'}}>↺</button>
+            <span style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,.28)'}}>復原</span>
+          </div>
+          {/* 略過 */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+            <button onClick={doSkip} style={{
+              width:56,height:56,borderRadius:'50%',cursor:'pointer',
+              border:'1.5px solid rgba(229,57,53,.55)',background:'rgba(229,57,53,.08)',
+              color:'#e57373',fontSize:22,lineHeight:1}}>✕</button>
+            <span style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,.28)'}}>略過</span>
+          </div>
+          {/* 收藏（最大，也是下滑的落點） */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+            <button ref={heartRef} onClick={doFav} style={{
+              width:68,height:68,borderRadius:'50%',cursor:'pointer',border:'none',
+              background:'linear-gradient(145deg, #c9a86c, #8a6a3a)',
+              boxShadow:'0 6px 20px rgba(184,147,90,.4)',
+              color:'#fff',fontSize:26,lineHeight:1}}>♥</button>
+            <span style={{fontSize:9,letterSpacing:2,color:'rgba(201,168,108,.7)'}}>收藏</span>
+          </div>
+          {/* 相似推薦 */}
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+            <button onClick={doLike} style={{
+              width:56,height:56,borderRadius:'50%',cursor:'pointer',
+              border:'1.5px solid rgba(184,147,90,.5)',background:'rgba(184,147,90,.08)',
+              color:'#c9a86c',fontSize:20,lineHeight:1}}>✦</button>
+            <span style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,.28)'}}>更多同款</span>
           </div>
         </div>
       )}
@@ -1687,7 +1781,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
 
           {/* Gesture hints */}
           <div style={{display:'flex',justifyContent:'space-around',width:'68vw',maxWidth:280,marginTop:20,gap:4}}>
-            {[['←','unlike','#c04040'],['↓','收藏','rgba(76,175,100,.9)'],['→','like','#b8935a']].map(([arrow,text,color])=>(
+            {[['←','略過','#c04040'],['↓','收藏','rgba(76,175,100,.9)'],['→','更多同款','#b8935a']].map(([arrow,text,color])=>(
               <div key={text} style={{flex:1,textAlign:'center'}}>
                 <div style={{fontSize:18,color,marginBottom:3,fontWeight:700}}>{arrow}</div>
                 <div style={{fontSize:11,color,fontWeight:700,letterSpacing:1}}>{text}</div>
@@ -1700,8 +1794,11 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
             padding:'8px 22px 7px',borderRadius:12,border:'1px solid rgba(184,147,90,.2)',
             background:'rgba(184,147,90,.05)'}}>♥</div>
 
-          <button onClick={() => setShowTutorial(false)}
-            style={{marginTop:22,padding:'9px 32px',borderRadius:22,
+          <div style={{marginTop:14,fontSize:11,color:'rgba(255,255,255,.35)',letterSpacing:1}}>
+            也可以直接點下方按鈕操作
+          </div>
+          <button onClick={dismissTutorial}
+            style={{marginTop:14,padding:'9px 32px',borderRadius:22,
               border:'1px solid rgba(184,147,90,.35)',
               background:'rgba(184,147,90,.12)',
               color:'rgba(220,195,140,.8)',fontSize:13,cursor:'pointer',letterSpacing:2,fontWeight:600}}>
