@@ -6101,7 +6101,64 @@ function QuoteHistoryPage({ role, onBack }) {
   const [page,     setPage]     = useState(1);
   const [hasMore,  setHasMore]  = useState(false);
   const [selected, setSelected] = useState(null); // quote object
-  const [subView,  setSubView]  = useState('list'); // 'list' | 'newquote'
+  const [subView,  setSubView]  = useState('list'); // 'list' | 'newquote' | 'photoquote'
+
+  /* 待確認成交 */
+  const [pending,     setPending]     = useState([]);
+  const [pendingFill, setPendingFill] = useState({});
+  const [pendingBusy, setPendingBusy] = useState(null);
+
+  /* 上傳圖片估價 */
+  const fileRef = useRef(null);
+  const [analyzing,  setAnalyzing]  = useState(false);
+  const [quotePhoto, setQuotePhoto] = useState(null);
+
+  const loadPending = () => {
+    fetch('/api/quotes/pending').then(r => r.json()).then(setPending).catch(() => {});
+  };
+  useEffect(loadPending, []);
+
+  async function confirmPending(id) {
+    const price = parseInt((pendingFill[id]||'').replace(/[^0-9]/g,''));
+    if (!price) return;
+    setPendingBusy(id);
+    try {
+      await fetch(`/api/quotes/${id}`, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ final_price: price }),
+      });
+      setPending(prev => prev.filter(q => q.id !== id));
+      load(1);
+    } catch { alert('回填失敗'); }
+    setPendingBusy(null);
+  }
+
+  const onPickFile = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    setAnalyzing(true);
+    try {
+      const fd = new FormData();
+      fd.append('files', f);
+      const r = await fetch('/api/upload', { method: 'POST', body: fd });
+      const d = await r.json();
+      const u = (d.uploaded || [])[0];
+      if (!u) throw new Error((d.errors && d.errors[0] && d.errors[0].error) || '上傳失敗');
+      const fl = u.fields || {};
+      const g = k => (fl[k] && fl[k].label) || null;
+      setQuotePhoto({
+        id: null, thumb_url: u.thumb_url, full_url: u.thumb_url,
+        category: g('category'), gemstone: g('gemstone'), stone_size: g('stone_size'),
+        stone_shape: g('stone_shape'), color: g('color'), metal_color: g('metal_color'),
+        material: g('material'), style: g('style'), setting_amount: g('setting_amount'),
+        craft_complexity: g('craft_complexity'),
+      });
+      setSubView('photoquote');
+    } catch (err) { alert('圖片分析失敗：' + err.message); }
+    setAnalyzing(false);
+  };
 
   const load = async (pg = 1) => {
     setLoading(true);
@@ -6125,9 +6182,18 @@ function QuoteHistoryPage({ role, onBack }) {
     />
   );
 
+  /* 上傳圖片 → Gemini 分析 → 正常估價流程（同看圖估價） */
+  if (subView === 'photoquote' && quotePhoto) return (
+    <PhotoQuoteFlow
+      photo={quotePhoto}
+      onBack={() => setSubView('list')}
+      onClose={() => { setSubView('list'); load(1); loadPending(); }}
+    />
+  );
 
   return (
     <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',background:'var(--bg)',paddingTop:'var(--nav-h)'}}>
+      <input type="file" accept="image/*" ref={fileRef} style={{display:'none'}} onChange={onPickFile} />
       {/* Header */}
       <div style={{padding:'14px 16px 10px',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--surface)',borderBottom:'1px solid var(--border)',flexShrink:0}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
@@ -6149,8 +6215,13 @@ function QuoteHistoryPage({ role, onBack }) {
               清空
             </button>
           )}
+          <button onClick={() => !analyzing && fileRef.current && fileRef.current.click()}
+            disabled={analyzing}
+            style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:analyzing?'default':'pointer',opacity:analyzing?0.7:1,whiteSpace:'nowrap'}}>
+            {analyzing ? 'AI 分析中…' : '📷 上傳估價'}
+          </button>
           {isAdmin && (
-            <button onClick={() => setSubView('newquote')} style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+            <button onClick={() => setSubView('newquote')} style={{background:'var(--s3)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>
               + 新估價
             </button>
           )}
@@ -6159,8 +6230,43 @@ function QuoteHistoryPage({ role, onBack }) {
 
       {/* List */}
       <div style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
+        {/* 待確認成交 */}
+        {pending.length > 0 && (
+          <div style={{background:'var(--surface)',borderBottom:'1px solid var(--border)'}}>
+            <div style={{padding:'12px 16px 4px',fontSize:10,fontWeight:700,letterSpacing:1.5,
+              color: pending.some(q=>q.hours_elapsed>=24) ? '#c62828' : 'var(--text3)'}}>
+              待確認成交 ({pending.length}){pending.some(q=>q.hours_elapsed>=24) ? '　⚠ 有超過 24 小時未回填' : ''}
+            </div>
+            {pending.map(q => {
+              const overdue = q.hours_elapsed >= 24;
+              const fillVal = pendingFill[q.id] || '';
+              return (
+                <div key={q.id} style={{borderTop:'1px solid var(--border)',padding:'10px 16px 12px'}}>
+                  <div style={{fontSize:13,fontWeight:600,color:'var(--text)',marginBottom:2}}>{q.description || '(無描述)'}</div>
+                  {q.customer_name && <div style={{fontSize:11,color:'var(--text2)'}}>客戶：{q.customer_name}</div>}
+                  <div style={{fontSize:11,color:overdue?'#c62828':'var(--text3)',margin:'2px 0 8px'}}>
+                    {(overdue ? '⚠ ' : '') + q.hours_elapsed + '小時前'}
+                    {q.estimated_min ? `　·　${fmtNT(q.estimated_min)} – ${fmtNT(q.estimated_max)}` : ''}
+                  </div>
+                  <div style={{display:'flex',gap:6}}>
+                    <div style={{position:'relative',flex:1}}>
+                      <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:12,color:'var(--text2)',fontWeight:600,pointerEvents:'none'}}>NT$</span>
+                      <input type="text" inputMode="numeric" placeholder="成交價" value={fillVal}
+                        onChange={e => setPendingFill(prev => ({...prev, [q.id]: e.target.value.replace(/[^0-9]/g,'')}))}
+                        style={{width:'100%',border:'1px solid var(--border)',borderRadius:7,padding:'8px 8px 8px 36px',fontSize:13,fontFamily:'inherit',outline:'none',background:'var(--surface)'}} />
+                    </div>
+                    <button onClick={() => confirmPending(q.id)} disabled={!fillVal || pendingBusy === q.id}
+                      style={{background:fillVal?'var(--gold)':'var(--s3)',color:fillVal?'#fff':'var(--text3)',border:'none',borderRadius:7,padding:'8px 14px',fontSize:12,fontWeight:700,cursor:fillVal?'pointer':'default',whiteSpace:'nowrap'}}>
+                      {pendingBusy === q.id ? '…' : '確認✓'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
         {loading && quotes.length === 0 && <div className="loading-msg">載入中…</div>}
-        {!loading && quotes.length === 0 && <div className="empty-msg">尚無估價紀錄</div>}
+        {!loading && quotes.length === 0 && pending.length === 0 && <div className="empty-msg">尚無估價紀錄</div>}
         {quotes.map(q => {
           const pending = !q.final_price || q.final_price === 0;
           const adj = (() => { try { return JSON.parse(q.adjusted_data||'{}'); } catch { return {}; } })();
@@ -7110,11 +7216,9 @@ function GuestLinksPanel() {
   );
 }
 
-/* ── Quote Section: estimator first, history on demand ─── */
+/* ── Quote Section: 估價紀錄為主，估價一律從圖片出發 ─── */
 function QuoteSection({ role }) {
-  const [showHistory, setShowHistory] = useState(false);
-  if (showHistory) return React.createElement(QuoteHistoryPage, { role, onBack: () => setShowHistory(false) });
-  return React.createElement(QuoteTab, { onHistory: () => setShowHistory(true) });
+  return React.createElement(QuoteHistoryPage, { role });
 }
 
 /* ──────────────────────────────────────────────────────── */
