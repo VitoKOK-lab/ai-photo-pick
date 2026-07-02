@@ -1764,48 +1764,48 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         )}
         {current && !done && (
           <div style={{position:'relative',width:'100%',maxWidth:420}}>
-            {/* 牌堆：後面墊兩張下一張的卡 */}
-            {[2,1].map(off => {
+            {/* 牌堆：三張卡同一個 keyed 列表 → 換卡時 React 重用節點，
+                後面那張平滑升到最前，圖片不重載、不閃爍 */}
+            {[2,1,0].map(off => {
               const p = photos[idx + off];
               if (!p) return null;
+              const isTop = off === 0;
               return (
-                <div key={p.id} style={{position:'absolute',inset:0,zIndex:3-off,
-                  transform:`translateY(${off*13}px) scale(${1 - off*0.05})`,
-                  transition:'transform .35s cubic-bezier(.34,1.2,.64,1)',
-                  background:'#fff',borderRadius:32,overflow:'hidden',
-                  border:'1px solid rgba(184,147,90,.22)',
-                  boxShadow:'0 8px 22px rgba(80,60,30,.12)',pointerEvents:'none'}}>
-                  <img src={p.thumb_url} alt="" draggable={false}
-                    style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#faf8f4',display:'block'}} />
+                <div key={p.id}
+                  ref={isTop ? cardRef : null}
+                  onTouchStart={isTop ? onTouchStart : undefined}
+                  onTouchMove={isTop ? onTouchMove : undefined}
+                  onTouchEnd={isTop ? onTouchEnd : undefined}
+                  style={{
+                    position: isTop ? 'relative' : 'absolute',
+                    ...(isTop ? {} : { inset: 0 }),
+                    width:'100%', zIndex: 3 - off,
+                    transform: isTop ? '' : `translateY(${off*13}px) scale(${1 - off*0.05})`,
+                    transition:'transform .32s cubic-bezier(.34,1.2,.64,1), box-shadow .32s',
+                    background:'#fff', borderRadius:32, overflow:'hidden',
+                    border:'1px solid rgba(184,147,90,.28)',
+                    boxShadow: isTop
+                      ? '0 18px 44px rgba(80,60,30,.18), 0 4px 12px rgba(80,60,30,.10)'
+                      : '0 8px 22px rgba(80,60,30,.12)',
+                    pointerEvents: isTop ? 'auto' : 'none',
+                    userSelect:'none', touchAction:'none',
+                  }}>
+                  {/* 三張都載 full 圖：升到最前時 src 不變 → 零閃爍 */}
+                  <img src={p.full_url || p.thumb_url} alt="" draggable={false}
+                    style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#faf8f4',display:'block',pointerEvents:'none'}} />
+                  {isTop && <div ref={lblRef} className="swipe-lbl" />}
+                  {/* Info strip */}
                   <div style={{padding:'10px 16px 14px',background:'#fff',borderTop:'1px solid rgba(184,147,90,.14)'}}>
-                    <div style={{fontSize:13,fontWeight:500,color:'#3a3530',marginBottom:3}}>{p.category || '—'}</div>
+                    <div style={{fontSize:13,fontWeight:500,color:'#3a3530',marginBottom:3}}>
+                      {p.category || '—'}
+                    </div>
                     <div style={{fontSize:11,color:'#b0a898',fontWeight:300,letterSpacing:.5}}>
-                      {[p.gemstone,p.style,p.stone_size].filter(v=>v&&v!=='未定').join('  ·  ') || ' '}
+                      {[p.gemstone,p.style,p.stone_size].filter(v=>v&&v!=='未定').join('  ·  ') || ' '}
                     </div>
                   </div>
                 </div>
               );
             })}
-            {/* 當前卡片 */}
-            <div ref={cardRef} key={current.id}
-              style={{width:'100%',background:'#fff',borderRadius:32,overflow:'hidden',
-                boxShadow:'0 18px 44px rgba(80,60,30,.18), 0 4px 12px rgba(80,60,30,.10)',
-                border:'1px solid rgba(184,147,90,.3)',
-                position:'relative',zIndex:3,userSelect:'none',touchAction:'none'}}
-              onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-              <img src={current.full_url || current.thumb_url} alt="" draggable={false}
-                style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#faf8f4',display:'block',pointerEvents:'none'}} />
-              <div ref={lblRef} className="swipe-lbl" />
-              {/* Info strip */}
-              <div style={{padding:'10px 16px 14px',background:'#fff',borderTop:'1px solid rgba(184,147,90,.14)'}}>
-                <div style={{fontSize:13,fontWeight:500,color:'#3a3530',marginBottom:3}}>
-                  {current.category || '—'}
-                </div>
-                <div style={{fontSize:11,color:'#b0a898',fontWeight:300,letterSpacing:.5}}>
-                  {[current.gemstone,current.style,current.stone_size].filter(v=>v&&v!=='未定').join('  ·  ') || ' '}
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>
