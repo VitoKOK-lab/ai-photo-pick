@@ -2141,37 +2141,44 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
     <>
       <div className="browse-hdr">
         <CategoryTabs active={catFilter} onSelect={v => { if (!batchMode) setCatFilter(v); }} />
-        {/* 單列：去背/情境 + 篩選 chips + 動作按鈕 */}
-        <div className="chips-bar" style={{gap:6,padding:'6px 10px'}}>
-          <div style={{display:'flex',gap:0,background:'var(--s3)',borderRadius:8,padding:2,flexShrink:0}}>
-            {['去背','情境'].map(mode => (
-              <button key={mode} onClick={() => setPhotoMode(mode)} style={{
-                padding:'4px 12px', border:'none', borderRadius:6, fontSize:12, fontWeight:600,
-                cursor:'pointer', transition:'all .18s',
-                background: photoMode===mode ? 'var(--surface)' : 'transparent',
-                color: photoMode===mode ? 'var(--text)' : 'var(--text3)',
-                boxShadow: photoMode===mode ? '0 1px 3px rgba(0,0,0,.1)' : 'none',
-              }}>{mode}</button>
+        {/* 單列：左邊可橫滑（切換+篩選+次要動作），右邊固定 like or not */}
+        <div style={{display:'flex',alignItems:'stretch',background:'var(--surface)',borderBottom:'1px solid var(--border)'}}>
+          <div className="chips-bar" style={{flex:1,minWidth:0,gap:6,padding:'6px 10px',border:'none'}}>
+            <div style={{display:'flex',gap:0,background:'var(--s3)',borderRadius:8,padding:2,flexShrink:0}}>
+              {['去背','情境'].map(mode => (
+                <button key={mode} onClick={() => setPhotoMode(mode)} style={{
+                  padding:'4px 12px', border:'none', borderRadius:6, fontSize:12, fontWeight:600,
+                  cursor:'pointer', transition:'all .18s',
+                  background: photoMode===mode ? 'var(--surface)' : 'transparent',
+                  color: photoMode===mode ? 'var(--text)' : 'var(--text3)',
+                  boxShadow: photoMode===mode ? '0 1px 3px rgba(0,0,0,.1)' : 'none',
+                }}>{mode}</button>
+              ))}
+            </div>
+            {Object.entries(CFG).map(([field]) => (
+              <FilterDropdown key={field} field={field} cur={filters[field] || null}
+                counts={counts[field] || {}} onPick={v => setF(field, v)} />
             ))}
+            {(catFilter || Object.keys(filters).length > 0) && (
+              <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
+            )}
+            <div style={{flex:1,minWidth:8}} />
+            {isStaff && (
+              batchMode
+                ? <button onClick={exitBatch} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',flexShrink:0}}>取消</button>
+                : <>
+                    <button onClick={() => setBatchMode(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>批量編輯</button>
+                    <button onClick={() => setBudgetFlow(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>以預算找款</button>
+                  </>
+            )}
           </div>
-          {Object.entries(CFG).map(([field]) => (
-            <FilterDropdown key={field} field={field} cur={filters[field] || null}
-              counts={counts[field] || {}} onPick={v => setF(field, v)} />
-          ))}
-          {(catFilter || Object.keys(filters).length > 0) && (
-            <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
-          )}
-          <div style={{flex:1,minWidth:8}} />
-          {isStaff && (
-            batchMode
-              ? <button onClick={exitBatch} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',flexShrink:0}}>取消</button>
-              : <>
-                  <button onClick={() => setBatchMode(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>批量編輯</button>
-                  <button onClick={() => setBudgetFlow(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>以預算找款</button>
-                  <button className="swipe-launch-btn" onClick={() => window.innerWidth < 768 ? setSwipeMode(true) : setShowQR(true)} style={{padding:'5px 12px',border:'1px solid var(--gold)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap',flexShrink:0}}>
-                    <span style={{fontSize:12}}>✦</span> like or not
-                  </button>
-                </>
+          {isStaff && !batchMode && (
+            <div style={{flexShrink:0,display:'flex',alignItems:'center',padding:'6px 10px 6px 6px',
+              boxShadow:'-10px 0 10px -8px rgba(0,0,0,.12)',position:'relative',zIndex:1}}>
+              <button className="swipe-launch-btn" onClick={() => window.innerWidth < 768 ? setSwipeMode(true) : setShowQR(true)} style={{padding:'5px 12px',border:'1px solid var(--gold)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
+                <span style={{fontSize:12}}>✦</span> like or not
+              </button>
+            </div>
           )}
         </div>
       </div>
