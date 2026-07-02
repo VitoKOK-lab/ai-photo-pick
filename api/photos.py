@@ -125,11 +125,8 @@ def list_photos(
 
     add_in("color",          color)
     # 查「其他」時同時包含「未定」，避免未定照片消失
-    # 查「項鍊」時同時包含舊的「墜子」記錄（向後相容）
     if category == "其他":
         wheres.append("(category IN ('其他','未定') OR category IS NULL)")
-    elif category == "項鍊":
-        wheres.append("category IN ('項鍊','墜子')")
     else:
         add_in("category", category)
     add_in("material",       material)
@@ -202,17 +199,19 @@ def filter_counts(
     gemstone:    Optional[str] = None,
     stone_shape: Optional[str] = None,
     stone_size:  Optional[str] = None,
+    price_band:  Optional[str] = None,
     photo_type:  Optional[str] = None,
 ):
     """根據目前已選篩選器，回傳各維度每個值的照片數量（faceted counts）。"""
     CFG_VALS = {
-        "category":    ['戒指','手鏈','項鍊','耳釘','胸針','其他'],
+        "category":    ['戒指','墜子','耳釘','手鏈','項鍊','胸針','其他'],
         "style":       ['無鑽','簡約','輕奢','奢華'],
-        "gemstone":    ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','紫水晶','黃水晶','月光石','歐泊','橄欖石','石榴石','珍珠','翡翠','托帕石','其他彩寶','無寶石'],
+        "gemstone":    ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','紫水晶','黃水晶','月光石','歐泊','橄欖石','石榴石','珍珠','翡翠','托帕石','尖晶石','其他彩寶','無寶石'],
         "stone_shape": ['橢圓形','圓形','水滴形','心形','方形','長方形','馬眼形','枕形','梨形','三角形','花形','不規則','無主石'],
         "stone_size":  ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉','10克拉以上'],
         "color":       ['紅','粉','黃','綠','藍','紫','白','彩'],
         "metal_color": ['金','銀'],
+        "price_band":  ['入門','中階','高階','奢華','頂級'],
     }
     # photo_type 不列入 facet，但納入每個欄位的計數條件
     base_filter = {"photo_type": photo_type} if photo_type else {}
@@ -220,6 +219,7 @@ def filter_counts(
         **base_filter,
         "category": category, "style": style, "color": color, "metal_color": metal_color,
         "gemstone": gemstone, "stone_shape": stone_shape, "stone_size": stone_size,
+        "price_band": price_band,
     }
     conn = _conn()
     result = {}

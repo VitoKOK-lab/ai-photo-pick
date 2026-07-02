@@ -81,11 +81,11 @@ _SEED_LABOR = [
     ("耳釘",   "中等",  4500,  7000),
     ("耳釘",   "複雜",  7000, 12000),
     ("耳釘",   "精工", 12000, 22000),
-    ("手鍊",   "極簡",  3000,  5000),
-    ("手鍊",   "簡單",  5000,  8000),
-    ("手鍊",   "中等",  8000, 13000),
-    ("手鍊",   "複雜", 13000, 22000),
-    ("手鍊",   "精工", 22000, 40000),
+    ("手鏈",   "極簡",  3000,  5000),
+    ("手鏈",   "簡單",  5000,  8000),
+    ("手鏈",   "中等",  8000, 13000),
+    ("手鏈",   "複雜", 13000, 22000),
+    ("手鏈",   "精工", 22000, 40000),
     ("項鍊",   "極簡",  4000,  7000),
     ("項鍊",   "簡單",  7000, 12000),
     ("項鍊",   "中等", 12000, 20000),
@@ -103,96 +103,114 @@ _SEED_LABOR = [
     ("手鐲",   "精工", 18000, 35000),
 ]
 
-_SEED_STONES_INVEST = [
-    # (key, name, band, price_floor, price_ceil)
-    ("RUBY",     "紅寶石",   "B1",  40000,  200000),
-    ("RUBY",     "紅寶石",   "B2", 120000,  600000),
-    ("RUBY",     "紅寶石",   "B3", 300000, 1500000),
-    ("RUBY",     "紅寶石",   "B4",1000000, 5000000),
-    ("RUBY",     "紅寶石",   "B5",2500000,12000000),
-    ("SAPPHIRE", "藍寶石",   "B1",  30000,  150000),
-    ("SAPPHIRE", "藍寶石",   "B2",  80000,  400000),
-    ("SAPPHIRE", "藍寶石",   "B3", 200000, 1000000),
-    ("SAPPHIRE", "藍寶石",   "B4", 500000, 2500000),
-    ("SAPPHIRE", "藍寶石",   "B5",1200000, 6000000),
-    ("EMERALD",  "祖母綠",   "B1",  20000,  100000),
-    ("EMERALD",  "祖母綠",   "B2",  60000,  300000),
-    ("EMERALD",  "祖母綠",   "B3", 150000,  750000),
-    ("EMERALD",  "祖母綠",   "B4", 400000, 2000000),
-    ("EMERALD",  "祖母綠",   "B5",1000000, 5000000),
-    ("DIAMOND",  "鑽石",     "B1",  40000,  160000),   # K-M/I1-I3 商業品
-    ("DIAMOND",  "鑽石",     "B2", 100000,  400000),   # H-J/SI1-SI2
-    ("DIAMOND",  "鑽石",     "B3", 250000,  900000),   # G-H/VS
-    ("DIAMOND",  "鑽石",     "B4", 600000, 2500000),   # E-F/VVS
-    ("DIAMOND",  "鑽石",     "B5",1500000, 6000000),   # D-E/IF-VVS1
-    ("ALEXANDRITE","亞歷山大石","B1", 60000, 350000),
-    ("ALEXANDRITE","亞歷山大石","B2",180000, 900000),
-    ("ALEXANDRITE","亞歷山大石","B3",400000,2000000),
-    ("ALEXANDRITE","亞歷山大石","B4",1000000,5000000),
-    ("ALEXANDRITE","亞歷山大石","B5",2500000,12000000),
-    ("TANZANITE", "坦桑石",   "B1",  15000,   80000),
-    ("TANZANITE", "坦桑石",   "B2",  40000,  200000),
-    ("TANZANITE", "坦桑石",   "B3", 100000,  500000),
-    ("TANZANITE", "坦桑石",   "B4", 250000, 1200000),
-    ("TANZANITE", "坦桑石",   "B5", 600000, 3000000),
-]
+# ── 投資級寶石 v2：與前端估價工具一致（17 種，含產地/處理/色級乘數）──
+# 升版時會清空四張 invest 表重灌一次（使用者自訂值會被重設，之後可再編輯）
+INVEST_SEED_VERSION = 2
 
-# (key, origin, multiplier)
-_SEED_STONE_ORIGINS = [
-    ("RUBY",      "緬甸",   1.5),
-    ("RUBY",      "莫桑比克", 1.0),
-    ("RUBY",      "泰國",   0.7),
-    ("RUBY",      "其他",   0.8),
-    ("SAPPHIRE",  "斯里蘭卡", 1.3),
-    ("SAPPHIRE",  "克什米爾", 2.0),
-    ("SAPPHIRE",  "緬甸",   1.2),
-    ("SAPPHIRE",  "馬達加斯加",0.8),
-    ("SAPPHIRE",  "泰國",   0.7),
-    ("SAPPHIRE",  "其他",   0.85),
-    ("EMERALD",   "哥倫比亞", 1.5),
-    ("EMERALD",   "尚比亞",  0.9),
-    ("EMERALD",   "巴西",   0.75),
-    ("EMERALD",   "其他",   0.7),
-    ("ALEXANDRITE","俄羅斯", 2.0),
-    ("ALEXANDRITE","斯里蘭卡",1.2),
-    ("ALEXANDRITE","巴西",  0.9),
-    ("TANZANITE", "坦尚尼亞",1.0),
-]
-
-# (key, treatment, multiplier)
-_SEED_STONE_TREATMENTS = [
-    ("RUBY",     "無燒",  1.5),
-    ("RUBY",     "有燒",  1.0),
-    ("RUBY",     "鉛玻璃", 0.3),
-    ("SAPPHIRE", "無燒",  1.4),
-    ("SAPPHIRE", "有燒",  1.0),
-    ("EMERALD",  "無注油", 1.4),
-    ("EMERALD",  "輕微注油",1.0),
-    ("EMERALD",  "中度注油",0.7),
-    ("EMERALD",  "重度注油",0.4),
-    ("DIAMOND",  "無處理", 1.0),
-    ("DIAMOND",  "輻照彩鑽",0.5),
-]
-
-# (key, color_quality, multiplier)
-_SEED_STONE_COLORS = [
-    ("RUBY",      "頂級紅/鴿血紅", 1.8),
-    ("RUBY",      "優質紅",        1.2),
-    ("RUBY",      "標準紅",        1.0),
-    ("RUBY",      "粉紅/淺紅",     0.6),
-    ("SAPPHIRE",  "皇家藍/矢車菊藍",1.6),
-    ("SAPPHIRE",  "優質藍",        1.2),
-    ("SAPPHIRE",  "標準藍",        1.0),
-    ("SAPPHIRE",  "淺藍/灰藍",     0.65),
-    ("EMERALD",   "頂級綠",        1.5),
-    ("EMERALD",   "優質綠",        1.1),
-    ("EMERALD",   "標準綠",        1.0),
-    ("EMERALD",   "淺綠/黃綠",     0.6),
-    ("TANZANITE", "頂級藍紫",      1.5),
-    ("TANZANITE", "優質藍",        1.1),
-    ("TANZANITE", "標準",          1.0),
-    ("TANZANITE", "淺色",          0.65),
-]
+_INVEST_V2 = {
+    "RUBY": {"name": "紅寶石",
+        "floor": {"B1": 40000, "B2": 120000, "B3": 350000, "B4": 1000000, "B5": 3500000},
+        "ceil":  {"B1": 200000, "B2": 600000, "B3": 2000000, "B4": 8000000, "B5": 30000000},
+        "origins": {"緬甸 Mogok": 3.0, "莫桑比克": 1.0, "泰國": 0.4, "馬達加斯加": 0.6, "其他": 0.5},
+        "treatments": {"無燒": 1.0, "有燒": 0.3},
+        "colors": {"頂級 (鴿血/牛血)": 2.5, "中等 (深紅)": 1.0, "入門 (淡紅/粉)": 0.5}},
+    "SAPPHIRE": {"name": "藍寶石",
+        "floor": {"B1": 50000, "B2": 150000, "B3": 400000, "B4": 1000000, "B5": 3000000},
+        "ceil":  {"B1": 250000, "B2": 1200000, "B3": 3500000, "B4": 12000000, "B5": 40000000},
+        "origins": {"喀什米爾": 4.0, "緬甸": 2.5, "錫蘭/斯里蘭卡": 1.0, "馬達加斯加": 0.5, "泰國": 0.3, "澳洲": 0.3},
+        "treatments": {"無燒": 1.0, "有燒": 0.3},
+        "colors": {"頂級 (矢車菊/皇家藍)": 2.5, "中等 (中藍)": 1.0, "入門 (淺藍)": 0.5}},
+    "PADPARADSCHA": {"name": "帕帕拉恰",
+        "floor": {"B1": 100000, "B2": 250000, "B3": 600000, "B4": 1500000, "B5": 5000000},
+        "ceil":  {"B1": 300000, "B2": 800000, "B3": 2500000, "B4": 8000000, "B5": 25000000},
+        "origins": {"錫蘭/斯里蘭卡": 1.0, "馬達加斯加": 0.5, "越南": 0.6},
+        "treatments": {"無燒": 1.0, "有燒": 0.4},
+        "colors": {"頂級 (粉橙均衡)": 2.0, "中等 (偏粉或偏橙)": 1.0, "入門 (色淡)": 0.5}},
+    "EMERALD": {"name": "祖母綠",
+        "floor": {"B1": 30000, "B2": 80000, "B3": 300000, "B4": 800000, "B5": 2500000},
+        "ceil":  {"B1": 150000, "B2": 400000, "B3": 1500000, "B4": 5000000, "B5": 15000000},
+        "origins": {"哥倫比亞 Muzo": 2.5, "哥倫比亞 Chivor": 1.8, "尚比亞": 1.0, "巴西": 0.6, "衣索比亞": 0.5},
+        "treatments": {"None (無油)": 1.4, "Minor (輕油)": 1.0, "Moderate (中油)": 0.6, "Significant (重油)": 0.3},
+        "colors": {"頂級 (Vivid Green)": 2.0, "中等 (中綠)": 1.0, "入門 (淺綠)": 0.5}},
+    "DIAMOND": {"name": "鑽石",
+        "floor": {"B1": 40000, "B2": 100000, "B3": 250000, "B4": 600000, "B5": 1500000},
+        "ceil":  {"B1": 160000, "B2": 400000, "B3": 900000, "B4": 2500000, "B5": 6000000},
+        "origins": {"一般": 1.0},
+        "treatments": {"無處理": 1.0, "HPHT/輻照處理": 0.5, "培育鑽 (Lab-grown)": 0.15},
+        "colors": {"D–F 高色": 1.5, "G–H": 1.0, "I–J": 0.7, "K 以下": 0.45}},
+    "PARAIBA": {"name": "帕拉依巴",
+        "floor": {"B1": 70000, "B2": 150000, "B3": 500000, "B4": 1500000, "B5": 4000000},
+        "ceil":  {"B1": 300000, "B2": 700000, "B3": 2500000, "B4": 7000000, "B5": 20000000},
+        "origins": {"巴西 Paraiba 州": 3.5, "莫桑比克": 1.0, "奈及利亞": 0.5},
+        "treatments": {"無燒": 1.0, "有燒": 0.6},
+        "colors": {"頂級 (霓虹藍/電光)": 2.0, "中等 (藍綠)": 1.0, "入門 (淡綠)": 0.4}},
+    "SPINEL": {"name": "尖晶石",
+        "floor": {"B1": 30000, "B2": 80000, "B3": 200000, "B4": 500000, "B5": 1500000},
+        "ceil":  {"B1": 200000, "B2": 800000, "B3": 2500000, "B4": 6000000, "B5": 18000000},
+        "origins": {"緬甸 Mogok": 2.5, "坦尚 Mahenge": 2.0, "越南 (鈷藍)": 3.0, "馬達加斯加": 1.0, "塔吉克": 1.2, "其他": 0.7},
+        "treatments": {"無燒": 1.0},
+        "colors": {"頂級 (鴿血/鈷藍/螢光粉)": 2.5, "中等 (紅/粉/紫)": 1.0, "入門 (淡色/灰色)": 0.4}},
+    "ALEXANDRITE": {"name": "變色石",
+        "floor": {"B1": 80000, "B2": 200000, "B3": 500000, "B4": 1200000, "B5": 3500000},
+        "ceil":  {"B1": 400000, "B2": 1500000, "B3": 4000000, "B4": 10000000, "B5": 30000000},
+        "origins": {"俄羅斯 Ural": 2.5, "巴西": 1.0, "斯里蘭卡": 0.8},
+        "treatments": {"無處理": 1.0},
+        "colors": {"頂級 (變色明顯 80%+)": 2.5, "中等 (50-70%)": 1.0, "入門 (變色弱 <50%)": 0.4}},
+    "TANZANITE": {"name": "坦桑石",
+        "floor": {"B1": 10000, "B2": 25000, "B3": 50000, "B4": 120000, "B5": 300000},
+        "ceil":  {"B1": 40000, "B2": 80000, "B3": 180000, "B4": 400000, "B5": 900000},
+        "origins": {"坦尚 Merelani": 1.0},
+        "treatments": {"熱處理 (標準)": 1.0, "無燒 (罕見)": 1.4},
+        "colors": {"頂級 (D Block 深藍紫)": 2.0, "中等 (藍紫)": 1.0, "入門 (淡藍/淡紫)": 0.4}},
+    "TSAVORITE": {"name": "沙弗萊石",
+        "floor": {"B1": 40000, "B2": 80000, "B3": 200000, "B4": 600000, "B5": 1500000},
+        "ceil":  {"B1": 150000, "B2": 320000, "B3": 800000, "B4": 2000000, "B5": 5000000},
+        "origins": {"肯亞": 1.0, "坦尚尼亞": 1.0, "其他": 0.7},
+        "treatments": {"無處理": 1.0},
+        "colors": {"頂級 (Vivid Green)": 2.0, "中等 (中綠)": 1.0, "入門 (淡綠)": 0.5}},
+    "TOURMALINE": {"name": "碧璽",
+        "floor": {"B1": 8000, "B2": 20000, "B3": 50000, "B4": 130000, "B5": 300000},
+        "ceil":  {"B1": 40000, "B2": 100000, "B3": 300000, "B4": 700000, "B5": 1500000},
+        "origins": {"巴西": 1.0, "莫桑比克": 1.2, "奈及利亞": 0.8, "美國 (西瓜)": 1.5, "其他": 0.7},
+        "treatments": {"無處理": 1.0, "熱處理": 0.9},
+        "colors": {"紅碧璽 Rubellite": 1.5, "藍綠 Indicolite": 1.3, "帕拉依巴色 (含銅)": 4.0, "一般綠/粉": 1.0, "雙色/西瓜": 1.2}},
+    "AQUAMARINE": {"name": "海藍寶",
+        "floor": {"B1": 10000, "B2": 25000, "B3": 60000, "B4": 130000, "B5": 300000},
+        "ceil":  {"B1": 60000, "B2": 250000, "B3": 600000, "B4": 1500000, "B5": 4000000},
+        "origins": {"巴西 Santa Maria": 2.0, "巴西其他": 1.0, "莫桑比克": 0.7, "馬達加斯加": 0.6, "巴基斯坦": 1.2},
+        "treatments": {"熱處理 (標準)": 1.0, "無燒": 1.3},
+        "colors": {"頂級 (Santa Maria 深藍)": 2.5, "中等 (中藍)": 1.0, "入門 (淡藍)": 0.4}},
+    "OPAL": {"name": "歐泊",
+        "floor": {"B1": 8000, "B2": 20000, "B3": 40000, "B4": 100000, "B5": 250000},
+        "ceil":  {"B1": 40000, "B2": 120000, "B3": 300000, "B4": 800000, "B5": 2000000},
+        "origins": {"澳洲 Lightning Ridge (黑歐泊)": 5.0, "澳洲 Queensland (Boulder)": 3.0, "澳洲其他": 1.5, "衣索比亞": 1.0, "墨西哥 (Fire)": 0.6},
+        "treatments": {"無處理 (Solid)": 1.0, "糖煙處理": 0.6, "雙層複合 Doublet": 0.3, "三層複合 Triplet": 0.15},
+        "colors": {"頂級 (Red Fire/Harlequin)": 2.5, "中等 (Multi-color play)": 1.0, "入門 (Blue/Green flash)": 0.5}},
+    "SPESSARTITE": {"name": "芬達石榴石",
+        "floor": {"B1": 10000, "B2": 25000, "B3": 55000, "B4": 120000, "B5": 280000},
+        "ceil":  {"B1": 40000, "B2": 100000, "B3": 250000, "B4": 600000, "B5": 1500000},
+        "origins": {"奈及利亞 (Mandarin)": 2.0, "馬達加斯加": 1.5, "納米比亞": 1.3, "巴西": 0.8, "其他": 0.7},
+        "treatments": {"無處理": 1.0},
+        "colors": {"頂級 (Vivid Mandarin Orange)": 2.0, "中等 (Orange)": 1.0, "入門 (Brownish Orange)": 0.5}},
+    "MOONSTONE": {"name": "月光石",
+        "floor": {"B1": 4000, "B2": 10000, "B3": 20000, "B4": 45000, "B5": 100000},
+        "ceil":  {"B1": 12000, "B2": 30000, "B3": 70000, "B4": 150000, "B5": 300000},
+        "origins": {"印度": 0.8, "斯里蘭卡": 1.0, "緬甸": 1.2},
+        "treatments": {"無處理": 1.0},
+        "colors": {"頂級 (藍光彩虹)": 1.8, "中等 (白光)": 1.0, "入門 (灰白)": 0.5}},
+    "YELLOW_SAP": {"name": "黃剛玉",
+        "floor": {"B1": 20000, "B2": 60000, "B3": 150000, "B4": 400000, "B5": 1000000},
+        "ceil":  {"B1": 100000, "B2": 400000, "B3": 1000000, "B4": 2500000, "B5": 8000000},
+        "origins": {"錫蘭": 1.5, "馬達加斯加": 1.0, "緬甸": 1.3, "泰國": 0.5},
+        "treatments": {"無燒": 1.0, "有燒": 0.4},
+        "colors": {"頂級 (金黃/帕帕色)": 2.0, "中等 (檸檬黃)": 1.0, "入門 (淡黃)": 0.5}},
+    "CATEYE": {"name": "貓眼石",
+        "floor": {"B1": 20000, "B2": 50000, "B3": 130000, "B4": 300000, "B5": 700000},
+        "ceil":  {"B1": 100000, "B2": 250000, "B3": 700000, "B4": 1800000, "B5": 5000000},
+        "origins": {"斯里蘭卡": 1.5, "巴西": 1.0, "印度": 0.8},
+        "treatments": {"無處理": 1.0},
+        "colors": {"頂級 (蜜糖色+清晰光帶)": 2.0, "中等": 1.0, "入門": 0.5}},
+}
 
 _SEED_STONES_COMMERCIAL = [
     # 台灣市場 2025 行情（TWD/ct，商業品質批發零售區間）
@@ -373,17 +391,31 @@ def _init_db():
     if not c.execute("SELECT 1 FROM pricing_labor LIMIT 1").fetchone():
         c.executemany("INSERT OR IGNORE INTO pricing_labor (category, complexity, price_min, price_max) VALUES (?,?,?,?)", _SEED_LABOR)
 
-    if not c.execute("SELECT 1 FROM pricing_stones_invest LIMIT 1").fetchone():
-        c.executemany("INSERT OR IGNORE INTO pricing_stones_invest (stone_key, stone_name, band, price_floor, price_ceil) VALUES (?,?,?,?,?)", _SEED_STONES_INVEST)
+    # ── 品項用字統一：手鍊 → 手鏈（與 CLIP/Gemini 分類器一致）──
+    c.execute("UPDATE OR IGNORE pricing_labor SET category='手鏈' WHERE category='手鍊'")
+    c.execute("DELETE FROM pricing_labor WHERE category='手鍊'")
 
-    if not c.execute("SELECT 1 FROM pricing_stone_origins LIMIT 1").fetchone():
-        c.executemany("INSERT OR IGNORE INTO pricing_stone_origins (stone_key, origin, multiplier) VALUES (?,?,?)", _SEED_STONE_ORIGINS)
-
-    if not c.execute("SELECT 1 FROM pricing_stone_treatments LIMIT 1").fetchone():
-        c.executemany("INSERT OR IGNORE INTO pricing_stone_treatments (stone_key, treatment, multiplier) VALUES (?,?,?)", _SEED_STONE_TREATMENTS)
-
-    if not c.execute("SELECT 1 FROM pricing_stone_colors LIMIT 1").fetchone():
-        c.executemany("INSERT OR IGNORE INTO pricing_stone_colors (stone_key, color_quality, multiplier) VALUES (?,?,?)", _SEED_STONE_COLORS)
+    # ── 投資級寶石：版本化 seed（升版時清空重灌，與前端估價工具一致）──
+    c.execute("CREATE TABLE IF NOT EXISTS pricing_meta (key TEXT PRIMARY KEY, value TEXT)")
+    row = c.execute("SELECT value FROM pricing_meta WHERE key='invest_seed_version'").fetchone()
+    cur_ver = int(row[0]) if row else 0
+    if cur_ver < INVEST_SEED_VERSION:
+        c.execute("DELETE FROM pricing_stones_invest")
+        c.execute("DELETE FROM pricing_stone_origins")
+        c.execute("DELETE FROM pricing_stone_treatments")
+        c.execute("DELETE FROM pricing_stone_colors")
+        for key, s in _INVEST_V2.items():
+            for band in ("B1", "B2", "B3", "B4", "B5"):
+                c.execute(
+                    "INSERT INTO pricing_stones_invest (stone_key, stone_name, band, price_floor, price_ceil) VALUES (?,?,?,?,?)",
+                    (key, s["name"], band, s["floor"][band], s["ceil"][band]))
+            for o, m in s["origins"].items():
+                c.execute("INSERT INTO pricing_stone_origins (stone_key, origin, multiplier) VALUES (?,?,?)", (key, o, m))
+            for t, m in s["treatments"].items():
+                c.execute("INSERT INTO pricing_stone_treatments (stone_key, treatment, multiplier) VALUES (?,?,?)", (key, t, m))
+            for cq, m in s["colors"].items():
+                c.execute("INSERT INTO pricing_stone_colors (stone_key, color_quality, multiplier) VALUES (?,?,?)", (key, cq, m))
+        c.execute("INSERT OR REPLACE INTO pricing_meta (key, value) VALUES ('invest_seed_version', ?)", (str(INVEST_SEED_VERSION),))
 
     if not c.execute("SELECT 1 FROM pricing_stones_commercial LIMIT 1").fetchone():
         c.executemany("INSERT OR IGNORE INTO pricing_stones_commercial (stone_key, stone_name, price_min, price_max) VALUES (?,?,?,?)", _SEED_STONES_COMMERCIAL)

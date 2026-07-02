@@ -673,7 +673,7 @@ const CFG = {
   gemstone:    { label: '寶石', values: ['鑽石','紅寶石','藍寶石','祖母綠','坦桑石','海藍寶','碧璽','紫水晶','黃水晶','月光石','歐泊','橄欖石','石榴石','珍珠','翡翠','托帕石','尖晶石','其他彩寶','無寶石'] },
   color:       { label: '色系', values: ['紅','粉','黃','綠','藍','紫','白','彩'] },
   metal_color: { label: '金工', values: ['金','銀'] },
-  price_band:  { label: '價格', values: ['< 1萬','1-3萬','3-6萬','6-10萬','10-15萬','> 15萬'] },
+  price_band:  { label: '價位', values: ['入門','中階','高階','奢華','頂級'] },
   style:       { label: '鑽飾', values: ['無鑽','簡約','輕奢','奢華'] },
   stone_shape: { label: '形狀', values: ['橢圓形','圓形','水滴形','心形','方形','長方形','馬眼形','枕形','梨形','三角形','花形','不規則','無主石'] },
 };
@@ -1741,7 +1741,14 @@ function QRModal({ onClose }) {
 }
 
 /* ── Budget Flow ─────────────────────────────────────── */
-const PRICE_BANDS = ['< 1萬','1-3萬','3-6萬','6-10萬','10-15萬','> 15萬'];
+/* value 必須對應 DB photos.price_band 實際存的值（入門…頂級） */
+const PRICE_BANDS = [
+  { value:'入門', hint:'1 萬以內' },
+  { value:'中階', hint:'1–3 萬' },
+  { value:'高階', hint:'3–6 萬' },
+  { value:'奢華', hint:'6–15 萬' },
+  { value:'頂級', hint:'15 萬以上' },
+];
 const COLOR_OPTS  = [
   {label:'紅', hex:'#e05050'}, {label:'粉', hex:'#f2a0b8'},
   {label:'黃', hex:'#e8c84a'}, {label:'綠', hex:'#5cb85c'},
@@ -1840,13 +1847,14 @@ function BudgetFlow({ onClose, onApplyFilters }) {
             新台幣
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,maxWidth:360,margin:'0 auto'}}>
-            {PRICE_BANDS.map(b => (
-              <button key={b} onClick={() => { setBand(b); setStep(2); }}
-                style={{padding:'20px 10px',borderRadius:16,border:'1px solid rgba(184,147,90,.25)',
+            {PRICE_BANDS.map(({value, hint}) => (
+              <button key={value} onClick={() => { setBand(value); setStep(2); }}
+                style={{padding:'18px 10px',borderRadius:16,border:'1px solid rgba(184,147,90,.25)',
                   background:'rgba(184,147,90,.07)',color:'rgba(220,195,140,.85)',
-                  fontSize:18,fontWeight:500,cursor:'pointer',letterSpacing:.5,
-                  transition:'all .15s'}}>
-                {b}
+                  cursor:'pointer',letterSpacing:.5,transition:'all .15s',
+                  display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                <span style={{fontSize:18,fontWeight:500}}>{hint}</span>
+                <span style={{fontSize:11,color:'rgba(184,147,90,.6)'}}>{value}</span>
               </button>
             ))}
           </div>
@@ -2012,15 +2020,19 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   };
 
   useEffect(() => {
-    const qs = new URLSearchParams();
-    if (catFilter) qs.set('category', catFilter);
-    qs.set('photo_type', photoMode);
-    Object.entries(filters).forEach(([k, v]) => v && qs.set(k, v));
-    fetch('/api/photos/filter-counts?' + qs)
-      .then(r => r.json())
-      .then(d => setCounts(d))
-      .catch(() => {});
-  }, [catFilter, JSON.stringify(filters)]);
+    let stale = false;
+    const timer = setTimeout(() => {
+      const qs = new URLSearchParams();
+      if (catFilter) qs.set('category', catFilter);
+      qs.set('photo_type', photoMode);
+      Object.entries(filters).forEach(([k, v]) => v && qs.set(k, v));
+      fetch('/api/photos/filter-counts?' + qs)
+        .then(r => r.json())
+        .then(d => { if (!stale) setCounts(d); })
+        .catch(() => {});
+    }, 150);
+    return () => { stale = true; clearTimeout(timer); };
+  }, [catFilter, photoMode, JSON.stringify(filters)]);
 
   const setF = (field, value) => setFilters(prev => {
     const n = { ...prev };
@@ -2299,7 +2311,7 @@ const METAL_PER_G = {'925銀':100,'18K金':3800,'Pt950':5500};
 const WEIGHTS = {'極輕 (0.5–1.5g)':[0.5,1.5],'輕 (1.5–3g)':[1.5,3],'中 (3–5g)':[3,5],'偏重 (5–8g)':[5,8],'重 (8–13g)':[8,13],'很重 (13–20g)':[13,20]};
 const SIDESTONES = {'無配石':[0,0],'配石/鋯石 1–5顆':[400,1200],'配石/鋯石 6–20顆':[1200,2800],'配石/鋯石 21–50顆':[2800,5500],'碎鑽/莫桑 1–5顆':[500,1000],'碎鑽/莫桑 6–20顆':[2000,5000],'碎鑽/莫桑 21–50顆':[8000,20000],'碎鑽/莫桑 50+顆':[20000,60000]};
 const CERTS = {'無':0,'一般證書':1500,'GIA':0,'GRS':0,'SSEF':0,'GUBELIN':0};
-const SIZE_OPTS = {'戒指':['活圍','#5','#6','#7','#8','#9','#10','#11','#12','#13','#14','#15'],'手鏈':['活圍','15cm','16cm','17cm','18cm','19cm','20cm'],'項鍊':['40cm','42cm','45cm','50cm','55cm','60cm'],'吊墜':['不附鍊','40cm','42cm','45cm','50cm'],'耳釘':['標準耳針','螺絲耳針','法式鉤','夾式']};
+const SIZE_OPTS = {'戒指':['活圍','#5','#6','#7','#8','#9','#10','#11','#12','#13','#14','#15'],'手鏈':['活圍','15cm','16cm','17cm','18cm','19cm','20cm'],'項鍊':['40cm','42cm','45cm','50cm','55cm','60cm'],'吊墜':['不附鍊','40cm','42cm','45cm','50cm'],'墜子':['不附鍊','40cm','42cm','45cm','50cm'],'耳釘':['標準耳針','螺絲耳針','法式鉤','夾式']};
 /* length → 少/正常/多 for necklaces & bracelets so selecting cm auto-drives weight */
 const NECKLACE_LENGTH_TO_CHAIN = {'40cm':'少','42cm':'少','45cm':'正常','50cm':'正常','55cm':'多','60cm':'多'};
 const BRACELET_LENGTH_TO_CHAIN = {'活圍':'少','15cm':'少','16cm':'少','17cm':'正常','18cm':'正常','19cm':'多','20cm':'多'};
@@ -2325,6 +2337,13 @@ function _fetchPricing(setP) {
         STONES_COMMERCIAL: Object.fromEntries(
           Object.entries(d.stones_commercial || {}).map(([k, v]) => [k, { name: v.name, range: v.range || [v.price_min||0, v.price_max||0] }])
         ),
+        /* 投資級寶石：DB 有完整資料（含產地/處理/色級乘數）才採用，否則 fallback 寫死表 */
+        STONES_INVEST: (() => {
+          const inv = d.stones_invest || {};
+          const ok = Object.keys(inv).length > 0 &&
+            Object.values(inv).every(s => s.floor && s.ceil && Object.keys(s.origins||{}).length && Object.keys(s.colors||{}).length);
+          return ok ? inv : null;
+        })(),
       };
       _pricingState.data = data;
       if (setP) setP(data);
@@ -2352,6 +2371,7 @@ function usePricing() {
     SIDESTONES:        p?.SIDESTONES        || SIDESTONES,
     SIDESTONES_V2:     p?.SIDESTONES_V2     || {},
     STONES_COMMERCIAL: p?.STONES_COMMERCIAL || STONES_COMMERCIAL,
+    STONES_INVEST:     p?.STONES_INVEST     || STONES_INVEST,
     PLATING:           p?.PLATING           || {'無':[0,0],'金色':[500,1500],'玫瑰金':[500,1500],'黑金':[800,2000]},
   };
 }
@@ -2492,6 +2512,7 @@ function ImgZoom({ src, fullSrc, style, className, ...props }) {
 
 function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const pricing = usePricing();
+  const STONES_INVEST = pricing.STONES_INVEST;  // 遮蔽全域寫死表，與設定頁同步
   const GEM_MAP = {};
   Object.entries(STONES_INVEST).forEach(([k,s]) => { GEM_MAP[s.name] = {key:k,mode:'invest'}; });
   Object.entries(pricing.STONES_COMMERCIAL).forEach(([k,s]) => { GEM_MAP[s.name] = {key:k,mode:'commercial'}; });
@@ -3382,6 +3403,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
 /* ── Quote / Estimator tab ──────────────────────────── */
 function QuoteTab({ onBack, onHistory } = {}) {
   const pricing = usePricing();
+  const STONES_INVEST = pricing.STONES_INVEST;  // 遮蔽全域寫死表，與設定頁同步
   /* ── State ── */
   const [stoneKey,    setStoneKey]    = useState('');       // invest key or '' or COMMERCIAL_*
   const [stoneMode,   setStoneMode]   = useState('invest'); // 'invest' | 'commercial'
@@ -3779,7 +3801,7 @@ function QuoteTab({ onBack, onHistory } = {}) {
             React.createElement('div', { style: rowStyle },
               React.createElement('div', { style: labelStyle }, '飾品類型'),
               React.createElement('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
-                ['戒指','吊墜','耳釘','手鏈','項鍊'].map(i =>
+                ['戒指','墜子','耳釘','手鏈','項鍊','胸針','手鐲'].map(i =>
                   React.createElement('button', {
                     key: i, onClick: () => setItem(i),
                     style: {
