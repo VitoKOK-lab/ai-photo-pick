@@ -89,26 +89,26 @@ button { font-family: inherit; cursor: pointer; }
 .content { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
 
 /* ── Category tabs ───────────────────────────────────────── */
-.cat-tabs { display:flex; overflow-x:auto; scrollbar-width:none; padding:10px 10px 6px; gap:6px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
+.cat-tabs { display:flex; overflow-x:auto; scrollbar-width:none; padding:6px 10px 4px; gap:4px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
 .cat-tabs::-webkit-scrollbar { display:none; }
-.cat-tab { display:flex; flex-direction:column; align-items:center; gap:4px; border:none; background:none; padding:4px 6px; border-radius:10px; cursor:pointer; min-width:56px; flex-shrink:0; touch-action:manipulation; transition:background .2s; }
+.cat-tab { display:flex; flex-direction:column; align-items:center; gap:3px; border:none; background:none; padding:3px 5px; border-radius:10px; cursor:pointer; min-width:48px; flex-shrink:0; touch-action:manipulation; transition:background .2s; }
 .cat-tab.on { background:none; }
-.cat-tab-img { width:72px; height:72px; border-radius:8px; object-fit:cover; border:none; transition:transform .15s; }
+.cat-tab-img { width:52px; height:52px; border-radius:8px; object-fit:cover; border:none; transition:transform .15s; }
 .cat-tab:active .cat-tab-img { transform:scale(.93); }
-.cat-tab-thumb { position:relative; width:72px; height:72px; flex-shrink:0; }
+.cat-tab-thumb { position:relative; width:52px; height:52px; flex-shrink:0; }
 .cat-tab-thumb img { width:100%; height:100%; object-fit:cover; border-radius:8px; display:block; }
 .cat-tab-thumb::after { content:''; position:absolute; inset:0; border-radius:8px; background:rgba(184,147,90,0); transition:background .2s; pointer-events:none; }
 .cat-tab.on .cat-tab-thumb::after { background:rgba(184,147,90,.38); }
-.cat-tab-all { width:72px; height:72px; border-radius:8px; background:var(--s3); display:flex; align-items:center; justify-content:center; font-size:22px; color:var(--text2); border:none; }
-.cat-tab span { font-size:11px; color:var(--text2); white-space:nowrap; }
+.cat-tab-all { width:52px; height:52px; border-radius:8px; background:var(--s3); display:flex; align-items:center; justify-content:center; font-size:16px; color:var(--text2); border:none; }
+.cat-tab span { font-size:10px; color:var(--text2); white-space:nowrap; }
 .cat-tab.on span { color:var(--gold); font-weight:600; }
 
 /* ── Chips ───────────────────────────────────────────────── */
 .chips-bar { display: flex; align-items: center; overflow-x: auto; scrollbar-width: none; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .chips-bar::-webkit-scrollbar { display: none; }
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 8px 18px; background: none; border: none; border-right: 1px solid var(--border); font-size: 13px; color: var(--text2); white-space: nowrap; transition: color .15s; flex-shrink: 0; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: none; border: none; border-right: 1px solid var(--border); font-size: 13px; color: var(--text2); white-space: nowrap; transition: color .15s; flex-shrink: 0; }
 .chip.on { color: var(--accent); font-weight: 600; }
-.chip-clr { display: inline-flex; align-items: center; padding: 8px 18px; background: none; border: none; font-size: 13px; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
+.chip-clr { display: inline-flex; align-items: center; padding: 6px 12px; background: none; border: none; font-size: 13px; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
 
 /* ── Body row ───────────────────────────────────────────── */
 .body-row { flex: 1; overflow: hidden; display: flex; min-height: 0; }
@@ -2043,40 +2043,38 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   return (
     <>
       <div className="browse-hdr">
-        {/* 去背 / 情境 切換 */}
-        <div style={{display:'flex',alignItems:'center',gap:8,margin:'8px 14px 0'}}>
-          <div style={{display:'flex',gap:0,background:'var(--s3)',borderRadius:10,padding:3}}>
+        <CategoryTabs active={catFilter} onSelect={v => { if (!batchMode) setCatFilter(v); }} />
+        {/* 單列：去背/情境 + 篩選 chips + 動作按鈕 */}
+        <div className="chips-bar" style={{gap:6,padding:'6px 10px'}}>
+          <div style={{display:'flex',gap:0,background:'var(--s3)',borderRadius:8,padding:2,flexShrink:0}}>
             {['去背','情境'].map(mode => (
               <button key={mode} onClick={() => setPhotoMode(mode)} style={{
-                padding:'6px 22px', border:'none', borderRadius:8, fontSize:13, fontWeight:600,
+                padding:'4px 12px', border:'none', borderRadius:6, fontSize:12, fontWeight:600,
                 cursor:'pointer', transition:'all .18s',
                 background: photoMode===mode ? 'var(--surface)' : 'transparent',
                 color: photoMode===mode ? 'var(--text)' : 'var(--text3)',
-                boxShadow: photoMode===mode ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+                boxShadow: photoMode===mode ? '0 1px 3px rgba(0,0,0,.1)' : 'none',
               }}>{mode}</button>
             ))}
           </div>
-          <div style={{flex:1}} />
-          {isStaff && (
-            batchMode
-              ? <button onClick={exitBatch} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>取消</button>
-              : <>
-                  <button onClick={() => setBatchMode(true)} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)'}}>批量編輯</button>
-                  <button onClick={() => setBudgetFlow(true)} style={{padding:'6px 14px',border:'1px solid var(--border)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap'}}>以預算找款</button>
-                  <button className="swipe-launch-btn" onClick={() => window.innerWidth < 768 ? setSwipeMode(true) : setShowQR(true)} style={{padding:'6px 14px',border:'1px solid var(--gold)',borderRadius:8,fontSize:13,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
-                    <span style={{fontSize:13}}>✦</span> like or not
-                  </button>
-                </>
-          )}
-        </div>
-        <CategoryTabs active={catFilter} onSelect={v => { if (!batchMode) setCatFilter(v); }} />
-        <div className="chips-bar">
           {Object.entries(CFG).map(([field]) => (
             <FilterDropdown key={field} field={field} cur={filters[field] || null}
               counts={counts[field] || {}} onPick={v => setF(field, v)} />
           ))}
           {(catFilter || Object.keys(filters).length > 0) && (
             <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
+          )}
+          <div style={{flex:1,minWidth:8}} />
+          {isStaff && (
+            batchMode
+              ? <button onClick={exitBatch} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',flexShrink:0}}>取消</button>
+              : <>
+                  <button onClick={() => setBatchMode(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>批量編輯</button>
+                  <button onClick={() => setBudgetFlow(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>以預算找款</button>
+                  <button className="swipe-launch-btn" onClick={() => window.innerWidth < 768 ? setSwipeMode(true) : setShowQR(true)} style={{padding:'5px 12px',border:'1px solid var(--gold)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap',flexShrink:0}}>
+                    <span style={{fontSize:12}}>✦</span> like or not
+                  </button>
+                </>
           )}
         </div>
       </div>
