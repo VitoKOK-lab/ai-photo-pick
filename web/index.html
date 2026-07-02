@@ -577,22 +577,36 @@ button { font-family: inherit; cursor: pointer; }
 }
 .swipe-mode-btn:active { transform: scale(.97); }
 /* like-or-not button visible on all screen sizes */
-/* ── Swipe explore dark-luxury theme ── */
-.swipe-dir-left  { box-shadow: 0 0 28px rgba(180,60,60,0.55),  0 20px 50px rgba(0,0,0,.55) !important; }
-.swipe-dir-right { box-shadow: 0 0 32px rgba(184,147,90,0.65), 0 20px 50px rgba(0,0,0,.55) !important; }
-.swipe-dir-down  { box-shadow: 0 0 28px rgba(76,175,100,0.5),  0 20px 50px rgba(0,0,0,.55) !important; }
+/* ── Swipe explore light-luxury theme ── */
 .swipe-lbl {
   position: absolute; top: 42%; left: 50%;
   transform: translateX(-50%) translateY(-50%);
   opacity: 0; transition: opacity .08s;
   pointer-events: none; z-index: 5;
-  font-size: 18px; font-weight: 300; letter-spacing: 3px;
-  padding: 6px 18px; border-radius: 4px; border: 1px solid currentColor;
-  background: rgba(255,255,255,0.88); white-space: nowrap;
+  font-size: 18px; font-weight: 400; letter-spacing: 3px;
+  padding: 6px 18px; border-radius: 4px; border: 1.5px solid currentColor;
+  background: rgba(255,255,255,0.92); white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,0,0,.12);
 }
 @keyframes particleFly {
   0%   { transform: translate(0,0) scale(1.1) rotate(0deg);   opacity:1; }
   100% { transform: translate(var(--tx),var(--ty)) scale(0) rotate(200deg); opacity:0; }
+}
+/* 金色星火：先炸開放大再飛散（like / 收藏） */
+@keyframes sparkFly {
+  0%   { transform: translate(0,0) scale(.3) rotate(0deg); opacity:1; }
+  28%  { transform: translate(calc(var(--tx)*.3),calc(var(--ty)*.3)) scale(1.3) rotate(80deg); opacity:1; }
+  100% { transform: translate(var(--tx),var(--ty)) scale(0) rotate(320deg); opacity:0; }
+}
+/* 冷灰塵埃：往下沉、加速墜落（略過） */
+@keyframes dustFall {
+  0%   { transform: translate(0,0) scale(1); opacity:.85; }
+  100% { transform: translate(var(--tx),var(--ty)) scale(.3); opacity:0; }
+}
+/* 震波環 */
+@keyframes ringPulse {
+  0%   { transform: translate(-50%,-50%) scale(.25); opacity:.85; }
+  100% { transform: translate(-50%,-50%) scale(2.4); opacity:0; }
 }
 @keyframes heartBeat {
   0%   { transform: scale(1);    filter: drop-shadow(0 0 0px  rgba(229,57,53,0)); }
@@ -990,11 +1004,20 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
 
   const fav  = isFav(photo.id);
   const STYLE_VALS = new Set(['無鑽','簡約','輕奢','奢華']);
-  const tags = [photo.category, photo.style,
-    STYLE_VALS.has(photo.gemstone) ? null : photo.gemstone,
-    photo.stone_shape, photo.stone_size, photo.color, photo.metal_color,
-    photo.setting_amount, photo.craft_complexity]
-    .filter(v => v && v !== '未定');
+  const gemDisplay = STYLE_VALS.has(photo.gemstone) ? null : photo.gemstone;
+  const ok = v => v && v !== '未定';
+  /* 有標籤的規格列（取代舊 tag 雲） */
+  const SPECS = [
+    ['寶石',   gemDisplay],
+    ['形狀',   photo.stone_shape],
+    ['主石',   photo.stone_size],
+    ['色系',   photo.color],
+    ['金工',   photo.metal_color ? photo.metal_color + '色系' : null],
+    ['材質',   photo.material],
+    ['配石',   photo.setting_amount],
+    ['工藝',   photo.craft_complexity],
+    ['用料',   photo.metal_weight],
+  ].filter(([, v]) => ok(v));
 
   /* Edit view */
   if (view === 'edit') return (
@@ -1099,9 +1122,37 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
         </div>
         <div className="det-right">
           <div className="det-scroll">
-            <div className="det-tags">
-              {tags.map((t, i) => <span key={i} className="tag">{t}</span>)}
-              {photo.price_band && <span className="tag" style={{color:'var(--text3)'}}>{photo.price_band}</span>}
+            {/* 標題區：品項 + 寶石 + 價位徽章 */}
+            <div style={{padding:'20px 22px 6px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                <span style={{fontSize:21,fontWeight:700,color:'var(--text)',letterSpacing:.5}}>
+                  {[photo.category, gemDisplay].filter(ok).join(' · ') || '未分類'}
+                </span>
+                {ok(photo.price_band) && (
+                  <span style={{fontSize:11,fontWeight:700,color:'var(--gold)',
+                    border:'1px solid rgba(184,147,90,.5)',borderRadius:12,padding:'3px 12px',letterSpacing:1}}>
+                    {photo.price_band}
+                  </span>
+                )}
+              </div>
+              {ok(photo.style) && (
+                <div style={{fontSize:12,color:'var(--text3)',marginTop:5,letterSpacing:.5}}>
+                  {photo.style}{ok(photo.craft_complexity) ? `・${photo.craft_complexity}工藝` : ''}
+                </div>
+              )}
+            </div>
+            <div style={{borderTop:'1px solid var(--border)',margin:'12px 22px 0'}} />
+            {/* 規格表 */}
+            <div style={{padding:'14px 22px 18px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px 20px'}}>
+              {SPECS.map(([label, value]) => (
+                <div key={label}>
+                  <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:'var(--text3)',marginBottom:3}}>{label}</div>
+                  <div style={{fontSize:14,color:'var(--text)',fontWeight:500}}>{value}</div>
+                </div>
+              ))}
+              {SPECS.length === 0 && (
+                <div style={{gridColumn:'1 / -1',fontSize:13,color:'var(--text3)'}}>尚未分類</div>
+              )}
             </div>
           </div>
           {/* Fixed action bar */}
@@ -1355,7 +1406,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     const heart = tutHeartRef.current;
     if (!card) return;
 
-    const SHADOW_BASE = '0 14px 48px rgba(0,0,0,.65)';
+    const SHADOW_BASE = '0 14px 40px rgba(80,60,30,.22)';
     const setLbl = (text, color, rot = '0deg') => {
       if (!lbl) return;
       lbl.textContent = text; lbl.style.color = color; lbl.style.borderColor = color;
@@ -1374,8 +1425,8 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
       setTimeout(() => {
         card.style.transition = 'transform .54s cubic-bezier(.1,.3,.55,1), box-shadow .18s';
         card.style.transform  = 'translateX(-92px) rotate(-20deg)';
-        card.style.boxShadow  = `0 0 32px rgba(200,50,50,.55), ${SHADOW_BASE}`;
-        setLbl('略過', '#e53935', '-12deg');
+        card.style.boxShadow  = `0 0 28px rgba(130,140,155,.55), ${SHADOW_BASE}`;
+        setLbl('略過', '#8a93a0', '-12deg');
       }, 680),
       setTimeout(() => { clearLbl(); spring(); }, 1530),
 
@@ -1384,7 +1435,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
       setTimeout(() => {
         card.style.transition = 'transform .54s cubic-bezier(.1,.3,.55,1), box-shadow .18s';
         card.style.transform  = 'translateX(92px) rotate(20deg)';
-        card.style.boxShadow  = `0 0 36px rgba(184,147,90,.65), ${SHADOW_BASE}`;
+        card.style.boxShadow  = `0 0 34px rgba(201,168,108,.7), ${SHADOW_BASE}`;
         setLbl('✦ 更多同款', '#b8935a', '12deg');
       }, 2430),
       setTimeout(() => { clearLbl(); spring(); }, 3290),
@@ -1393,8 +1444,8 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
       setTimeout(() => {
         card.style.transition = 'transform .11s ease-out';
         card.style.transform  = 'translateY(-10px) scale(1.03) rotate(-3deg)';
-        card.style.boxShadow  = `0 0 28px rgba(76,175,100,.5), ${SHADOW_BASE}`;
-        setLbl('♥ 收藏', '#4caf77', '0deg');
+        card.style.boxShadow  = `0 0 28px rgba(224,80,112,.5), ${SHADOW_BASE}`;
+        setLbl('♥ 收藏', '#e05070', '0deg');
       }, 3900),
       setTimeout(() => {
         card.style.transition = 'transform .45s cubic-bezier(.4,0,.6,.9), box-shadow .2s';
@@ -1424,49 +1475,88 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
   };
 
   /* DOM particle burst – no React state, zero re-renders */
+  const spawnEl = (text, css, life = 1100) => {
+    const el = document.createElement('div');
+    el.textContent = text;
+    el.style.cssText = css;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), life);
+  };
+  const spawnRing = (x, y, color) => {
+    spawnEl('', `position:fixed;left:${x}px;top:${y}px;width:90px;height:90px;border-radius:50%;`
+      + `border:2.5px solid ${color};pointer-events:none;z-index:919;`
+      + `animation:ringPulse .55s ease-out forwards;`, 650);
+  };
   const burstParticles = (dir) => {
     const card = cardRef.current;
     if (!card) return;
     const rect = card.getBoundingClientRect();
     const cx = rect.left + rect.width  / 2;
     const cy = rect.top  + rect.height / 2;
-    const cfgs = {
-      left:  { color:'rgba(160,140,140,0.75)', chars:['·','·','·','·','·'] },
-      right: { color:'#c9a86c', chars:['✦','·','✦','✦','·','✦','·','✦','·','✦'] },
-      down:  { color:'#e05070', chars:['♥','·','♥','♥','·','♥','·','♥','·','♥'] },
-    };
-    const cfg = cfgs[dir]; if (!cfg) return;
-    cfg.chars.forEach((ch, i) => {
-      const el    = document.createElement('div');
-      const angle = (360 / cfg.chars.length) * i + (Math.random()-.5)*30;
-      const dist  = 55 + Math.random() * 80;
-      const tx    = Math.cos(angle * Math.PI/180) * dist;
-      const ty    = Math.sin(angle * Math.PI/180) * dist;
-      el.textContent = ch;
-      el.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;color:${cfg.color};`
-        + `font-size:${ch==='·'?7:13}px;font-weight:900;pointer-events:none;z-index:920;`
-        + `margin:-8px 0 0 -4px;--tx:${tx}px;--ty:${ty}px;`
-        + `animation:particleFly .72s cubic-bezier(.2,0,.5,1) ${i*16}ms forwards;`;
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 900);
-    });
+
+    if (dir === 'right') {
+      /* 金色星火：偏右上炸開、發光旋轉 */
+      spawnRing(cx, cy, 'rgba(201,168,108,.75)');
+      for (let i = 0; i < 16; i++) {
+        const ang  = -100 + Math.random() * 160;
+        const dist = 70 + Math.random() * 140;
+        const tx   = Math.cos(ang * Math.PI/180) * dist + 45;
+        const ty   = Math.sin(ang * Math.PI/180) * dist - 25;
+        const ch   = i % 3 === 0 ? '✦' : (i % 3 === 1 ? '✧' : '·');
+        const size = ch === '·' ? 8 : 12 + Math.random() * 12;
+        spawnEl(ch, `position:fixed;left:${cx}px;top:${cy}px;color:#c9a86c;`
+          + `font-size:${size}px;font-weight:900;pointer-events:none;z-index:920;margin:-8px 0 0 -4px;`
+          + `text-shadow:0 0 8px rgba(201,168,108,.95), 0 0 20px rgba(255,215,140,.65);`
+          + `--tx:${tx}px;--ty:${ty}px;animation:sparkFly .82s cubic-bezier(.2,.4,.4,1) ${i*13}ms forwards;`);
+      }
+    } else if (dir === 'left') {
+      /* 冷灰塵埃：往左下墜落消散（與 like 相反：冷色、下沉、無光） */
+      for (let i = 0; i < 12; i++) {
+        const tx = -(20 + Math.random() * 130);
+        const ty = 50 + Math.random() * 130;
+        const size = 5 + Math.random() * 6;
+        spawnEl('·', `position:fixed;left:${cx}px;top:${cy}px;color:#9aa2ad;`
+          + `font-size:${size}px;font-weight:900;pointer-events:none;z-index:920;margin:-8px 0 0 -4px;`
+          + `--tx:${tx}px;--ty:${ty}px;animation:dustFall .68s cubic-bezier(.45,.05,.9,.6) ${i*18}ms forwards;`, 850);
+      }
+    } else if (dir === 'down') {
+      /* 愛心煙火：從收藏鈕炸出 + 震波環 */
+      const h = heartRef.current;
+      const hr = h ? h.getBoundingClientRect() : null;
+      const hx = hr ? hr.left + hr.width / 2 : cx;
+      const hy = hr ? hr.top + hr.height / 2 : cy;
+      setTimeout(() => {
+        spawnRing(hx, hy, 'rgba(224,80,112,.75)');
+        for (let i = 0; i < 12; i++) {
+          const ang  = 180 + Math.random() * 180;   // 往上半圓
+          const dist = 50 + Math.random() * 100;
+          const tx   = Math.cos(ang * Math.PI/180) * dist;
+          const ty   = Math.sin(ang * Math.PI/180) * dist - 20;
+          const ch   = i % 2 === 0 ? '♥' : '·';
+          spawnEl(ch, `position:fixed;left:${hx}px;top:${hy}px;color:#e05070;`
+            + `font-size:${ch==='·'?7:11+Math.random()*9}px;font-weight:900;pointer-events:none;z-index:920;margin:-8px 0 0 -4px;`
+            + `text-shadow:0 0 8px rgba(224,80,112,.8);`
+            + `--tx:${tx}px;--ty:${ty}px;animation:sparkFly .75s cubic-bezier(.2,.4,.4,1) ${i*15}ms forwards;`);
+        }
+      }, 360);   // 等卡片落進收藏鈕
+    }
   };
 
   /* single centered label + box-shadow glow */
+  const GLOW_BASE = '0 18px 44px rgba(80,60,30,.18), 0 4px 12px rgba(80,60,30,.10)';
   const showLabel = dir => {
     const lbl  = lblRef.current;
     const card = cardRef.current;
-    const GLOW_BASE = '0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4)';
     if (card) {
       if (!dir) { card.style.boxShadow = GLOW_BASE; }
       else {
-        const g = { left:'rgba(200,60,60,.5)', right:'rgba(184,147,90,.65)', down:'rgba(76,175,100,.5)' };
-        card.style.boxShadow = `0 0 30px ${g[dir]}, ${GLOW_BASE}`;
+        const g = { left:'rgba(130,140,155,.55)', right:'rgba(201,168,108,.75)', down:'rgba(224,80,112,.55)' };
+        card.style.boxShadow = `0 0 34px ${g[dir]}, ${GLOW_BASE}`;
       }
     }
     if (!lbl) return;
     if (!dir) { lbl.style.opacity = '0'; return; }
-    const C = { left:['略過','#e53935','-13deg'], right:['✦ 更多同款','#b8935a','13deg'], down:['♥ 收藏','#4caf77','0deg'] }[dir];
+    const C = { left:['略過','#8a93a0','-13deg'], right:['✦ 更多同款','#b8935a','13deg'], down:['♥ 收藏','#e05070','0deg'] }[dir];
     lbl.textContent = C[0]; lbl.style.color = C[1]; lbl.style.borderColor = C[1];
     lbl.style.transform = `translateX(-50%) translateY(-50%) rotate(${C[2]})`;
     lbl.style.opacity = '1';
@@ -1488,9 +1578,9 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
       const tx = heartRect ? (heartRect.left + heartRect.width  / 2) - cardCx : 0;
       const ty = heartRect ? (heartRect.top  + heartRect.height / 2) - cardCy : window.innerHeight * 0.45;
 
-      /* Single fluid motion: shrink + fall straight down into heart */
+      /* Single fluid motion: 後仰縮小 + 直落收藏鈕（像掉進投幣口） */
       card.style.transition = 'transform .48s cubic-bezier(.5,0,.8,.6), opacity .38s ease-in .1s';
-      card.style.transform  = `translateY(${ty}px) scale(0.05)`;
+      card.style.transform  = `perspective(900px) translate(${tx}px,${ty}px) scale(0.06) rotateX(42deg)`;
       card.style.opacity    = '0';
 
       /* Heart glows when card arrives */
@@ -1505,10 +1595,13 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
       }, 380);
       setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 540);
     } else {
-      const tx  = dir === 'right' ? '118vw' : '-118vw';
-      const rot = dir === 'right' ? '28deg' : '-28deg';
-      card.style.transition = 'transform .42s cubic-bezier(.15,.3,.65,1)';
-      card.style.transform  = `translate(${tx},-16px) rotate(${rot})`;
+      /* like：亮金翻飛出去｜略過：褪色灰暗、下墜翻出（相反特效） */
+      const isR  = dir === 'right';
+      card.style.transition = 'transform .42s cubic-bezier(.15,.3,.65,1), filter .3s ease';
+      card.style.transform  = isR
+        ? `perspective(900px) translate(118vw,-30px) rotate(26deg) rotateY(38deg)`
+        : `perspective(900px) translate(-118vw,60px) rotate(-30deg) rotateY(-38deg)`;
+      card.style.filter = isR ? 'brightness(1.1) saturate(1.2)' : 'grayscale(.95) brightness(.88)';
       setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 420);
     }
     burstParticles(dir);
@@ -1579,7 +1672,11 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     if (cardRef.current) {
       /* amplify downward pull so it feels like throwing, not pressing */
       const visualDy = dy > 0 ? dy * 1.5 : dy;
-      cardRef.current.style.transform = `translate(${dx}px,${visualDy}px) rotate(${dx*0.055}deg)`;
+      const clamp = (v, lim) => Math.max(-lim, Math.min(lim, v));
+      /* 3D 傾斜：左右拖有 Y 軸翻轉、下拉有 X 軸後仰 */
+      cardRef.current.style.transform =
+        `perspective(900px) translate(${dx}px,${visualDy}px) rotate(${dx*0.055}deg)`
+        + ` rotateY(${clamp(dx*0.07, 16)}deg) rotateX(${clamp(-dy*0.05, 14)}deg)`;
     }
     showLabel(getDir(dx, dy, 40));
   };
@@ -1599,43 +1696,43 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
       if (cardRef.current) {
         cardRef.current.style.transition = 'transform .38s cubic-bezier(.34,1.3,.64,1), box-shadow .25s';
         cardRef.current.style.transform  = '';
-        cardRef.current.style.boxShadow  = '0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4)';
+        cardRef.current.style.boxShadow  = GLOW_BASE;
         setTimeout(() => { if (cardRef.current) cardRef.current.style.transition=''; }, 400);
       }
     }
   };
 
   /* ── RENDER ── */
-  const BG = 'radial-gradient(ellipse at 50% 90%, #1e1508 0%, #0a0705 100%)';
+  const BG = 'radial-gradient(ellipse at 50% 12%, #fffdf8 0%, #f1ebe0 100%)';
 
   return (
     <div style={{position:'fixed',inset:0,zIndex:800,background:BG,display:'flex',flexDirection:'column',touchAction:'none'}}>
 
       {/* ── Header ── */}
       <div style={{display:'flex',alignItems:'center',padding:'11px 16px',
-        background:'rgba(6,4,2,.65)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',
-        borderBottom:'1px solid rgba(184,147,90,.15)',flexShrink:0}}>
+        background:'rgba(255,255,255,.82)',backdropFilter:'blur(14px)',WebkitBackdropFilter:'blur(14px)',
+        borderBottom:'1px solid rgba(184,147,90,.22)',flexShrink:0}}>
         <button onClick={onClose} style={{border:'none',background:'none',fontSize:12,fontWeight:600,cursor:'pointer',
-          padding:'4px 10px 4px 0',color:'rgba(184,147,90,.65)',whiteSpace:'nowrap',letterSpacing:.5}}>
+          padding:'4px 10px 4px 0',color:'#a07f4d',whiteSpace:'nowrap',letterSpacing:.5}}>
           ← 一般模式
         </button>
-        <span style={{flex:1,textAlign:'center',fontWeight:700,fontSize:14,color:'rgba(220,195,140,.9)',letterSpacing:3}}>
+        <span style={{flex:1,textAlign:'center',fontWeight:700,fontSize:14,color:'#8a6a3a',letterSpacing:3}}>
           {current?.category || '探索'}
         </span>
         {/* Favorites counter */}
         <div style={{display:'flex',alignItems:'center',gap:5,minWidth:52,justifyContent:'flex-end'}}>
-          <span ref={heartNumRef} style={{fontSize:15,fontWeight:700,color:favCount>0?'#c9a86c':'rgba(255,255,255,.2)',minWidth:16,textAlign:'right'}}>
+          <span ref={heartNumRef} style={{fontSize:15,fontWeight:700,color:favCount>0?'#a07f4d':'rgba(0,0,0,.15)',minWidth:16,textAlign:'right'}}>
             {favCount > 0 ? favCount : ''}
           </span>
-          <span style={{fontSize:16,color:favCount>0?'#c04060':'rgba(255,255,255,.2)',transition:'color .4s'}}>♥</span>
+          <span style={{fontSize:16,color:favCount>0?'#e05070':'rgba(0,0,0,.15)',transition:'color .4s'}}>♥</span>
         </div>
         <button onClick={() => setShowTutorial(true)} style={{background:'none',cursor:'pointer',
-          marginLeft:10,width:22,height:22,borderRadius:'50%',border:'1px solid rgba(184,147,90,.35)',
-          color:'rgba(184,147,90,.55)',fontSize:12,lineHeight:1,padding:0,flexShrink:0}}>?</button>
+          marginLeft:10,width:22,height:22,borderRadius:'50%',border:'1px solid rgba(184,147,90,.45)',
+          color:'#a07f4d',fontSize:12,lineHeight:1,padding:0,flexShrink:0}}>?</button>
       </div>
 
       {/* ── 進度條 ── */}
-      <div style={{height:2,background:'rgba(255,255,255,.06)',flexShrink:0}}>
+      <div style={{height:2,background:'rgba(0,0,0,.06)',flexShrink:0}}>
         <div style={{height:'100%',transition:'width .35s ease',
           width: photos.length ? Math.min(100, (idx / photos.length) * 100) + '%' : '0%',
           background:'linear-gradient(90deg, rgba(138,106,58,.8), #c9a86c)'}} />
@@ -1651,16 +1748,16 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         )}
 
         {loading && !current && (
-          <div style={{color:'rgba(184,147,90,.5)',fontSize:14,letterSpacing:2}}>載入中…</div>
+          <div style={{color:'#a07f4d',fontSize:14,letterSpacing:2}}>載入中…</div>
         )}
         {done && (
           <div style={{textAlign:'center'}}>
-            <div style={{fontSize:44,marginBottom:12,filter:'drop-shadow(0 0 12px rgba(184,147,90,.6))'}}>✦</div>
-            <div style={{fontSize:15,color:'rgba(220,195,140,.8)',letterSpacing:2}}>探索完畢</div>
-            <div style={{fontSize:13,color:'rgba(255,255,255,.35)',marginTop:6}}>共收藏 {favCount} 件</div>
+            <div style={{fontSize:44,marginBottom:12,color:'#c9a86c',filter:'drop-shadow(0 0 12px rgba(184,147,90,.5))'}}>✦</div>
+            <div style={{fontSize:15,color:'#8a6a3a',letterSpacing:2}}>探索完畢</div>
+            <div style={{fontSize:13,color:'rgba(0,0,0,.4)',marginTop:6}}>共收藏 {favCount} 件</div>
             <button onClick={onClose} style={{marginTop:22,padding:'10px 30px',borderRadius:20,
-              border:'1px solid rgba(184,147,90,.4)',background:'rgba(184,147,90,.1)',
-              color:'rgba(220,195,140,.85)',fontSize:14,cursor:'pointer',letterSpacing:1}}>
+              border:'1px solid rgba(184,147,90,.5)',background:'rgba(184,147,90,.08)',
+              color:'#8a6a3a',fontSize:14,cursor:'pointer',letterSpacing:1}}>
               返回
             </button>
           </div>
@@ -1675,12 +1772,12 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
                 <div key={p.id} style={{position:'absolute',inset:0,zIndex:3-off,
                   transform:`translateY(${off*13}px) scale(${1 - off*0.05})`,
                   transition:'transform .35s cubic-bezier(.34,1.2,.64,1)',
-                  background:'#fff5f7',borderRadius:32,overflow:'hidden',
-                  border:'1px solid rgba(220,150,165,0.3)',
-                  boxShadow:'0 10px 28px rgba(0,0,0,.35)',pointerEvents:'none'}}>
+                  background:'#fff',borderRadius:32,overflow:'hidden',
+                  border:'1px solid rgba(184,147,90,.22)',
+                  boxShadow:'0 8px 22px rgba(80,60,30,.12)',pointerEvents:'none'}}>
                   <img src={p.thumb_url} alt="" draggable={false}
-                    style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f4f1ec',display:'block'}} />
-                  <div style={{padding:'10px 16px 14px',background:'#fff5f7',borderTop:'1px solid rgba(220,150,165,0.25)'}}>
+                    style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#faf8f4',display:'block'}} />
+                  <div style={{padding:'10px 16px 14px',background:'#fff',borderTop:'1px solid rgba(184,147,90,.14)'}}>
                     <div style={{fontSize:13,fontWeight:500,color:'#3a3530',marginBottom:3}}>{p.category || '—'}</div>
                     <div style={{fontSize:11,color:'#b0a898',fontWeight:300,letterSpacing:.5}}>
                       {[p.gemstone,p.style,p.stone_size].filter(v=>v&&v!=='未定').join('  ·  ') || ' '}
@@ -1691,16 +1788,16 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
             })}
             {/* 當前卡片 */}
             <div ref={cardRef} key={current.id}
-              style={{width:'100%',background:'#fff5f7',borderRadius:32,overflow:'hidden',
-                boxShadow:'0 20px 60px rgba(0,0,0,.55), 0 4px 16px rgba(0,0,0,.4)',
-                border:'1px solid rgba(220,150,165,0.35)',
+              style={{width:'100%',background:'#fff',borderRadius:32,overflow:'hidden',
+                boxShadow:'0 18px 44px rgba(80,60,30,.18), 0 4px 12px rgba(80,60,30,.10)',
+                border:'1px solid rgba(184,147,90,.3)',
                 position:'relative',zIndex:3,userSelect:'none',touchAction:'none'}}
               onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
               <img src={current.full_url || current.thumb_url} alt="" draggable={false}
-                style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#f4f1ec',display:'block',pointerEvents:'none'}} />
+                style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#faf8f4',display:'block',pointerEvents:'none'}} />
               <div ref={lblRef} className="swipe-lbl" />
               {/* Info strip */}
-              <div style={{padding:'10px 16px 14px',background:'#fff5f7',borderTop:'1px solid rgba(220,150,165,0.25)'}}>
+              <div style={{padding:'10px 16px 14px',background:'#fff',borderTop:'1px solid rgba(184,147,90,.14)'}}>
                 <div style={{fontSize:13,fontWeight:500,color:'#3a3530',marginBottom:3}}>
                   {current.category || '—'}
                 </div>
@@ -1720,35 +1817,38 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
             <button onClick={undo} disabled={histLen === 0} style={{
               width:42,height:42,borderRadius:'50%',cursor:histLen?'pointer':'default',
-              border:'1px solid rgba(255,255,255,.16)',background:'rgba(255,255,255,.05)',
-              color: histLen ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.18)',
+              border:'1px solid rgba(0,0,0,.12)',background:'#fff',
+              color: histLen ? 'rgba(0,0,0,.5)' : 'rgba(0,0,0,.15)',
+              boxShadow:'0 2px 8px rgba(80,60,30,.1)',
               fontSize:17,lineHeight:1,transition:'color .2s'}}>↺</button>
-            <span style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,.28)'}}>復原</span>
+            <span style={{fontSize:9,letterSpacing:2,color:'rgba(0,0,0,.32)'}}>復原</span>
           </div>
           {/* 略過 */}
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
             <button onClick={doSkip} style={{
               width:56,height:56,borderRadius:'50%',cursor:'pointer',
-              border:'1.5px solid rgba(229,57,53,.55)',background:'rgba(229,57,53,.08)',
-              color:'#e57373',fontSize:22,lineHeight:1}}>✕</button>
-            <span style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,.28)'}}>略過</span>
+              border:'1.5px solid rgba(138,147,160,.55)',background:'#fff',
+              boxShadow:'0 3px 12px rgba(80,60,30,.12)',
+              color:'#8a93a0',fontSize:22,lineHeight:1}}>✕</button>
+            <span style={{fontSize:9,letterSpacing:2,color:'rgba(0,0,0,.32)'}}>略過</span>
           </div>
           {/* 收藏（最大，也是下滑的落點） */}
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
             <button ref={heartRef} onClick={doFav} style={{
               width:68,height:68,borderRadius:'50%',cursor:'pointer',border:'none',
-              background:'linear-gradient(145deg, #c9a86c, #8a6a3a)',
-              boxShadow:'0 6px 20px rgba(184,147,90,.4)',
+              background:'linear-gradient(145deg, #e26a8f, #c94069)',
+              boxShadow:'0 6px 22px rgba(224,80,112,.4)',
               color:'#fff',fontSize:26,lineHeight:1}}>♥</button>
-            <span style={{fontSize:9,letterSpacing:2,color:'rgba(201,168,108,.7)'}}>收藏</span>
+            <span style={{fontSize:9,letterSpacing:2,color:'#c94069'}}>收藏</span>
           </div>
           {/* 相似推薦 */}
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
             <button onClick={doLike} style={{
               width:56,height:56,borderRadius:'50%',cursor:'pointer',
-              border:'1.5px solid rgba(184,147,90,.5)',background:'rgba(184,147,90,.08)',
-              color:'#c9a86c',fontSize:20,lineHeight:1}}>✦</button>
-            <span style={{fontSize:9,letterSpacing:2,color:'rgba(255,255,255,.28)'}}>更多同款</span>
+              border:'1.5px solid rgba(184,147,90,.55)',background:'#fff',
+              boxShadow:'0 3px 12px rgba(184,147,90,.2)',
+              color:'#b8935a',fontSize:20,lineHeight:1}}>✦</button>
+            <span style={{fontSize:9,letterSpacing:2,color:'#a07f4d'}}>更多同款</span>
           </div>
         </div>
       )}
@@ -1756,24 +1856,24 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
       {/* ── Tutorial overlay ── */}
       {showTutorial && (
         <div style={{position:'absolute',inset:0,zIndex:850,
-          background:'rgba(5,3,1,.9)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',
+          background:'rgba(255,252,246,.94)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',
           display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'20px'}}>
 
           {/* Decorative title */}
-          <div style={{fontSize:11,letterSpacing:5,color:'rgba(184,147,90,.6)',marginBottom:20,fontWeight:600}}>EXPLORE</div>
+          <div style={{fontSize:11,letterSpacing:5,color:'#a07f4d',marginBottom:20,fontWeight:600}}>EXPLORE</div>
 
           {/* Mock card */}
           <div ref={tutCardRef} style={{
-            width:'68vw',maxWidth:280,background:'#fff5f7',borderRadius:32,overflow:'hidden',
-            boxShadow:'0 14px 48px rgba(0,0,0,.65)',position:'relative',
-            border:'1px solid rgba(255,255,255,0.08)', transition:'box-shadow .2s',
+            width:'68vw',maxWidth:280,background:'#fff',borderRadius:32,overflow:'hidden',
+            boxShadow:'0 14px 40px rgba(80,60,30,.22)',position:'relative',
+            border:'1px solid rgba(184,147,90,.25)', transition:'box-shadow .2s',
           }}>
-            <div style={{width:'100%',aspectRatio:'1/1',background:'#f4f1ec',
+            <div style={{width:'100%',aspectRatio:'1/1',background:'#faf8f4',
               display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-              <span style={{fontSize:52,opacity:.1,filter:'grayscale(1)'}}>💎</span>
+              <span style={{fontSize:52,opacity:.12,filter:'grayscale(1)'}}>💎</span>
             </div>
             <div ref={tutLblRef} className="swipe-lbl" />
-            <div style={{padding:'10px 16px 13px',background:'#fff5f7',borderTop:'1px solid rgba(220,150,165,0.25)'}}>
+            <div style={{padding:'10px 16px 13px',background:'#fff',borderTop:'1px solid rgba(184,147,90,.14)'}}>
               <div style={{fontSize:12,fontWeight:500,color:'#3a3530'}}>戒指</div>
               <div style={{fontSize:10,color:'#b0a898',fontWeight:300,letterSpacing:.5}}>藍寶石  ·  輕奢</div>
             </div>
@@ -1781,7 +1881,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
 
           {/* Gesture hints */}
           <div style={{display:'flex',justifyContent:'space-around',width:'68vw',maxWidth:280,marginTop:20,gap:4}}>
-            {[['←','略過','#c04040'],['↓','收藏','rgba(76,175,100,.9)'],['→','更多同款','#b8935a']].map(([arrow,text,color])=>(
+            {[['←','略過','#8a93a0'],['↓','收藏','#e05070'],['→','更多同款','#b8935a']].map(([arrow,text,color])=>(
               <div key={text} style={{flex:1,textAlign:'center'}}>
                 <div style={{fontSize:18,color,marginBottom:3,fontWeight:700}}>{arrow}</div>
                 <div style={{fontSize:11,color,fontWeight:700,letterSpacing:1}}>{text}</div>
@@ -1790,18 +1890,18 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
           </div>
 
           {/* Heart target */}
-          <div ref={tutHeartRef} style={{fontSize:28,color:'rgba(184,147,90,.35)',marginTop:16,display:'inline-block',
-            padding:'8px 22px 7px',borderRadius:12,border:'1px solid rgba(184,147,90,.2)',
-            background:'rgba(184,147,90,.05)'}}>♥</div>
+          <div ref={tutHeartRef} style={{fontSize:28,color:'rgba(224,80,112,.55)',marginTop:16,display:'inline-block',
+            padding:'8px 22px 7px',borderRadius:12,border:'1px solid rgba(224,80,112,.3)',
+            background:'rgba(224,80,112,.06)'}}>♥</div>
 
-          <div style={{marginTop:14,fontSize:11,color:'rgba(255,255,255,.35)',letterSpacing:1}}>
+          <div style={{marginTop:14,fontSize:11,color:'rgba(0,0,0,.4)',letterSpacing:1}}>
             也可以直接點下方按鈕操作
           </div>
           <button onClick={dismissTutorial}
             style={{marginTop:14,padding:'9px 32px',borderRadius:22,
-              border:'1px solid rgba(184,147,90,.35)',
-              background:'rgba(184,147,90,.12)',
-              color:'rgba(220,195,140,.8)',fontSize:13,cursor:'pointer',letterSpacing:2,fontWeight:600}}>
+              border:'1px solid rgba(184,147,90,.5)',
+              background:'rgba(184,147,90,.1)',
+              color:'#8a6a3a',fontSize:13,cursor:'pointer',letterSpacing:2,fontWeight:600}}>
             知道了
           </button>
         </div>
