@@ -6031,6 +6031,9 @@ function QuoteHistoryPage({ role, onBack }) {
   const [analyzing,  setAnalyzing]  = useState(false);
   const [quotePhoto, setQuotePhoto] = useState(null);
 
+  /* 金工試算 */
+  const [showCalc, setShowCalc] = useState(false);
+
   const loadPending = () => {
     fetch('/api/quotes/pending').then(r => r.json()).then(setPending).catch(() => {});
   };
@@ -6123,28 +6126,35 @@ function QuoteHistoryPage({ role, onBack }) {
             <div style={{fontSize:11,color:'var(--text3)',marginTop:1}}>{quotes.length} 筆</div>
           </div>
         </div>
-        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}>
           {isAdmin && quotes.length > 0 && (
             <button onClick={async () => {
               if (!confirm(`確定清空全部 ${quotes.length} 筆估價紀錄？`)) return;
               await fetch('/api/quotes/all', { method: 'DELETE' });
               setQuotes([]);
-            }} style={{background:'#ffebee',color:'#c62828',border:'none',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
+            }} style={{background:'#ffebee',color:'#c62828',border:'none',borderRadius:10,padding:'8px 12px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
               清空
             </button>
           )}
+          <button onClick={() => setShowCalc(true)}
+            style={{background:'var(--surface)',color:'var(--gold)',border:'1px solid var(--gold)',borderRadius:10,padding:'8px 12px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>
+            ⚖ 金工試算
+          </button>
           <button onClick={() => !analyzing && fileRef.current && fileRef.current.click()}
             disabled={analyzing}
-            style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:analyzing?'default':'pointer',opacity:analyzing?0.7:1,whiteSpace:'nowrap'}}>
+            style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:700,cursor:analyzing?'default':'pointer',opacity:analyzing?0.7:1,whiteSpace:'nowrap'}}>
             {analyzing ? 'AI 分析中…' : '📷 上傳估價'}
           </button>
           {isAdmin && (
-            <button onClick={() => setSubView('newquote')} style={{background:'var(--s3)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>
+            <button onClick={() => setSubView('newquote')} style={{background:'var(--s3)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 12px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>
               + 新估價
             </button>
           )}
         </div>
       </div>
+
+      {/* 金工試算 overlay */}
+      {showCalc && <CostCalcPanel onClose={() => setShowCalc(false)} />}
 
       {/* List */}
       <div style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
