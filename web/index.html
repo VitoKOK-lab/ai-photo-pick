@@ -1791,7 +1791,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
                     userSelect:'none', touchAction:'none',
                   }}>
                   {/* 三張都載 full 圖：升到最前時 src 不變 → 零閃爍 */}
-                  <img src={p.full_url || p.thumb_url} alt="" draggable={false}
+                  <img src={p.thumb_url ? p.thumb_url + '?size=1200' : p.full_url} alt="" draggable={false}
                     style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#faf8f4',display:'block',pointerEvents:'none'}} />
                   {isTop && <div ref={lblRef} className="swipe-lbl" />}
                   {/* Info strip */}
@@ -2115,6 +2115,48 @@ function ConsultMode({ onClose, role }) {
   const [quoting,  setQuoting]  = useState(null);
   const [quotedIds,setQuotedIds]= useState(new Set());
   const [swipe,    setSwipe]    = useState(false);
+  const [shareUrl, setShareUrl] = useState(null);
+  const [sharing,  setSharing]  = useState(false);
+  const sessionIdRef = useRef(null);
+
+  /* 自動存檔：選款有變動就 debounce 寫入 consult_sessions */
+  useEffect(() => {
+    if (stage === 'start' || picks.length === 0) return;
+    const t = setTimeout(async () => {
+      const payload = { customer_name: name || null, picks: picks.map(p => p.id), quoted: [...quotedIds] };
+      try {
+        if (!sessionIdRef.current) {
+          const r = await fetch('/api/consult-sessions', { method:'POST',
+            headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          const d = await r.json();
+          sessionIdRef.current = d.id;
+        } else {
+          await fetch('/api/consult-sessions/' + sessionIdRef.current, { method:'PATCH',
+            headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        }
+      } catch {}
+    }, 800);
+    return () => clearTimeout(t);
+  }, [stage, name, JSON.stringify(picks.map(p=>p.id)), quotedIds.size]);
+
+  /* 產生臨時連結：建立 guest link 並把選款預填成客人的收藏 */
+  const shareToGuest = async () => {
+    if (sharing || !picks.length) return;
+    setSharing(true);
+    try {
+      const r = await fetch('/api/guest-links', { method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ customer_name: name || '訪客' }) });
+      if (!r.ok) throw new Error('建立失敗');
+      const d = await r.json();
+      await Promise.all(picks.map(pk =>
+        fetch(`/api/guest-links/favorite/${d.token}/${pk.id}`, { method:'POST' }).catch(()=>{})));
+      const url = window.location.origin + '/?g=' + d.token;
+      setShareUrl(url);
+      try { await navigator.clipboard.writeText(url); } catch {}
+    } catch (e) { alert('產生連結失敗：' + e.message); }
+    setSharing(false);
+  };
 
   const pageRef    = useRef(1);
   const hasMoreRef = useRef(true);
@@ -2261,7 +2303,7 @@ function ConsultMode({ onClose, role }) {
                 return (
                   <div key={p.id} style={{position:'relative',borderRadius:14,overflow:'hidden',background:'var(--surface)',
                     border: on ? '2px solid var(--gold)' : '2px solid transparent',boxShadow:'0 2px 10px rgba(0,0,0,.06)'}}>
-                    <img src={p.thumb_url} alt="" loading="lazy" onClick={() => { setLightbox(p); logEvent(p.id, 'view'); }}
+                    <img src={p.thumb_url + '?size=640'} alt="" loading="lazy" onClick={() => { setLightbox(p); logEvent(p.id, 'view'); }}
                       style={{width:'100%',aspectRatio:'1/1',objectFit:'cover',display:'block',cursor:'pointer',background:'#faf8f4'}} />
                     <button onClick={() => togglePick(p)}
                       style={{position:'absolute',top:8,right:8,width:40,height:40,borderRadius:'50%',border:'none',
@@ -2315,6 +2357,23 @@ function ConsultMode({ onClose, role }) {
             </div>
             <button onClick={onClose} style={{background:'none',border:'none',fontSize:13,fontWeight:600,color:'var(--text3)',cursor:'pointer',padding:0}}>結束</button>
           </div>
+          {/* 傳給客人：臨時連結 */}
+          <div style={{padding:'10px 14px 0',flexShrink:0}}>
+            {shareUrl ? (
+              <div style={{display:'flex',gap:8,alignItems:'center',background:'#f0f9f1',border:'1px solid #bfe3c5',borderRadius:10,padding:'9px 12px'}}>
+                <span style={{fontSize:12,color:'#2e7d32',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>✓ 已複製連結　{shareUrl}</span>
+                <button onClick={() => { try { navigator.clipboard.writeText(shareUrl); } catch {} }}
+                  style={{background:'#2e7d32',color:'#fff',border:'none',borderRadius:7,padding:'6px 12px',fontSize:12,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>複製</button>
+              </div>
+            ) : (
+              <button onClick={shareToGuest} disabled={sharing || !picks.length}
+                style={{width:'100%',padding:'10px',borderRadius:10,border:'1.5px dashed var(--gold)',
+                  background:'#fffdf8',color:'var(--gold)',fontSize:13,fontWeight:700,cursor:'pointer',
+                  opacity: sharing ? 0.6 : 1}}>
+                {sharing ? '產生中…' : '🔗 傳給客人（臨時連結，內含這次選款）'}
+              </button>
+            )}
+          </div>
           <div style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'12px 14px'}}>
             {picks.map(p => (
               <div key={p.id} style={{display:'flex',gap:12,alignItems:'center',background:'var(--surface)',
@@ -2347,7 +2406,7 @@ function ConsultMode({ onClose, role }) {
       {lightbox && (
         <div onClick={() => setLightbox(null)} style={{position:'fixed',inset:0,zIndex:880,background:'rgba(15,10,5,.92)',
           display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:18}}>
-          <img src={lightbox.full_url || lightbox.thumb_url} alt="" onClick={e => e.stopPropagation()}
+          <img src={lightbox.thumb_url ? lightbox.thumb_url + '?size=1200' : lightbox.full_url} alt="" onClick={e => e.stopPropagation()}
             style={{maxWidth:'100%',maxHeight:'70vh',objectFit:'contain',borderRadius:14,background:'#fff'}} />
           <div style={{marginTop:14,fontSize:15,color:'#f0e6d2',letterSpacing:1,textAlign:'center'}}>
             {[lightbox.category, lightbox.gemstone, lightbox.stone_size].filter(v=>v&&v!=='未定').join('・')}
@@ -4836,6 +4895,49 @@ function UploadResultCard({ item, onUpdate, onImport, onDiscard, importing }) {
   );
 }
 
+/* ── 建檔品質卡：各欄位缺標籤統計 ────────────────────── */
+function DataQualityCard() {
+  const [dq, setDq] = useState(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    fetch('/api/admin/data-quality').then(r => r.ok ? r.json() : null).then(setDq).catch(() => {});
+  }, []);
+  if (!dq || !dq.total) return null;
+  const gaps = dq.fields.filter(f => f.missing > 0).sort((a,b) => b.missing - a.missing);
+  if (gaps.length === 0) return (
+    <div style={{background:'#f0f9f1',border:'1px solid #bfe3c5',borderRadius:10,padding:'10px 14px',marginBottom:12,fontSize:13,color:'#2e7d32'}}>
+      ✓ 建檔品質良好：{dq.total.toLocaleString('zh-TW')} 張照片標籤齊全
+    </div>
+  );
+  return (
+    <div style={{background:'#fffbf0',border:'1px solid rgba(184,147,90,.35)',borderRadius:10,padding:'10px 14px',marginBottom:12}}>
+      <div onClick={() => setOpen(o => !o)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',cursor:'pointer'}}>
+        <span style={{fontSize:13,fontWeight:700,color:'#8a6a3a'}}>
+          ⚠ 建檔品質：{gaps.length} 個欄位有缺（共 {dq.total.toLocaleString('zh-TW')} 張）
+        </span>
+        <span style={{fontSize:12,color:'var(--text3)'}}>{open ? '收合 ▲' : '詳情 ▼'}</span>
+      </div>
+      {open && (
+        <div style={{marginTop:10}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))',gap:6}}>
+            {gaps.map(f => (
+              <div key={f.field} style={{display:'flex',justifyContent:'space-between',fontSize:12,
+                background:'var(--surface)',border:'1px solid var(--border)',borderRadius:7,padding:'6px 10px'}}>
+                <span style={{color:'var(--text2)'}}>{f.label}</span>
+                <span style={{color:'#c62828',fontWeight:700}}>{f.missing.toLocaleString('zh-TW')}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:'var(--text3)',marginTop:8,lineHeight:1.6}}>
+            在 Mac 上執行補跑：<code style={{background:'var(--s3)',padding:'1px 6px',borderRadius:4}}>python3 -m scripts.full_ingest</code>（新照片）
+            或 <code style={{background:'var(--s3)',padding:'1px 6px',borderRadius:4}}>python3 -m scripts.classify_photo_type</code>（舊照片補標籤）
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UploadPanel() {
   const [dragging,     setDragging]     = useState(false);
   const [uploading,    setUploading]    = useState(false);
@@ -4923,6 +5025,7 @@ function UploadPanel() {
 
   return (
     <div style={{flex:1, overflowY:'auto', padding:'16px 14px 40px'}}>
+      <DataQualityCard />
       {/* Drop zone */}
       <div
         onDragOver={e=>{e.preventDefault();setDragging(true);}}
@@ -5960,6 +6063,47 @@ function StaffActivitySection() {
 }
 
 /* ── 客人分析面板 ────────────────────────────────────── */
+/* ── 選款紀錄：顧問選款自動存的 session ─────────────── */
+function ConsultSessionsList() {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    fetch('/api/consult-sessions').then(r => r.json()).then(setRows).catch(() => setRows([]));
+  }, []);
+  if (!rows || rows.length === 0) return null;
+  return (
+    <div style={{marginBottom:20}}>
+      <div style={{fontWeight:800,fontSize:14,marginBottom:10,color:'var(--text2)'}}>✦ 選款紀錄（顧問選款）</div>
+      {rows.map(r => (
+        <div key={r.id} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,
+          padding:'10px 14px',marginBottom:8,display:'flex',alignItems:'center',gap:12}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:4}}>
+              <span style={{fontWeight:700,fontSize:14,color:'var(--text)'}}>{r.customer_name || '（未留名）'}</span>
+              <span style={{fontSize:11,color:'var(--text3)'}}>{(r.updated_at || '').slice(0,16).replace('T',' ')}</span>
+              {r.staff_name && <span style={{fontSize:11,color:'var(--text3)'}}>・{r.staff_name}</span>}
+            </div>
+            <div style={{display:'flex',gap:4,overflow:'hidden'}}>
+              {r.picks.slice(0,8).map(id => (
+                <img key={id} src={'/api/thumb/' + id} alt=""
+                  style={{width:34,height:34,borderRadius:7,objectFit:'cover',flexShrink:0,background:'var(--s3)'}} />
+              ))}
+              {r.picks.length > 8 && <span style={{fontSize:11,color:'var(--text3)',alignSelf:'center'}}>+{r.picks.length - 8}</span>}
+            </div>
+          </div>
+          <div style={{textAlign:'center',flexShrink:0}}>
+            <div style={{fontSize:17,fontWeight:700,color:'var(--gold)'}}>{r.picks.length}</div>
+            <div style={{fontSize:10,color:'var(--text3)'}}>選款</div>
+          </div>
+          <div style={{textAlign:'center',flexShrink:0}}>
+            <div style={{fontSize:17,fontWeight:700,color: r.quoted.length ? '#2e7d32' : 'var(--text3)'}}>{r.quoted.length}</div>
+            <div style={{fontSize:10,color:'var(--text3)'}}>已估價</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CustomerAnalyticsPanel() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -6004,6 +6148,7 @@ function CustomerAnalyticsPanel() {
 
   return (
     <div style={{flex:1,overflowY:'auto',padding:'14px 20px 40px'}}>
+      <ConsultSessionsList />
       {/* 摘要卡片 */}
       <div style={{display:'flex',gap:10,marginBottom:20}}>
         {[

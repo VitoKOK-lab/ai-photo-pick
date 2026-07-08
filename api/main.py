@@ -270,6 +270,7 @@ from api.pricing      import router as pricing_router
 from api.agents       import router as agents_router
 from api.staging      import router as staging_router
 from api.admin        import router as admin_router
+from api.consult      import router as consult_router
 from api.guest_links  import router as guest_links_router
 
 app.include_router(photos_router)
@@ -301,6 +302,7 @@ def _post_startup_cleanup():
 app.include_router(agents_router)
 app.include_router(staging_router)
 app.include_router(admin_router)
+app.include_router(consult_router)
 app.include_router(guest_links_router)
 
 app.mount("/", StaticFiles(directory=str(BASE_DIR / "web"), html=True), name="web")

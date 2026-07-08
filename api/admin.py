@@ -210,3 +210,24 @@ def customer_analytics(_user=Depends(require_admin)):
         "recent_interactions": [dict(r) for r in recent],
         "customers": [dict(r) for r in customers],
     }
+
+
+# ── 建檔品質：各欄位缺標籤統計 ──────────────────────────
+@router.get("/data-quality")
+def data_quality(_user=Depends(require_admin)):
+    FIELDS = [
+        ("category", "品項"), ("gemstone", "寶石"), ("stone_shape", "形狀"),
+        ("stone_size", "大小"), ("color", "色系"), ("metal_color", "金工色"),
+        ("style", "鑽飾"), ("setting_amount", "配石量"), ("craft_complexity", "複雜度"),
+        ("price_band", "價位"), ("photo_type", "照片類型"), ("material", "材質"),
+    ]
+    conn = _conn()
+    total = conn.execute("SELECT COUNT(*) FROM photos").fetchone()[0]
+    fields = []
+    for col, label in FIELDS:
+        missing = conn.execute(
+            f"SELECT COUNT(*) FROM photos WHERE {col} IS NULL OR {col} = '' OR {col} = '未定'"
+        ).fetchone()[0]
+        fields.append({"field": col, "label": label, "missing": missing})
+    conn.close()
+    return {"total": total, "fields": fields}
