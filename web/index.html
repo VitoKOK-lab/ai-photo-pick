@@ -2095,14 +2095,288 @@ function CostCalcPanel({ onClose }) {
   );
 }
 
+/* ══ 顧問選款模式：介紹 → 選款 → 快速估價 一條龍 ══════════
+   給店員拿著平板/手機/電腦向客人介紹用。
+   大圖大按鈕、無後台雜訊；手機可切換滑卡手勢，共用同一份選款清單。 */
+const CONSULT_COLORS = [
+  ['紅','#e05050'],['粉','#f2a0b8'],['黃','#e8c84a'],['綠','#5cb85c'],
+  ['藍','#5090e0'],['紫','#9b59b6'],['白','#e8e4de'],['彩','linear-gradient(135deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f)'],
+];
+const CONSULT_BANDS = [['入門','1萬內'],['中階','1–3萬'],['高階','3–6萬'],['奢華','6–15萬'],['頂級','15萬+']];
+
+function ConsultMode({ onClose, role }) {
+  const [stage,    setStage]    = useState('start');   // start | pick | summary
+  const [name,     setName]     = useState('');
+  const [filters,  setFilters]  = useState({});        // category / color / price_band
+  const [photos,   setPhotos]   = useState([]);
+  const [loading,  setLoading]  = useState(false);
+  const [picks,    setPicks]    = useState([]);
+  const [lightbox, setLightbox] = useState(null);
+  const [quoting,  setQuoting]  = useState(null);
+  const [quotedIds,setQuotedIds]= useState(new Set());
+  const [swipe,    setSwipe]    = useState(false);
+
+  const pageRef    = useRef(1);
+  const hasMoreRef = useRef(true);
+  const loadingRef = useRef(false);
+  const seedRef    = useRef(Math.random());
+  const sentinelRef= useRef(null);
+  const scrollRef  = useRef(null);
+
+  const pickHas    = id => picks.some(p => p.id === id);
+  const togglePick = photo => setPicks(prev =>
+    prev.some(p => p.id === photo.id) ? prev.filter(p => p.id !== photo.id) : [...prev, photo]);
+
+  const loadMore = async (reset = false) => {
+    if (loadingRef.current) return;
+    if (!reset && !hasMoreRef.current) return;
+    loadingRef.current = true;
+    setLoading(true);
+    if (reset) { pageRef.current = 1; hasMoreRef.current = true; seedRef.current = Math.random(); }
+    try {
+      const qs = new URLSearchParams({ page: pageRef.current, sort: 'random', _r: seedRef.current, photo_type: '去背' });
+      Object.entries(filters).forEach(([k, v]) => v && qs.set(k, v));
+      const r = await fetch('/api/photos?' + qs);
+      const d = await r.json();
+      setPhotos(prev => reset ? (d.photos || []) : [...prev, ...(d.photos || [])]);
+      hasMoreRef.current = !!d.has_more;
+      pageRef.current += 1;
+    } catch {}
+    loadingRef.current = false;
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (stage !== 'pick') return;
+    setPhotos([]);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    loadMore(true);
+  }, [stage, JSON.stringify(filters)]);
+
+  useEffect(() => {
+    if (stage !== 'pick') return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) loadMore(); }, { rootMargin: '600px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [stage]);
+
+  const setF = (field, value) => setFilters(prev => {
+    const n = { ...prev };
+    if (n[field] === value || !value) delete n[field]; else n[field] = value;
+    return n;
+  });
+
+  /* 大顆觸控 chip */
+  const bigChip = (on, extra = {}) => ({
+    padding:'9px 16px', borderRadius:20, border:'1.5px solid', fontSize:14, cursor:'pointer',
+    borderColor: on ? 'var(--gold)' : 'var(--border)', background: on ? '#fff8ee' : 'var(--surface)',
+    color: on ? 'var(--gold)' : 'var(--text2)', fontWeight: on ? 700 : 500,
+    whiteSpace:'nowrap', flexShrink:0, transition:'all .15s', ...extra,
+  });
+  const chipRow = { display:'flex', gap:8, overflowX:'auto', padding:'6px 16px',
+    scrollbarWidth:'none', WebkitOverflowScrolling:'touch' };
+
+  /* ── 估價中：直接進正常估價精靈 ── */
+  if (quoting) return (
+    <PhotoQuoteFlow photo={quoting} initialCustomer={name}
+      onBack={() => setQuoting(null)}
+      onClose={() => { setQuotedIds(prev => new Set(prev).add(quoting.id)); setQuoting(null); }} />
+  );
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:850,background:'var(--bg)',display:'flex',flexDirection:'column'}}>
+
+      {/* ══ 開始畫面 ══ */}
+      {stage === 'start' && (
+        <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24,
+          background:'radial-gradient(ellipse at 50% 20%, #fffdf8 0%, #f1ebe0 100%)'}}>
+          <button onClick={onClose} style={{position:'absolute',top:16,right:18,background:'none',border:'none',fontSize:24,color:'var(--text3)',cursor:'pointer',lineHeight:1}}>×</button>
+          <div style={{fontSize:11,letterSpacing:6,color:'#a07f4d',fontWeight:600,marginBottom:14}}>PRIVATE SELECTION</div>
+          <div style={{fontSize:26,fontWeight:300,color:'var(--text)',letterSpacing:2,marginBottom:6,textAlign:'center'}}>顧問選款</div>
+          <div style={{fontSize:13,color:'var(--text3)',marginBottom:36,textAlign:'center',lineHeight:1.7}}>
+            陪同客人瀏覽、收藏喜歡的款式<br/>選完直接逐件估價
+          </div>
+          <input type="text" placeholder="客人稱呼（選填）" value={name}
+            onChange={e => setName(e.target.value)}
+            style={{width:'100%',maxWidth:320,border:'1.5px solid var(--border)',borderRadius:12,
+              padding:'13px 16px',fontSize:15,textAlign:'center',outline:'none',background:'var(--surface)',
+              color:'var(--text)',marginBottom:16,fontFamily:'inherit'}} />
+          <button onClick={() => setStage('pick')}
+            style={{width:'100%',maxWidth:320,padding:'14px',borderRadius:12,border:'none',
+              background:'linear-gradient(135deg,#c9a86c,#8a6a3a)',color:'#fff',fontSize:16,fontWeight:700,
+              letterSpacing:2,cursor:'pointer',boxShadow:'0 6px 20px rgba(184,147,90,.35)'}}>
+            開始選款
+          </button>
+        </div>
+      )}
+
+      {/* ══ 選款畫面 ══ */}
+      {stage === 'pick' && (
+        <>
+          {/* Header */}
+          <div style={{display:'flex',alignItems:'center',padding:'10px 16px',background:'var(--surface)',
+            borderBottom:'1px solid var(--border)',flexShrink:0,gap:10}}>
+            <button onClick={onClose} style={{background:'none',border:'none',fontSize:13,fontWeight:600,color:'var(--text3)',cursor:'pointer',padding:0,whiteSpace:'nowrap'}}>結束</button>
+            <div style={{flex:1,textAlign:'center',fontSize:14,fontWeight:700,color:'#8a6a3a',letterSpacing:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+              {name ? name + ' 的選款' : '顧問選款'}
+            </div>
+            {window.innerWidth < 768 && (
+              <button onClick={() => setSwipe(true)}
+                style={{background:'none',border:'1px solid var(--gold)',borderRadius:8,padding:'4px 10px',
+                  fontSize:12,fontWeight:600,color:'var(--gold)',cursor:'pointer',whiteSpace:'nowrap'}}>✦ 滑卡</button>
+            )}
+          </div>
+
+          {/* 大顆篩選：品項 / 色系 / 價位 */}
+          <div style={{background:'var(--surface)',borderBottom:'1px solid var(--border)',flexShrink:0}}>
+            <div style={chipRow}>
+              {CATS.map(c => <button key={c} style={bigChip(filters.category === c)} onClick={() => setF('category', c)}>{c}</button>)}
+            </div>
+            <div style={{...chipRow,paddingTop:0}}>
+              {CONSULT_COLORS.map(([label, hex]) => (
+                <button key={label} onClick={() => setF('color', label)}
+                  style={{...bigChip(filters.color === label),display:'flex',alignItems:'center',gap:6,padding:'7px 13px'}}>
+                  <span style={{width:14,height:14,borderRadius:'50%',background:hex,border:'1px solid rgba(0,0,0,.12)',display:'inline-block'}} />
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div style={{...chipRow,paddingTop:0,paddingBottom:10}}>
+              {CONSULT_BANDS.map(([band, hint]) => (
+                <button key={band} style={bigChip(filters.price_band === band)} onClick={() => setF('price_band', band)}>
+                  {hint}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 大圖網格 */}
+          <div ref={scrollRef} style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:8}}>
+            <div style={{display:'grid',gap:8,
+              gridTemplateColumns:`repeat(${window.innerWidth >= 1200 ? 4 : window.innerWidth >= 768 ? 3 : 2}, 1fr)`}}>
+              {photos.map(p => {
+                const on = pickHas(p.id);
+                return (
+                  <div key={p.id} style={{position:'relative',borderRadius:14,overflow:'hidden',background:'var(--surface)',
+                    border: on ? '2px solid var(--gold)' : '2px solid transparent',boxShadow:'0 2px 10px rgba(0,0,0,.06)'}}>
+                    <img src={p.thumb_url} alt="" loading="lazy" onClick={() => { setLightbox(p); logEvent(p.id, 'view'); }}
+                      style={{width:'100%',aspectRatio:'1/1',objectFit:'cover',display:'block',cursor:'pointer',background:'#faf8f4'}} />
+                    <button onClick={() => togglePick(p)}
+                      style={{position:'absolute',top:8,right:8,width:40,height:40,borderRadius:'50%',border:'none',
+                        background: on ? 'linear-gradient(145deg,#e26a8f,#c94069)' : 'rgba(255,255,255,.92)',
+                        color: on ? '#fff' : 'rgba(0,0,0,.35)',fontSize:18,cursor:'pointer',lineHeight:1,
+                        boxShadow:'0 2px 8px rgba(0,0,0,.15)',transition:'all .15s'}}>
+                      {on ? '♥' : '♡'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <div ref={sentinelRef} style={{height:1}} />
+            {loading && <div style={{textAlign:'center',padding:18,fontSize:13,color:'var(--text3)'}}>載入中…</div>}
+            {!loading && photos.length === 0 && (
+              <div style={{textAlign:'center',padding:'60px 20px',fontSize:14,color:'var(--text3)'}}>沒有符合條件的款式<br/><span style={{fontSize:12}}>點已選的篩選可取消</span></div>
+            )}
+          </div>
+
+          {/* 底部：已選 → 完成 */}
+          <div style={{flexShrink:0,padding:'10px 16px 14px',background:'var(--surface)',borderTop:'1px solid var(--border)',
+            display:'flex',alignItems:'center',gap:12}}>
+            <div style={{flex:1,display:'flex',alignItems:'center',gap:6,overflow:'hidden'}}>
+              {picks.slice(-5).map(p => (
+                <img key={p.id} src={p.thumb_url} alt="" style={{width:36,height:36,borderRadius:8,objectFit:'cover',border:'1.5px solid var(--gold)',flexShrink:0}} />
+              ))}
+              <span style={{fontSize:13,color:picks.length?'var(--gold)':'var(--text3)',fontWeight:600,whiteSpace:'nowrap'}}>
+                {picks.length ? `已選 ${picks.length} 件` : '點 ♡ 收藏喜歡的款式'}
+              </span>
+            </div>
+            <button disabled={!picks.length} onClick={() => setStage('summary')}
+              style={{padding:'11px 22px',borderRadius:10,border:'none',fontSize:14,fontWeight:700,letterSpacing:1,
+                cursor:picks.length?'pointer':'default',whiteSpace:'nowrap',
+                background:picks.length?'linear-gradient(135deg,#c9a86c,#8a6a3a)':'var(--s3)',
+                color:picks.length?'#fff':'var(--text3)',
+                boxShadow:picks.length?'0 4px 14px rgba(184,147,90,.3)':'none'}}>
+              完成選款 ›
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ══ 總結畫面：逐件估價 ══ */}
+      {stage === 'summary' && (
+        <>
+          <div style={{display:'flex',alignItems:'center',padding:'10px 16px',background:'var(--surface)',
+            borderBottom:'1px solid var(--border)',flexShrink:0,gap:10}}>
+            <button onClick={() => setStage('pick')} style={{background:'none',border:'none',fontSize:13,fontWeight:600,color:'var(--text3)',cursor:'pointer',padding:0}}>‹ 繼續選款</button>
+            <div style={{flex:1,textAlign:'center',fontSize:14,fontWeight:700,color:'#8a6a3a',letterSpacing:2}}>
+              {(name ? name + '・' : '') + '已選 ' + picks.length + ' 件'}
+            </div>
+            <button onClick={onClose} style={{background:'none',border:'none',fontSize:13,fontWeight:600,color:'var(--text3)',cursor:'pointer',padding:0}}>結束</button>
+          </div>
+          <div style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'12px 14px'}}>
+            {picks.map(p => (
+              <div key={p.id} style={{display:'flex',gap:12,alignItems:'center',background:'var(--surface)',
+                borderRadius:14,border:'1px solid var(--border)',padding:10,marginBottom:10}}>
+                <img src={p.thumb_url} alt="" onClick={() => setLightbox(p)}
+                  style={{width:76,height:76,borderRadius:10,objectFit:'cover',cursor:'pointer',flexShrink:0,background:'#faf8f4'}} />
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14,fontWeight:700,color:'var(--text)',marginBottom:2}}>
+                    {[p.category, p.gemstone].filter(v=>v&&v!=='未定').join('・') || '未分類'}
+                  </div>
+                  <div style={{fontSize:11,color:'var(--text3)'}}>
+                    {[p.stone_size, p.style, p.price_band].filter(v=>v&&v!=='未定').join('・')}
+                  </div>
+                </div>
+                <button onClick={() => togglePick(p)} style={{background:'none',border:'none',fontSize:16,color:'var(--text3)',cursor:'pointer',padding:'4px 6px'}}>✕</button>
+                <button onClick={() => setQuoting(p)}
+                  style={{padding:'10px 16px',borderRadius:10,border:'none',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',
+                    background: quotedIds.has(p.id) ? '#e8f5e9' : 'linear-gradient(135deg,#c9a86c,#8a6a3a)',
+                    color: quotedIds.has(p.id) ? '#2e7d32' : '#fff'}}>
+                  {quotedIds.has(p.id) ? '✓ 已估價' : '💎 估價'}
+                </button>
+              </div>
+            ))}
+            {picks.length === 0 && <div style={{textAlign:'center',padding:'60px 0',fontSize:14,color:'var(--text3)'}}>尚未選任何款式</div>}
+          </div>
+        </>
+      )}
+
+      {/* ══ 大圖 lightbox ══ */}
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{position:'fixed',inset:0,zIndex:880,background:'rgba(15,10,5,.92)',
+          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:18}}>
+          <img src={lightbox.full_url || lightbox.thumb_url} alt="" onClick={e => e.stopPropagation()}
+            style={{maxWidth:'100%',maxHeight:'70vh',objectFit:'contain',borderRadius:14,background:'#fff'}} />
+          <div style={{marginTop:14,fontSize:15,color:'#f0e6d2',letterSpacing:1,textAlign:'center'}}>
+            {[lightbox.category, lightbox.gemstone, lightbox.stone_size].filter(v=>v&&v!=='未定').join('・')}
+          </div>
+          <button onClick={e => { e.stopPropagation(); togglePick(lightbox); }}
+            style={{marginTop:16,padding:'12px 34px',borderRadius:24,border:'none',fontSize:15,fontWeight:700,cursor:'pointer',
+              background: pickHas(lightbox.id) ? 'linear-gradient(145deg,#e26a8f,#c94069)' : 'rgba(255,255,255,.95)',
+              color: pickHas(lightbox.id) ? '#fff' : '#333'}}>
+            {pickHas(lightbox.id) ? '♥ 已收藏' : '♡ 收藏這款'}
+          </button>
+        </div>
+      )}
+
+      {/* ══ 手機滑卡模式：共用同一份選款清單 ══ */}
+      {swipe && (
+        <SwipeMode initFilters={{ ...filters, photo_type:'去背' }} onClose={() => setSwipe(false)}
+          isFav={pickHas} toggleFav={togglePick} role={role} />
+      )}
+    </div>
+  );
+}
+
 /* ── Browse tab ─────────────────────────────────────── */
 function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [photoMode, setPhotoMode] = useState('去背'); // '去背' | '情境'
   const [catFilter, setCatFilter]  = useState(null);
   const [filters,   setFilters]    = useState({});
   const [counts,    setCounts]     = useState({});
-  const [swipeMode,   setSwipeMode]   = useState(false);
-  const [showQR,      setShowQR]      = useState(false);
+  const [consult,     setConsult]     = useState(false);
   const [costCalc,    setCostCalc]    = useState(false);
   const [batchMode,  setBatchMode]  = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -2198,8 +2472,8 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
           {isStaff && !batchMode && (
             <div style={{flexShrink:0,display:'flex',alignItems:'center',padding:'6px 10px 6px 6px',
               boxShadow:'-10px 0 10px -8px rgba(0,0,0,.12)',position:'relative',zIndex:1}}>
-              <button className="swipe-launch-btn" onClick={() => window.innerWidth < 768 ? setSwipeMode(true) : setShowQR(true)} style={{padding:'5px 12px',border:'1px solid var(--gold)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
-                <span style={{fontSize:12}}>✦</span> like or not
+              <button className="swipe-launch-btn" onClick={() => setConsult(true)} style={{padding:'5px 12px',border:'1px solid var(--gold)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
+                <span style={{fontSize:12}}>✦</span> 客人選款
               </button>
             </div>
           )}
@@ -2266,19 +2540,8 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
       {/* 金工試算 */}
       {costCalc && <CostCalcPanel onClose={() => setCostCalc(false)} />}
 
-      {/* QR code modal – desktop only */}
-      {showQR && <QRModal onClose={() => setShowQR(false)} />}
-
-      {/* Like or Not swipe mode – mobile */}
-      {swipeMode && (
-        <SwipeMode
-          initFilters={allFilters}
-          onClose={() => setSwipeMode(false)}
-          isFav={isFav}
-          toggleFav={toggleFav}
-          role={role}
-        />
-      )}
+      {/* 顧問選款模式（大圖選款＋滑卡＋逐件估價） */}
+      {consult && <ConsultMode onClose={() => setConsult(false)} role={role} />}
     </>
   );
 }
@@ -2630,7 +2893,7 @@ function ImgZoom({ src, fullSrc, style, className, ...props }) {
   );
 }
 
-function PhotoQuoteFlow({ photo, onBack, onClose }) {
+function PhotoQuoteFlow({ photo, onBack, onClose, initialCustomer }) {
   const pricing = usePricing();
   const STONES_INVEST = pricing.STONES_INVEST;  // 遮蔽全域寫死表，與設定頁同步
   const GEM_MAP = {};
@@ -2686,7 +2949,7 @@ function PhotoQuoteFlow({ photo, onBack, onClose }) {
   const [sideType,     setSideType]     = useState('無配石');
   const [sideBand,     setSideBand]     = useState('1–5顆');
   const [manualQuote,  setManualQuote]  = useState('');
-  const [customer,     setCustomer]     = useState('');
+  const [customer,     setCustomer]     = useState(initialCustomer || '');
   const [inquiryDate,  setInquiryDate]  = useState(`${new Date().getMonth()+1}/${new Date().getDate()}`);
   const [sourceChannel,setSourceChannel]= useState('');
   const [itemSize,     setItemSize]     = useState('');
