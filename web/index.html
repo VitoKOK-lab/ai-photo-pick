@@ -1106,7 +1106,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
 
   /* Quote flow view */
   if (view === 'quote') return (
-    <PhotoQuoteFlow photo={photo} onBack={() => setView('detail')} onClose={onClose} />
+    <QuickQuote photo={photo} onClose={() => setView('detail')} />
   );
 
   /* Detail view */
@@ -2220,8 +2220,7 @@ function ConsultMode({ onClose, role }) {
 
   /* ── 估價中：直接進正常估價精靈 ── */
   if (quoting) return (
-    <PhotoQuoteFlow photo={quoting} initialCustomer={name}
-      onBack={() => setQuoting(null)}
+    <QuickQuote photo={quoting} initialCustomer={name}
       onClose={() => { setQuotedIds(prev => new Set(prev).add(quoting.id)); setQuoting(null); }} />
   );
 
@@ -2522,7 +2521,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
                 ? <button onClick={exitBatch} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',flexShrink:0}}>取消</button>
                 : <>
                     <button onClick={() => setBatchMode(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>批量編輯</button>
-                    <button onClick={() => setCostCalc(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>金工試算</button>
+                    <button onClick={() => setCostCalc(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>快速估價</button>
                   </>
             )}
           </div>
@@ -2595,7 +2594,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
       )}
 
       {/* 金工試算 */}
-      {costCalc && <CostCalcPanel onClose={() => setCostCalc(false)} />}
+      {costCalc && <QuickQuote photo={null} onClose={() => setCostCalc(false)} />}
 
       {/* 顧問選款模式（大圖選款＋滑卡＋逐件估價） */}
       {consult && <ConsultMode onClose={() => setConsult(false)} role={role} />}
@@ -2947,6 +2946,328 @@ function ImgZoom({ src, fullSrc, style, className, ...props }) {
         document.body
       )}
     </>
+  );
+}
+
+/* ══ 快速估價 QuickQuote ══════════════════════════════════
+   唯一的估價介面：照片估價 / 上傳估價 / 新估價 / 金工試算 全走這裡。
+   單頁拉桿即時計價：主石 + 台子（金料/工錢/配石/電鍍）→ 底部報價。 */
+function QuickQuote({ photo, initialCustomer, onClose }) {
+  const pricing = usePricing();
+  const SI  = pricing.STONES_INVEST;
+  const SC  = pricing.STONES_COMMERCIAL;
+  const LC  = pricing.LABOR_CONFIG || {};
+  const dailyRate = Number(LC.daily_rate) || 3500;
+  const CRAFTS    = ['極簡','簡單','中等','複雜','精工'];
+  const metals    = Object.keys(pricing.METAL_PER_G);
+  const SIDE_TYPES = ['無配石', ...Object.keys(pricing.SIDESTONES_V2 || {})];
+  const QTY_BANDS  = ['1–5顆','6–15顆','16–30顆','31–50顆','50顆以上'];
+  const PLATINGS   = Object.keys(pricing.PLATING || {});
+
+  /* 從照片預填 */
+  const GEM_MAP = {};
+  Object.entries(SI).forEach(([k, v]) => { GEM_MAP[v.name] = { key: k, mode: 'invest' }; });
+  Object.entries(SC).forEach(([k, v]) => { if (!GEM_MAP[v.name]) GEM_MAP[v.name] = { key: k, mode: 'commercial' }; });
+  const initGem   = photo && photo.gemstone ? GEM_MAP[photo.gemstone] : null;
+  const initCarat = (() => { const n = parseFloat(String(photo && photo.stone_size || '')); return n > 0 ? Math.min(n, 10) : 1; })();
+  const initGrams = (() => {
+    const m = String(photo && photo.metal_weight || '').match(/([0-9.]+)\s*[-–]\s*([0-9.]+)/);
+    if (m) return Math.round((parseFloat(m[1]) + parseFloat(m[2])) / 2 * 2) / 2;
+    const one = parseFloat(String(photo && photo.metal_weight || ''));
+    return one > 0 ? one : 3;
+  })();
+  const CRAFT_FROM_PHOTO = { '極簡':'極簡', '普通':'中等', '複雜':'複雜', '極複雜':'精工' };
+
+  const [customer, setCustomer] = useState(initialCustomer || '');
+  const [budget,   setBudget]   = useState('');
+  const [cat,      setCat]      = useState((photo && photo.category) || '戒指');
+  const [stoneMode,setStoneMode]= useState(initGem ? initGem.mode : (photo ? 'commercial' : 'none'));
+  const [stoneKey, setStoneKey] = useState(initGem ? initGem.key : '');
+  const [carat,    setCarat]    = useState(initCarat);
+  const [origin,   setOrigin]   = useState('');
+  const [treatment,setTreatment]= useState('');
+  const [colorQ,   setColorQ]   = useState('');
+  const [metal,    setMetal]    = useState(photo && photo.metal_color === '銀' ? '925銀' : '18K金');
+  const [grams,    setGrams]    = useState(initGrams);
+  const [craftIdx, setCraftIdx] = useState(Math.max(0, CRAFTS.indexOf(CRAFT_FROM_PHOTO[photo && photo.craft_complexity] || '中等')));
+  const [sideType, setSideType] = useState('無配石');
+  const [sideIdx,  setSideIdx]  = useState(1);
+  const [plating,  setPlating]  = useState(PLATINGS[0] || '無');
+  const [notes,    setNotes]    = useState('');
+  const [finalPct, setFinalPct] = useState(50);      // 報價滑桿位置
+  const [saving,   setSaving]   = useState(false);
+  const [savedId,  setSavedId]  = useState(null);
+  const [copied,   setCopied]   = useState(false);
+
+  /* 換石種時帶預設乘數：預設抓基準檔（乘數最接近 1.0），避免起手就是頂級價 */
+  const baseline = obj => {
+    const es = Object.entries(obj || {});
+    if (!es.length) return '';
+    return es.reduce((a, b) => Math.abs(b[1] - 1) < Math.abs(a[1] - 1) ? b : a)[0];
+  };
+  useEffect(() => {
+    if (stoneMode === 'invest' && stoneKey && SI[stoneKey]) {
+      const st = SI[stoneKey];
+      setOrigin(baseline(st.origins));
+      setTreatment(baseline(st.treatments));
+      setColorQ(baseline(st.colors));
+    }
+  }, [stoneKey, stoneMode]);
+  useEffect(() => { setSavedId(null); setCopied(false); }, [stoneMode, stoneKey, carat, origin, treatment, colorQ, metal, grams, craftIdx, sideType, sideIdx, plating]);
+
+  /* ── 計價 ── */
+  const ct = Number(carat) || 0;
+  let stoneMin = 0, stoneMax = 0, stoneName = '';
+  if (stoneMode === 'invest' && stoneKey && SI[stoneKey] && ct > 0) {
+    const st = SI[stoneKey];
+    stoneName = st.name;
+    const band = getBand(ct);
+    const k = (st.origins[origin] || 1) * (st.treatments[treatment] || 1) * (st.colors[colorQ] || 1);
+    stoneMin = st.floor[band] * k * 0.8 * ct;
+    stoneMax = st.ceil[band]  * k * 0.8 * ct;
+  } else if (stoneMode === 'commercial' && stoneKey && SC[stoneKey] && ct > 0) {
+    stoneName = SC[stoneKey].name;
+    stoneMin = SC[stoneKey].range[0] * ct;
+    stoneMax = SC[stoneKey].range[1] * ct;
+  }
+  const metalPg    = pricing.METAL_PER_G[metal] || 0;
+  const metalCost  = Math.round(metalPg * grams);
+  const craft      = CRAFTS[craftIdx];
+  const laborMid   = Math.round(dailyRate * (Number(LC[craft]) || 0));
+  const laborMin   = Math.round(laborMid * 0.9), laborMax = Math.round(laborMid * 1.1);
+  const sideRange  = sideType !== '無配石' ? (((pricing.SIDESTONES_V2 || {})[sideType] || {})[QTY_BANDS[sideIdx]] || [0,0]) : [0,0];
+  const plateRange = (pricing.PLATING || {})[plating] || [0,0];
+  const mountMin   = metalCost + laborMin + sideRange[0] + plateRange[0];
+  const mountMax   = metalCost + laborMax + sideRange[1] + plateRange[1];
+  const totalMin   = Math.round(stoneMin + mountMin);
+  const totalMax   = Math.round(stoneMax + mountMax);
+  const finalPrice = Math.round((totalMin + (totalMax - totalMin) * finalPct / 100) / 100) * 100;
+  const budgetNum  = parseInt(String(budget).replace(/[^0-9]/g,'')) || 0;
+  const diff       = budgetNum ? budgetNum - finalPrice : null;
+
+  const stoneDesc = stoneName
+    ? `${stoneName} ${ct}ct${stoneMode==='invest' ? `（${[origin,treatment,colorQ].filter(Boolean).join('/')}）` : ''}`
+    : '無主石';
+
+  /* ── 複製報價文字 ── */
+  const copyText = () => {
+    const lines = [
+      `【估價】${cat}・${stoneDesc}`,
+      customer ? `客人：${customer}` : null,
+      stoneName ? `主石：${fmtNT(Math.round(stoneMin))} – ${fmtNT(Math.round(stoneMax))}` : null,
+      `台子：${metal} ${grams.toFixed(1)}g・${craft}工${sideType!=='無配石' ? '・'+sideType+' '+QTY_BANDS[sideIdx] : ''}${plating&&plating!=='無' ? '・鍍'+plating : ''}`,
+      `　　　${fmtNT(mountMin)} – ${fmtNT(mountMax)}`,
+      `合計參考：${fmtNT(totalMin)} – ${fmtNT(totalMax)}`,
+      `報價：${fmtNT(finalPrice)}`,
+      notes ? `備註：${notes}` : null,
+    ].filter(Boolean).join('\n');
+    try { navigator.clipboard.writeText(lines); setCopied(true); setTimeout(()=>setCopied(false), 2000); } catch {}
+  };
+
+  /* ── 存檔（沿用 quotes API 格式） ── */
+  const doSave = async () => {
+    if (saving || savedId) return;
+    setSaving(true);
+    try {
+      const adj = { category:cat, gemstone:stoneName, stoneKey, stoneMode, carat:ct, origin, treatment, colorQ,
+        material:metal, grams, craft_complexity:craft, sidestone: sideType!=='無配石' ? `${sideType} ${QTY_BANDS[sideIdx]}` : '無配石',
+        plating, staff_name: (getJwtUser() || {}).name || '', notes };
+      const payload = {
+        description:   `${cat}・${stoneName || '無主石'}${stoneName ? ' ' + ct + 'ct' : ''}・${craft}工`,
+        final_price:   null,
+        material:      metal,
+        gemstone:      stoneName || null,
+        photo_id:      (photo && photo.id) || null,
+        customer_name: customer || null,
+        original_data: JSON.stringify(photo || {}),
+        adjusted_data: JSON.stringify(adj),
+        estimated_min: totalMin || null,
+        estimated_max: totalMax || null,
+        budget:        budgetNum || null,
+        staff_name:    (getJwtUser() || {}).name || null,
+        notes:         [`報價：${fmtNT(finalPrice)}`, notes].filter(Boolean).join('\n') || null,
+        ref_photo_url: null,
+      };
+      const r = await fetch('/api/quotes', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      if (r.ok) { const d = await r.json(); setSavedId(d.id); }
+      else alert('儲存失敗 ' + r.status);
+    } catch (e) { alert('儲存失敗：' + e.message); }
+    setSaving(false);
+  };
+
+  /* ── 樣式 ── */
+  const secSt = { background:'var(--surface)', borderRadius:12, border:'1px solid var(--border)', padding:'12px 16px 14px', marginBottom:10 };
+  const secHd = (label, amountText) => (
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:8}}>
+      <span style={{fontSize:11,fontWeight:700,letterSpacing:1.5,color:'var(--text3)'}}>{label}</span>
+      {amountText != null && <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>{amountText}</span>}
+    </div>
+  );
+  const chipSt = on => ({ padding:'6px 13px', borderRadius:16, border:'1.5px solid', fontSize:13, cursor:'pointer',
+    borderColor: on ? 'var(--gold)' : 'var(--border)', background: on ? '#fff8ee' : 'var(--surface)',
+    color: on ? 'var(--gold)' : 'var(--text2)', fontWeight: on ? 700 : 400, whiteSpace:'nowrap', flexShrink:0 });
+  const sliderSt = { width:'100%', accentColor:'var(--gold)', cursor:'pointer', height:4, margin:'6px 0 2px' };
+  const selSt = { width:'100%', border:'1px solid var(--border)', borderRadius:8, padding:'9px 10px', fontSize:13,
+    background:'var(--surface)', color:'var(--text)', outline:'none', fontFamily:'inherit' };
+  const wrapRow = { display:'flex', gap:6, flexWrap:'wrap' };
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:950,background:'var(--bg)',display:'flex',flexDirection:'column'}}>
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 16px',background:'var(--surface)',borderBottom:'1px solid var(--border)',flexShrink:0}}>
+        {photo && photo.thumb_url && (
+          <img src={photo.thumb_url} alt="" style={{width:38,height:38,borderRadius:8,objectFit:'cover',flexShrink:0,background:'var(--s3)'}} />
+        )}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:14,fontWeight:700,color:'var(--text)'}}>快速估價</div>
+          {photo && photo.gemstone && <div style={{fontSize:11,color:'var(--text3)'}}>已帶入照片分類</div>}
+        </div>
+        <button onClick={onClose} style={{background:'none',border:'none',fontSize:22,color:'var(--text3)',cursor:'pointer',lineHeight:1,padding:'0 4px'}}>×</button>
+      </div>
+
+      {/* Scroll body */}
+      <div style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:'12px 14px 16px'}}>
+
+        {/* 客人 + 預算 + 品項 */}
+        <div style={secSt}>
+          <div style={{display:'flex',gap:8,marginBottom:10}}>
+            <input type="text" placeholder="客人稱呼（選填）" value={customer} onChange={e=>setCustomer(e.target.value)}
+              style={{...selSt, flex:1}} />
+            <div style={{position:'relative',flex:1}}>
+              <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:12,color:'var(--text2)',fontWeight:600,pointerEvents:'none'}}>NT$</span>
+              <input type="text" inputMode="numeric" placeholder="預算" value={budget}
+                onChange={e=>setBudget(e.target.value.replace(/[^0-9]/g,''))}
+                style={{...selSt, paddingLeft:40}} />
+            </div>
+          </div>
+          <div style={wrapRow}>
+            {['戒指','墜子','耳釘','手鏈','項鍊','胸針','手鐲'].map(c => (
+              <button key={c} style={chipSt(cat===c)} onClick={()=>setCat(c)}>{c}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* 主石 */}
+        <div style={secSt}>
+          {secHd('主石 ・ ' + stoneDesc, stoneName ? `${fmtNT(Math.round(stoneMin))} – ${fmtNT(Math.round(stoneMax))}` : fmtNT(0))}
+          <div style={{...wrapRow, marginBottom:8}}>
+            {[['none','無主石'],['commercial','商業級'],['invest','投資級']].map(([m, label]) => (
+              <button key={m} style={chipSt(stoneMode===m)} onClick={()=>{ setStoneMode(m); setStoneKey(''); }}>{label}</button>
+            ))}
+          </div>
+          {stoneMode !== 'none' && (
+            <>
+              <select value={stoneKey} onChange={e=>setStoneKey(e.target.value)} style={{...selSt, marginBottom:8}}>
+                <option value="">— 選擇{stoneMode==='invest'?'投資級':'商業級'}寶石 —</option>
+                {Object.entries(stoneMode==='invest' ? SI : SC).map(([k, v]) => (
+                  <option key={k} value={k}>{v.name}</option>
+                ))}
+              </select>
+              {stoneKey && (
+                <>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text2)',marginTop:2}}>
+                    <span>克拉數</span><span style={{fontWeight:700,color:'var(--text)'}}>{ct.toFixed(1)} ct</span>
+                  </div>
+                  <input type="range" min="0.3" max="10" step="0.1" value={carat}
+                    onChange={e=>setCarat(parseFloat(e.target.value))} style={sliderSt} />
+                  {stoneMode === 'invest' && SI[stoneKey] && (
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginTop:8}}>
+                      <select value={origin} onChange={e=>setOrigin(e.target.value)} style={selSt}>
+                        {Object.keys(SI[stoneKey].origins).map(o=><option key={o} value={o}>{o}</option>)}
+                      </select>
+                      <select value={treatment} onChange={e=>setTreatment(e.target.value)} style={selSt}>
+                        {Object.keys(SI[stoneKey].treatments).map(t=><option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <select value={colorQ} onChange={e=>setColorQ(e.target.value)} style={selSt}>
+                        {Object.keys(SI[stoneKey].colors).map(c=><option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* 台子（金工） */}
+        <div style={secSt}>
+          {secHd(`台子 ・ ${metal} ${grams.toFixed(1)}g・${craft}工`, `${fmtNT(mountMin)} – ${fmtNT(mountMax)}`)}
+          <div style={{...wrapRow, marginBottom:4}}>
+            {metals.map(m => <button key={m} style={chipSt(metal===m)} onClick={()=>setMetal(m)}>{m}</button>)}
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text2)',marginTop:6}}>
+            <span>金料克數（{metalPg.toLocaleString('zh-TW')}/g）</span>
+            <span style={{fontWeight:700,color:'var(--text)'}}>{grams.toFixed(1)} g = {fmtNT(metalCost)}</span>
+          </div>
+          <input type="range" min="0.5" max="50" step="0.5" value={grams}
+            onChange={e=>setGrams(parseFloat(e.target.value))} style={sliderSt} />
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text2)',marginTop:10}}>
+            <span>工藝（約 {Number(LC[craft])||0} 天工）</span>
+            <span style={{fontWeight:700,color:'var(--text)'}}>{fmtNT(laborMid)}</span>
+          </div>
+          <input type="range" min="0" max={CRAFTS.length-1} step="1" value={craftIdx}
+            onChange={e=>setCraftIdx(parseInt(e.target.value))} style={sliderSt} />
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:10}}>
+            {CRAFTS.map(c => <span key={c} style={{color:c===craft?'var(--gold)':'var(--text3)',fontWeight:c===craft?700:400}}>{c}</span>)}
+          </div>
+          <div style={{...wrapRow, marginTop:12}}>
+            {SIDE_TYPES.map(t => <button key={t} style={chipSt(sideType===t)} onClick={()=>setSideType(t)}>{t}</button>)}
+          </div>
+          {sideType !== '無配石' && (
+            <>
+              <input type="range" min="0" max={QTY_BANDS.length-1} step="1" value={sideIdx}
+                onChange={e=>setSideIdx(parseInt(e.target.value))} style={sliderSt} />
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:10}}>
+                {QTY_BANDS.map(b => <span key={b} style={{color:b===QTY_BANDS[sideIdx]?'var(--gold)':'var(--text3)',fontWeight:b===QTY_BANDS[sideIdx]?700:400}}>{b}</span>)}
+              </div>
+            </>
+          )}
+          <div style={{...wrapRow, marginTop:12}}>
+            {PLATINGS.map(pl => <button key={pl} style={chipSt(plating===pl)} onClick={()=>setPlating(pl)}>{pl === '無' ? '不電鍍' : '鍍' + pl}</button>)}
+          </div>
+        </div>
+
+        {/* 備註 */}
+        <div style={secSt}>
+          {secHd('備註（選填）', null)}
+          <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2}
+            placeholder="尺寸、裸石單號、特殊要求…"
+            style={{...selSt, resize:'vertical', lineHeight:1.6}} />
+        </div>
+      </div>
+
+      {/* ── 報價 footer ── */}
+      <div style={{flexShrink:0,background:'var(--accent)',padding:'12px 16px 14px',boxShadow:'0 -4px 20px rgba(0,0,0,.18)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+          <div>
+            <div style={{fontSize:24,fontWeight:700,color:'#fff',letterSpacing:.5}}>{fmtNT(finalPrice)}</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,.55)',marginTop:2}}>
+              區間 {fmtNT(totalMin)} – {fmtNT(totalMax)}
+              {diff !== null && (
+                <span style={{marginLeft:8,fontWeight:700,color: diff >= 0 ? '#7ddc9a' : '#ff8a80'}}>
+                  {diff >= 0 ? '預算內 +' : '超預算 -'}{Math.abs(diff).toLocaleString('zh-TW')}
+                </span>
+              )}
+            </div>
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={copyText} style={{padding:'10px 14px',borderRadius:10,border:'1px solid rgba(255,255,255,.35)',
+              background:'none',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>
+              {copied ? '✓ 已複製' : '複製'}
+            </button>
+            <button onClick={doSave} disabled={saving || !!savedId} style={{padding:'10px 16px',borderRadius:10,border:'none',
+              background: savedId ? '#2e7d32' : 'var(--gold)', color:'#fff', fontSize:13, fontWeight:700,
+              cursor: savedId ? 'default' : 'pointer', whiteSpace:'nowrap', opacity: saving ? .7 : 1}}>
+              {savedId ? '✓ 已存 #' + String(savedId).padStart(4,'0') : (saving ? '儲存中…' : '儲存紀錄')}
+            </button>
+          </div>
+        </div>
+        {/* 報價滑桿：在區間內挑報價點 */}
+        <input type="range" min="0" max="100" step="1" value={finalPct}
+          onChange={e=>setFinalPct(parseInt(e.target.value))}
+          style={{width:'100%',accentColor:'#c9a86c',cursor:'pointer',height:4}} />
+      </div>
+    </div>
   );
 }
 
@@ -6437,8 +6758,6 @@ function QuoteHistoryPage({ role, onBack }) {
   const [analyzing,  setAnalyzing]  = useState(false);
   const [quotePhoto, setQuotePhoto] = useState(null);
 
-  /* 金工試算 */
-  const [showCalc, setShowCalc] = useState(false);
 
   const loadPending = () => {
     fetch('/api/quotes/pending').then(r => r.json()).then(setPending).catch(() => {});
@@ -6502,20 +6821,13 @@ function QuoteHistoryPage({ role, onBack }) {
   useEffect(() => { load(1); }, []);
 
   if (subView === 'newquote') return (
-    <PhotoQuoteFlow
-      photo={{}}
-      onBack={() => setSubView('list')}
-      onClose={() => setSubView('list')}
-    />
+    <QuickQuote photo={null} onClose={() => { setSubView('list'); load(1); loadPending(); }} />
   );
 
-  /* 上傳圖片 → Gemini 分析 → 正常估價流程（同看圖估價） */
+  /* 上傳圖片 → Gemini 分析 → 快速估價（欄位已帶入） */
   if (subView === 'photoquote' && quotePhoto) return (
-    <PhotoQuoteFlow
-      photo={quotePhoto}
-      onBack={() => setSubView('list')}
-      onClose={() => { setSubView('list'); load(1); loadPending(); }}
-    />
+    <QuickQuote photo={quotePhoto}
+      onClose={() => { setSubView('list'); load(1); loadPending(); }} />
   );
 
   return (
@@ -6542,25 +6854,17 @@ function QuoteHistoryPage({ role, onBack }) {
               清空
             </button>
           )}
-          <button onClick={() => setShowCalc(true)}
-            style={{background:'var(--surface)',color:'var(--gold)',border:'1px solid var(--gold)',borderRadius:10,padding:'8px 12px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>
-            ⚖ 金工試算
-          </button>
           <button onClick={() => !analyzing && fileRef.current && fileRef.current.click()}
             disabled={analyzing}
             style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:10,padding:'8px 14px',fontSize:13,fontWeight:700,cursor:analyzing?'default':'pointer',opacity:analyzing?0.7:1,whiteSpace:'nowrap'}}>
             {analyzing ? 'AI 分析中…' : '📷 上傳估價'}
           </button>
-          {isAdmin && (
-            <button onClick={() => setSubView('newquote')} style={{background:'var(--s3)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:10,padding:'8px 12px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>
-              + 新估價
-            </button>
-          )}
+          <button onClick={() => setSubView('newquote')} style={{background:'var(--surface)',color:'var(--gold)',border:'1px solid var(--gold)',borderRadius:10,padding:'8px 12px',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>
+            ⚡ 快速估價
+          </button>
         </div>
       </div>
 
-      {/* 金工試算 overlay */}
-      {showCalc && <CostCalcPanel onClose={() => setShowCalc(false)} />}
 
       {/* List */}
       <div style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
