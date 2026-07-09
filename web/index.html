@@ -2100,12 +2100,16 @@ const CONSULT_COLORS = [
   ['紅','#e05050'],['粉','#f2a0b8'],['黃','#e8c84a'],['綠','#5cb85c'],
   ['藍','#5090e0'],['紫','#9b59b6'],['白','#e8e4de'],['彩','linear-gradient(135deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f)'],
 ];
-const CONSULT_BANDS = [['入門','1萬內'],['中階','1–3萬'],['高階','3–6萬'],['奢華','6–15萬'],['頂級','15萬+']];
+/* 喜好滑桿的兩個軸（款式語言，不是金額語言） */
+const STONE_SIZE_ORDER = ['1克拉以內','1克拉','2克拉','3克拉','5克拉','10克拉','10克拉以上'];
+const STONE_PREF_LABELS = ['精巧點綴','小巧','適中','顯眼','搶眼','大器','主角級'];
+const CRAFT_ORDER = ['極簡','普通','複雜','極複雜'];
+const CRAFT_PREF_LABELS = ['俐落簡約','日常精緻','細節講究','極致工藝'];
 
 function ConsultMode({ onClose, role }) {
   const [stage,    setStage]    = useState('start');   // start | pick | summary
   const [name,     setName]     = useState('');
-  const [filters,  setFilters]  = useState({});        // category / color / price_band
+  const [filters,  setFilters]  = useState({});        // category / color（純款式，不含價格）
   const [photos,   setPhotos]   = useState([]);
   const [loading,  setLoading]  = useState(false);
   const [picks,    setPicks]    = useState([]);
@@ -2116,6 +2120,30 @@ function ConsultMode({ onClose, role }) {
   const [shareUrl, setShareUrl] = useState(null);
   const [sharing,  setSharing]  = useState(false);
   const sessionIdRef = useRef(null);
+
+  /* 喜好滑桿：用款式語言取代價格語言，客人不用開口講預算。
+     兩軸剛好對應成本的兩個自由變因（裸石 / 台子工藝），但呈現上只談「款式偏好」。
+     null = 不介入排序，維持原本隨機序。 */
+  const [showTaste,   setShowTaste]   = useState(false);
+  const [stonePref,   setStonePref]   = useState(null);   // 0-6 → STONE_SIZE_ORDER index
+  const [craftPref,   setCraftPref]   = useState(null);   // 0-3 → CRAFT_ORDER index
+
+  const sortedPhotos = React.useMemo(() => {
+    if (stonePref === null && craftPref === null) return photos;
+    const dist = p => {
+      let d = 0, n = 0;
+      if (stonePref !== null) {
+        const i = STONE_SIZE_ORDER.indexOf(p.stone_size);
+        if (i >= 0) { d += Math.abs(i - stonePref); n++; }
+      }
+      if (craftPref !== null) {
+        const i = CRAFT_ORDER.indexOf(p.craft_complexity);
+        if (i >= 0) { d += Math.abs(i - craftPref); n++; }
+      }
+      return n ? d / n : 99;   // 沒標籤的排最後，但不消失
+    };
+    return [...photos].sort((a, b) => dist(a) - dist(b));
+  }, [photos, stonePref, craftPref]);
 
   /* 自動存檔：選款有變動就 debounce 寫入 consult_sessions */
   useEffect(() => {
@@ -2268,12 +2296,12 @@ function ConsultMode({ onClose, role }) {
             )}
           </div>
 
-          {/* 大顆篩選：品項 / 色系 / 價位 */}
+          {/* 大顆篩選：品項 / 色系（純款式，不談價格） */}
           <div style={{background:'var(--surface)',borderBottom:'1px solid var(--border)',flexShrink:0}}>
             <div style={chipRow}>
               {CATS.map(c => <button key={c} style={bigChip(filters.category === c)} onClick={() => setF('category', c)}>{c}</button>)}
             </div>
-            <div style={{...chipRow,paddingTop:0}}>
+            <div style={{...chipRow,paddingTop:0,paddingBottom:10}}>
               {CONSULT_COLORS.map(([label, hex]) => (
                 <button key={label} onClick={() => setF('color', label)}
                   style={{...bigChip(filters.color === label),display:'flex',alignItems:'center',gap:6,padding:'7px 13px'}}>
@@ -2281,21 +2309,55 @@ function ConsultMode({ onClose, role }) {
                   {label}
                 </button>
               ))}
+              <button onClick={() => setShowTaste(v => !v)}
+                style={{...bigChip(showTaste || stonePref !== null || craftPref !== null),display:'flex',alignItems:'center',gap:5}}>
+                🎚 抓喜好
+              </button>
             </div>
-            <div style={{...chipRow,paddingTop:0,paddingBottom:10}}>
-              {CONSULT_BANDS.map(([band, hint]) => (
-                <button key={band} style={bigChip(filters.price_band === band)} onClick={() => setF('price_band', band)}>
-                  {hint}
-                </button>
-              ))}
-            </div>
+            {/* 喜好滑桿：只談款式感受，從不提金額，客人不用開口說預算 */}
+            {showTaste && (
+              <div style={{padding:'2px 16px 14px'}}>
+                <div style={{marginBottom:14}}>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text2)',marginBottom:4}}>
+                    <span>主石想要多搶眼？</span>
+                    <span style={{fontWeight:700,color: stonePref===null ? 'var(--text3)' : 'var(--gold)'}}>
+                      {stonePref===null ? '不拘' : STONE_PREF_LABELS[stonePref]}
+                    </span>
+                  </div>
+                  <input type="range" min="0" max={STONE_SIZE_ORDER.length-1} step="1"
+                    value={stonePref === null ? Math.round((STONE_SIZE_ORDER.length-1)/2) : stonePref}
+                    onChange={e => setStonePref(parseInt(e.target.value))}
+                    style={{width:'100%',accentColor:'var(--gold)',cursor:'pointer',height:4,
+                      opacity: stonePref===null ? 0.4 : 1}} />
+                </div>
+                <div>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text2)',marginBottom:4}}>
+                    <span>做工想要多精緻？</span>
+                    <span style={{fontWeight:700,color: craftPref===null ? 'var(--text3)' : 'var(--gold)'}}>
+                      {craftPref===null ? '不拘' : CRAFT_PREF_LABELS[craftPref]}
+                    </span>
+                  </div>
+                  <input type="range" min="0" max={CRAFT_ORDER.length-1} step="1"
+                    value={craftPref === null ? Math.round((CRAFT_ORDER.length-1)/2) : craftPref}
+                    onChange={e => setCraftPref(parseInt(e.target.value))}
+                    style={{width:'100%',accentColor:'var(--gold)',cursor:'pointer',height:4,
+                      opacity: craftPref===null ? 0.4 : 1}} />
+                </div>
+                {(stonePref !== null || craftPref !== null) && (
+                  <button onClick={() => { setStonePref(null); setCraftPref(null); }}
+                    style={{marginTop:8,background:'none',border:'none',fontSize:12,color:'var(--text3)',cursor:'pointer',padding:0,textDecoration:'underline'}}>
+                    清除，恢復原本排序
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* 大圖網格 */}
+          {/* 大圖網格：依喜好滑桿排序，越符合越靠前，但從不隱藏任何款式 */}
           <div ref={scrollRef} style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:8}}>
             <div style={{display:'grid',gap:8,
               gridTemplateColumns:`repeat(${window.innerWidth >= 1200 ? 4 : window.innerWidth >= 768 ? 3 : 2}, 1fr)`}}>
-              {photos.map(p => {
+              {sortedPhotos.map(p => {
                 const on = pickHas(p.id);
                 return (
                   <div key={p.id} style={{position:'relative',borderRadius:14,overflow:'hidden',background:'var(--surface)',
