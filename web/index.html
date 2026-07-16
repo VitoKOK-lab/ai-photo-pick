@@ -135,24 +135,32 @@ button { font-family: inherit; cursor: pointer; }
 /* ── Main + grid ────────────────────────────────────────── */
 .main { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
 .grid-wrap { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 2px; }
-.card { background: var(--surface); cursor: pointer; overflow: hidden; position: relative; border-radius: 0; animation: fadeUp 1.5s cubic-bezier(.22,.68,0,1.2) both; transition: transform .15s ease; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 12px; padding: 14px 12px 24px; }
+/* 精品陳列卡：透明卡體、白色圓角相片磚浮在暖畫布上、磚外兩行標籤 */
+.card { background: transparent; cursor: pointer; position: relative; animation: fadeUp 1.5s cubic-bezier(.22,.68,0,1.2) both; transition: transform .15s ease; }
 .card:active { transform: scale(.97); }
 @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
-.card img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; background: #fff; transition: opacity .2s; }
-.card-fav { position: absolute; top: 7px; right: 7px; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.85); border: none; font-size: 15px; display: flex; align-items: center; justify-content: center; color: var(--text3); box-shadow: var(--shadow); transition: transform .2s, color .2s; }
+.card-media { position: relative; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(80,60,30,.05); transition: box-shadow .25s ease; }
+.card img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; background: #fff; border-radius: 12px; padding: 5%; transition: transform .45s cubic-bezier(.25,.46,.45,.94), opacity .2s; }
+@media (hover: hover) {
+  .card:hover .card-media { box-shadow: 0 6px 20px rgba(80,60,30,.12); }
+  .card:hover .card-media img { transform: scale(1.045); }
+}
+.card-fav { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.88); border: none; font-size: 15px; display: flex; align-items: center; justify-content: center; color: var(--text3); box-shadow: var(--shadow); transition: transform .2s, color .2s; z-index: 2; }
 .card-fav:active { transform: scale(1.3); }
 .card-fav.on { color: var(--gold); }
-.card-badge { position: absolute; top: 7px; left: 7px; font-size: 9px; font-weight: 700; letter-spacing: .5px; padding: 3px 7px; border-radius: 4px; background: rgba(255,255,255,.92); color: var(--gold); border: 1px solid rgba(184,147,90,.4); box-shadow: var(--shadow); white-space: nowrap; }
-.card-quote { position: absolute; bottom: 34px; right: 7px; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.9); border: none; font-size: 13px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); transition: transform .15s; }
+.card-badge { position: absolute; top: 8px; left: 8px; font-size: 9px; font-weight: 700; letter-spacing: .5px; padding: 3px 7px; border-radius: 4px; background: rgba(255,255,255,.92); color: var(--gold); border: 1px solid rgba(184,147,90,.4); box-shadow: var(--shadow); white-space: nowrap; z-index: 2; }
+.card-quote { position: absolute; bottom: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.9); border: none; font-size: 13px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); transition: transform .15s; z-index: 2; }
 .card-quote:active { transform: scale(1.2); }
-.card-selected { outline: 3px solid var(--gold); outline-offset: -2px; }
-.card-check { position: absolute; top: 7px; right: 7px; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); border: none; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: var(--shadow); border: 2px solid rgba(255,255,255,.8); }
-.card-lbl { padding: 6px 9px 8px; font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-selected .card-media { outline: 3px solid var(--gold); outline-offset: -2px; }
+.card-check { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); border: none; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: var(--shadow); border: 2px solid rgba(255,255,255,.8); z-index: 2; }
+.card-lbl { padding: 9px 3px 2px; }
+.card-lbl-title { font-size: 12.5px; font-weight: 600; color: var(--text); letter-spacing: .3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-lbl-sub { font-size: 11px; color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 14px; }
 .sentinel { height: 1px; }
 
 /* ── Grid banner (full-width editorial) ─────────────── */
-.grid-banner { grid-column: 1 / -1; position: relative; cursor: pointer; overflow: hidden; animation: fadeUp 1.5s cubic-bezier(.22,.68,0,1.2) both; }
+.grid-banner { grid-column: 1 / -1; position: relative; cursor: pointer; overflow: hidden; border-radius: 12px; animation: fadeUp 1.5s cubic-bezier(.22,.68,0,1.2) both; }
 .grid-banner img { width: 100%; aspect-ratio: 16/7; object-fit: cover; display: block; transition: transform .6s cubic-bezier(.25,.46,.45,.94); }
 .grid-banner:active img { transform: scale(1.04); }
 .grid-banner-lbl { position: absolute; bottom: 0; left: 0; right: 0; padding: 40px 20px 16px; background: linear-gradient(transparent, rgba(0,0,0,.42)); color: #fff; font-size: 13px; letter-spacing: 3px; font-weight: 300; text-transform: uppercase; }
@@ -306,7 +314,7 @@ button { font-family: inherit; cursor: pointer; }
   .tab-bar   { display: none; }
   .sidebar   { display: none; }
   .chips-bar { display: flex; }
-  .grid { grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+  .grid { grid-template-columns: repeat(3, 1fr); gap: 22px 18px; padding: 20px 20px 32px; }
 
   .sim-grid { grid-template-columns: repeat(3, 1fr); }
   .det-ovl { align-items: center; justify-content: center; padding: 32px; }
@@ -320,7 +328,7 @@ button { font-family: inherit; cursor: pointer; }
 @media (min-width: 1200px) { .grid { grid-template-columns: repeat(4, 1fr); } }
 @media (min-width: 1600px) { :root { --side-w: 248px; } .grid { grid-template-columns: repeat(5, 1fr); } }
 /* card label narrower to maximise photo area */
-.card-lbl { padding: 4px 7px 6px; font-size: 11px; }
+.card-lbl { padding: 7px 2px 2px; }
 
 /* ── Pricing Banner ────────────────────────────────────── */
 .pricing-banner {
@@ -1215,22 +1223,28 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
   const fetchRef    = useRef(null);
   const gridWrapRef = useRef(null);
 
+  const genRef = useRef(0);   // 篩選重置的世代序號：舊世代的回應一律丟棄
   const doFetch = async () => {
     if (loadingRef.current || !hasMoreRef.current) return;
     loadingRef.current = true;
     setLoading(true);
+    const gen = genRef.current;
     try {
       const qs = new URLSearchParams({ page: pageRef.current, sort: 'random', _r: seedRef.current });
       Object.entries(filtersRef.current).forEach(([k, v]) => v && qs.set(k, v));
       const res  = await fetch('/api/photos?' + qs);
       const data = await res.json();
+      if (gen !== genRef.current) return;   // 期間篩選已變，這批結果作廢
       const list = data.photos || [];
       if (pageRef.current === 1) setPhotos(list);
-      else setPhotos(prev => [...prev, ...list]);
+      else setPhotos(prev => {
+        const seen = new Set(prev.map(x => x.id));
+        return [...prev, ...list.filter(x => !seen.has(x.id))];
+      });
       hasMoreRef.current = !!data.has_more;
       pageRef.current += 1;
-    } catch { hasMoreRef.current = false; }
-    finally { loadingRef.current = false; setLoading(false); }
+    } catch { if (gen === genRef.current) hasMoreRef.current = false; }
+    finally { if (gen === genRef.current) { loadingRef.current = false; setLoading(false); } }
   };
   fetchRef.current = doFetch;
 
@@ -1244,8 +1258,6 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
     obs.observe(s);
     return () => obs.disconnect();
   }, []);
-
-  useEffect(() => { fetchRef.current?.(); }, []);
 
   useEffect(() => {
     const el = gridWrapRef.current;
@@ -1275,6 +1287,7 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
     pageRef.current    = 1;
     hasMoreRef.current = true;
     loadingRef.current = false;
+    genRef.current    += 1;
     seedRef.current    = Math.random();
     setPhotos([]);
     if (gridWrapRef.current) gridWrapRef.current.scrollTop = 0;
@@ -1301,22 +1314,29 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
               <div key={p.id} className={'card' + (isSel ? ' card-selected' : '')}
                 style={{animationDelay:`${(i % 9) * 0.19}s`}}
                 onClick={() => batchMode ? onToggleSelect(p.id) : setDetail(p)}>
-                <img src={p.thumb_url} alt="" loading="lazy" />
-                {badge && <span className="card-badge">{badge}</span>}
-                {batchMode
-                  ? <div className="card-check">{isSel ? '✓' : ''}</div>
-                  : <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
-                      onClick={e => { e.stopPropagation(); toggleFav(p); }}>
-                      {isFav(p.id) ? '♥' : '♡'}
+                <div className="card-media">
+                  <img src={p.thumb_url} alt="" loading="lazy" />
+                  {badge && <span className="card-badge">{badge}</span>}
+                  {batchMode
+                    ? <div className="card-check">{isSel ? '✓' : ''}</div>
+                    : <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
+                        onClick={e => { e.stopPropagation(); toggleFav(p); }}>
+                        {isFav(p.id) ? '♥' : '♡'}
+                      </button>
+                  }
+                  {!batchMode && onQuickQuote && (
+                    <button className="card-quote" onClick={e => { e.stopPropagation(); onQuickQuote(p); }}>
+                      💎
                     </button>
-                }
-                {!batchMode && onQuickQuote && (
-                  <button className="card-quote" onClick={e => { e.stopPropagation(); onQuickQuote(p); }}>
-                    💎
-                  </button>
-                )}
+                  )}
+                </div>
                 <div className="card-lbl">
-                  {[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}
+                  <div className="card-lbl-title">
+                    {[p.category, p.gemstone].filter(v => v && v !== '未定' && v !== '無寶石').join('・') || '未分類'}
+                  </div>
+                  <div className="card-lbl-sub">
+                    {[p.style, p.stone_shape].filter(v => v && v !== '未定' && v !== '無主石').join('・')}
+                  </div>
                 </div>
               </div>
             );
@@ -2742,9 +2762,18 @@ function FavsTab({ favs, isFav, toggleFav, clearFavs, role }) {
             <div className="grid">
               {favs.map(p => (
                 <div key={p.id} className="card" onClick={() => setDetail(p)}>
-                  <img src={p.thumb_url} alt="" loading="lazy" />
-                  <button className="card-fav on" onClick={e => { e.stopPropagation(); toggleFav(p); }}>♥</button>
-                  <div className="card-lbl">{[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}</div>
+                  <div className="card-media">
+                    <img src={p.thumb_url} alt="" loading="lazy" />
+                    <button className="card-fav on" onClick={e => { e.stopPropagation(); toggleFav(p); }}>♥</button>
+                  </div>
+                  <div className="card-lbl">
+                    <div className="card-lbl-title">
+                      {[p.category, p.gemstone].filter(v => v && v !== '未定' && v !== '無寶石').join('・') || '未分類'}
+                    </div>
+                    <div className="card-lbl-sub">
+                      {[p.style, p.stone_shape].filter(v => v && v !== '未定' && v !== '無主石').join('・')}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
