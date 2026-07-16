@@ -964,6 +964,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
 
   const [view,    setView]    = useState('detail'); // 'detail' | 'similar' | 'edit'
   const [similar, setSimilar] = useState(null);
+  const [simMode, setSimMode] = useState(null);
   const [simErr,  setSimErr]  = useState(false);
   const [editCat,   setEditCat]   = useState(photo.category        || '');
   const [editSty,   setEditSty]   = useState(photo.style           || '');
@@ -1011,7 +1012,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
     const timer = setTimeout(() => ctrl.abort(), 15000);
     fetch('/api/photos/' + photo.id + '/similar?limit=12', { signal: ctrl.signal })
       .then(r => r.json())
-      .then(d => { clearTimeout(timer); setSimilar(d.similar || []); })
+      .then(d => { clearTimeout(timer); setSimilar(d.similar || []); setSimMode(d.mode || null); })
       .catch(() => { clearTimeout(timer); setSimilar([]); setSimErr(true); });
   };
 
@@ -1102,7 +1103,10 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
       <div className="det-panel" style={{flexDirection:'column'}}>
         <div className="det-hd-bar">
           <button className="det-back" onClick={() => setView('detail')}>←</button>
-          <span className="det-hd-title">{'相似款 · ' + (photo.category || '')}</span>
+          <span className="det-hd-title">
+            {'相似款 · ' + (photo.category || '')}
+            {simMode === 'vector' && <span style={{marginLeft:8,fontSize:10,fontWeight:700,color:'var(--gold)',border:'1px solid rgba(184,147,90,.4)',borderRadius:10,padding:'2px 8px',verticalAlign:'middle'}}>✦ AI 視覺比對</span>}
+          </span>
           <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
         </div>
         <div className="det-scroll" ref={simScrollRef}>
@@ -1671,11 +1675,14 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     if (!current) return;
     pushHist(false);
     advance('right');
-    fetch(`/api/photos/${current.id}/similar?limit=6`).then(r=>r.json()).then(similars => {
-      if (Array.isArray(similars) && similars.length > 0) {
+    fetch(`/api/photos/${current.id}/similar?limit=6`).then(r=>r.json()).then(d => {
+      // API 回傳 {anchor, similar}；舊碼誤以為是陣列，導致「更多同款」從未真正插入
+      const similars = Array.isArray(d) ? d : (d.similar || []);
+      if (similars.length > 0) {
         setPhotos(prev => {
           const ci = idx + 1;
-          return [...prev.slice(0,ci), ...similars.filter(s=>s.id!==current.id), ...prev.slice(ci)];
+          const have = new Set(prev.map(x => x.id));
+          return [...prev.slice(0,ci), ...similars.filter(s => s.id !== current.id && !have.has(s.id)), ...prev.slice(ci)];
         });
       }
     }).catch(()=>{});

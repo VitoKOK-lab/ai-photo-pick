@@ -1,4 +1,6 @@
-"""similar.py - 找相似（同品項 → 鑽石款式 → 價格帶）"""
+"""similar.py - 找相似
+優先用 CLIP 視覺向量（ChromaDB，匯入時就算好的 embeddings），
+向量不可用時退回標籤比對（同品項 → 鑽石款式 → 價格帶）。"""
 import sqlite3
 import sys
 from pathlib import Path
@@ -9,6 +11,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH
 
 router = APIRouter(prefix="/api/photos", tags=["similar"])
+
+
+def _vector_similar_ids(photo_id: int, n: int):
+    """用 ChromaDB 向量找視覺相似的 photo_id 列表（近→遠）。失敗回 None。"""
+    try:
+        from scripts.db_writer import get_chroma_collection
+        col = get_chroma_collection()
+        got = col.get(ids=[f"photo_{photo_id}"], include=["embeddings"])
+        embs = got.get("embeddings")
+        if embs is None or len(embs) == 0:
+            return None
+        res = col.query(query_embeddings=[embs[0]], n_results=n + 1)
+        ids = (res.get("ids") or [[]])[0]
+        out = []
+        for cid in ids:
+            try:
+                pid = int(str(cid).replace("photo_", ""))
+            except ValueError:
+                continue
+            if pid != photo_id:
+                out.append(pid)
+        return out or None
+    except Exception:
+        return None
 
 def _conn():
     conn = sqlite3.connect(SQLITE_PATH)
@@ -59,6 +85,26 @@ def find_similar(
         raise HTTPException(status_code=404, detail="Photo not found")
     anchor = dict(anchor_row)
 
+    # ── 第一優先：CLIP 視覺向量（真的「長得像」，不只是標籤相同） ──
+    vec_ids = _vector_similar_ids(photo_id, limit * 3)
+    if vec_ids:
+        placeholders = ",".join("?" * len(vec_ids))
+        cur.execute(
+            f"SELECT * FROM photos WHERE id IN ({placeholders})"
+            "  AND (photo_type = ? OR (? IS NULL AND photo_type IS NULL))",
+            vec_ids + [anchor.get("photo_type"), anchor.get("photo_type")],
+        )
+        by_id = {r["id"]: r for r in cur.fetchall()}
+        ordered = [by_id[pid] for pid in vec_ids if pid in by_id][:limit]
+        if len(ordered) >= min(3, limit):
+            conn.close()
+            return {
+                "anchor": _to_dict(anchor_row),
+                "similar": [_to_dict(r) for r in ordered],
+                "mode": "vector",
+            }
+
+    # ── 備援：標籤比對 ──
     # 相似分：gemstone +3, style +2, color +2, setting_amount +2, material +1, price_band +1
     cur.execute(
         """
@@ -95,4 +141,5 @@ def find_similar(
     return {
         "anchor": _to_dict(anchor_row),
         "similar": similar,
+        "mode": "label",
     }
