@@ -143,6 +143,9 @@ button { font-family: inherit; cursor: pointer; }
 .card-fav { position: absolute; top: 7px; right: 7px; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.85); border: none; font-size: 15px; display: flex; align-items: center; justify-content: center; color: var(--text3); box-shadow: var(--shadow); transition: transform .2s, color .2s; }
 .card-fav:active { transform: scale(1.3); }
 .card-fav.on { color: var(--gold); }
+.card-badge { position: absolute; top: 7px; left: 7px; font-size: 9px; font-weight: 700; letter-spacing: .5px; padding: 3px 7px; border-radius: 4px; background: rgba(255,255,255,.92); color: var(--gold); border: 1px solid rgba(184,147,90,.4); box-shadow: var(--shadow); white-space: nowrap; }
+.card-quote { position: absolute; bottom: 34px; right: 7px; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.9); border: none; font-size: 13px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); transition: transform .15s; }
+.card-quote:active { transform: scale(1.2); }
 .card-selected { outline: 3px solid var(--gold); outline-offset: -2px; }
 .card-check { position: absolute; top: 7px; right: 7px; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); border: none; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: var(--shadow); border: 2px solid rgba(255,255,255,.8); }
 .card-lbl { padding: 6px 9px 8px; font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1188,7 +1191,14 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
 }
 
 /* ── Photo grid ─────────────────────────────────────── */
-function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, onToggleSelect }) {
+/* 熱門徽章：用真實的收藏/瀏覽數，不是憑空編造的行銷字眼 */
+function cardBadge(p) {
+  if ((p.favorite_count || 0) >= 3) return '♥ 熱門收藏';
+  if ((p.view_count || 0) >= 20) return '多人詢問';
+  return null;
+}
+
+function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, onToggleSelect, onQuickQuote }) {
   const [photos,     setPhotos]     = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [detail,     setDetail]     = useState(null);
@@ -1286,11 +1296,13 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
               );
             }
             const isSel = batchMode && selectedIds?.has(p.id);
+            const badge = !batchMode && cardBadge(p);
             acc.push(
               <div key={p.id} className={'card' + (isSel ? ' card-selected' : '')}
                 style={{animationDelay:`${(i % 9) * 0.19}s`}}
                 onClick={() => batchMode ? onToggleSelect(p.id) : setDetail(p)}>
                 <img src={p.thumb_url} alt="" loading="lazy" />
+                {badge && <span className="card-badge">{badge}</span>}
                 {batchMode
                   ? <div className="card-check">{isSel ? '✓' : ''}</div>
                   : <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
@@ -1298,6 +1310,11 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
                       {isFav(p.id) ? '♥' : '♡'}
                     </button>
                 }
+                {!batchMode && onQuickQuote && (
+                  <button className="card-quote" onClick={e => { e.stopPropagation(); onQuickQuote(p); }}>
+                    💎
+                  </button>
+                )}
                 <div className="card-lbl">
                   {[p.category, p.style].filter(v => v && v !== '未定').join(' · ')}
                 </div>
@@ -2500,6 +2517,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [counts,    setCounts]     = useState({});
   const [consult,     setConsult]     = useState(false);
   const [costCalc,    setCostCalc]    = useState(false);
+  const [quickQuote,  setQuickQuote]  = useState(null);
   const [batchMode,  setBatchMode]  = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchPicker, setBatchPicker] = useState(false);
@@ -2604,7 +2622,8 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
       <div className="body-row">
         <div className="main">
           <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role}
-            batchMode={batchMode} selectedIds={selectedIds} onToggleSelect={toggleSelect} />
+            batchMode={batchMode} selectedIds={selectedIds} onToggleSelect={toggleSelect}
+            onQuickQuote={isStaff ? setQuickQuote : null} />
         </div>
       </div>
 
@@ -2664,6 +2683,9 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
 
       {/* 顧問選款模式（大圖選款＋滑卡＋逐件估價） */}
       {consult && <ConsultMode onClose={() => setConsult(false)} role={role} />}
+
+      {/* 從照片格直接估價：不用先開詳情 */}
+      {quickQuote && <QuickQuote photo={quickQuote} onClose={() => setQuickQuote(null)} />}
     </>
   );
 }
