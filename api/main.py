@@ -305,4 +305,18 @@ app.include_router(admin_router)
 app.include_router(consult_router)
 app.include_router(guest_links_router)
 
+
+@app.middleware("http")
+async def no_cache_html(request, call_next):
+    """index.html 等 HTML 不給快取：手機瀏覽器常抓住舊版不放，改版後看不到變化。
+    圖片／縮圖不受影響，照常快取。"""
+    response = await call_next(request)
+    ct = response.headers.get("content-type", "")
+    if "text/html" in ct:
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        if "etag" in response.headers:
+            del response.headers["etag"]
+    return response
+
+
 app.mount("/", StaticFiles(directory=str(BASE_DIR / "web"), html=True), name="web")

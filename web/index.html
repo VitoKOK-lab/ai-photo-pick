@@ -1682,13 +1682,17 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
     pushHist(false);
     advance('right');
     fetch(`/api/photos/${current.id}/similar?limit=6`).then(r=>r.json()).then(d => {
-      // API 回傳 {anchor, similar}；舊碼誤以為是陣列，導致「更多同款」從未真正插入
-      const similars = Array.isArray(d) ? d : (d.similar || []);
+      const similars = (Array.isArray(d) ? d : (d.similar || [])).filter(sp => sp.id !== current.id);
       if (similars.length > 0) {
         setPhotos(prev => {
+          // 相似款若已在後面的隊列裡，就「搬到最前面」而不是放棄插入
           const ci = idx + 1;
-          const have = new Set(prev.map(x => x.id));
-          return [...prev.slice(0,ci), ...similars.filter(s => s.id !== current.id && !have.has(s.id)), ...prev.slice(ci)];
+          const simIds  = new Set(similars.map(sp => sp.id));
+          const before  = prev.slice(0, ci);                          // 已滑過 + 當前
+          const seenIds = new Set(before.map(x => x.id));
+          const after   = prev.slice(ci).filter(x => !simIds.has(x.id));
+          const inject  = similars.filter(sp => !seenIds.has(sp.id)); // 已滑過的不再回鍋
+          return [...before, ...inject, ...after];
         });
       }
     }).catch(()=>{});
