@@ -1636,7 +1636,10 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
           if (num) { num.classList.remove('score-pop'); void num.offsetWidth; num.classList.add('score-pop'); }
         }, 50);
       }, 380);
-      setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 540);
+      setTimeout(() => {
+        card.style.transition = ''; card.style.boxShadow = '';
+        setIdx(i => i+1);   // transform/opacity/filter 交給 React 重寫成左側殘影的姿態
+      }, 540);
     } else {
       /* like：亮金翻飛出去｜略過：褪色灰暗、下墜翻出（相反特效） */
       const isR  = dir === 'right';
@@ -1645,7 +1648,10 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
         ? `perspective(900px) translate(118vw,-30px) rotate(26deg) rotateY(38deg)`
         : `perspective(900px) translate(-118vw,60px) rotate(-30deg) rotateY(-38deg)`;
       card.style.filter = isR ? 'brightness(1.1) saturate(1.2)' : 'grayscale(.95) brightness(.88)';
-      setTimeout(() => { card.style.cssText = ''; setIdx(i => i+1); }, 420);
+      setTimeout(() => {
+        card.style.transition = ''; card.style.boxShadow = '';
+        setIdx(i => i+1);
+      }, 420);
     }
     burstParticles(dir);
     /* streak tracking */
@@ -1752,7 +1758,7 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
   const BG = 'radial-gradient(ellipse at 50% 12%, #fffdf8 0%, #f1ebe0 100%)';
 
   return (
-    <div style={{position:'fixed',inset:0,zIndex:800,background:BG,display:'flex',flexDirection:'column',touchAction:'none'}}>
+    <div style={{position:'fixed',inset:0,zIndex:800,background:BG,display:'flex',flexDirection:'column',touchAction:'none',overflow:'hidden'}}>
 
       {/* ── Header ── */}
       <div style={{display:'flex',alignItems:'center',padding:'11px 16px',
@@ -1809,34 +1815,43 @@ function SwipeMode({ initFilters, onClose, isFav, toggleFav, role }) {
           </div>
         )}
         {current && !done && (
-          <div style={{position:'relative',width:'100%',maxWidth:420}}>
-            {/* 牌堆：三張卡同一個 keyed 列表 → 換卡時 React 重用節點，
-                後面那張平滑升到最前，圖片不重載、不閃爍 */}
-            {[2,1,0].map(off => {
+          <div style={{position:'relative',width:'100%',maxWidth:420,perspective:'1100px'}}>
+            {/* 3D coverflow 牌堆：同一個 keyed 列表 → 換卡時 React 重用節點零閃爍。
+                左＝剛滑掉的上一張（點它可復原）、中＝當前、右＝下一張斜角預告 */}
+            {[-1, 2, 1, 0].map(off => {
               const p = photos[idx + off];
               if (!p) return null;
               const isTop = off === 0;
+              const CONF = {
+                '-1': { x:'-46%', s:.85, ry:'14deg',  o:.38, blur:3, z:5 },
+                '1':  { x:'46%',  s:.85, ry:'-14deg', o:.38, blur:3, z:5 },
+                '2':  { x:'92%',  s:.7,  ry:'-14deg', o:0,   blur:3, z:1 },
+              }[String(off)] || null;
               return (
                 <div key={p.id}
                   ref={isTop ? cardRef : null}
                   onTouchStart={isTop ? onTouchStart : undefined}
                   onTouchMove={isTop ? onTouchMove : undefined}
                   onTouchEnd={isTop ? onTouchEnd : undefined}
+                  onClick={off === -1 ? undo : undefined}
                   style={{
                     position: isTop ? 'relative' : 'absolute',
                     ...(isTop ? {} : { inset: 0 }),
-                    width:'100%', zIndex: 3 - off,
-                    transform: isTop ? '' : `translateY(${off*13}px) scale(${1 - off*0.05})`,
-                    transition:'transform .32s cubic-bezier(.34,1.2,.64,1), box-shadow .32s',
+                    width:'100%', zIndex: isTop ? 10 : CONF.z,
+                    transform: isTop ? '' : `translateX(${CONF.x}) scale(${CONF.s}) rotateY(${CONF.ry})`,
+                    opacity: isTop ? 1 : CONF.o,
+                    filter: isTop ? 'none' : `blur(${CONF.blur}px)`,
+                    transition:'transform .5s cubic-bezier(.25,.46,.45,.94), opacity .5s ease, filter .5s ease, box-shadow .32s',
                     background:'#fff', borderRadius:32, overflow:'hidden',
                     border:'1px solid rgba(184,147,90,.28)',
                     boxShadow: isTop
                       ? '0 18px 44px rgba(80,60,30,.18), 0 4px 12px rgba(80,60,30,.10)'
                       : '0 8px 22px rgba(80,60,30,.12)',
-                    pointerEvents: isTop ? 'auto' : 'none',
+                    pointerEvents: isTop ? 'auto' : (off === -1 ? 'auto' : 'none'),
+                    cursor: off === -1 ? 'pointer' : undefined,
                     userSelect:'none', touchAction:'none',
                   }}>
-                  {/* 三張都載 full 圖：升到最前時 src 不變 → 零閃爍 */}
+                  {/* 全部載 full 圖：位置輪替時 src 不變 → 零閃爍，右側卡兼作預載 */}
                   <img src={p.thumb_url ? p.thumb_url + '?size=1200' : p.full_url} alt="" draggable={false}
                     style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',background:'#faf8f4',display:'block',pointerEvents:'none'}} />
                   {isTop && <div ref={lblRef} className="swipe-lbl" />}
