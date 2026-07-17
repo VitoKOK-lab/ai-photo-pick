@@ -141,7 +141,7 @@ button { font-family: inherit; cursor: pointer; }
 .card:active { transform: scale(.97); }
 @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
 .card-media { position: relative; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(80,60,30,.05); transition: box-shadow .25s ease; }
-.card img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; background: #fff; border-radius: 12px; padding: 5%; transition: transform .45s cubic-bezier(.25,.46,.45,.94), opacity .2s; }
+.card img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; background: #fff; border-radius: 12px; transition: transform .45s cubic-bezier(.25,.46,.45,.94), opacity .2s; }
 @media (hover: hover) {
   .card:hover .card-media { box-shadow: 0 6px 20px rgba(80,60,30,.12); }
   .card:hover .card-media img { transform: scale(1.045); }
@@ -2243,7 +2243,7 @@ function ImageSearchPanel({ onClose, pickHas, togglePick, onQuote }) {
                         border: on ? '2px solid var(--gold)' : '1px solid var(--border)',
                         boxShadow:'0 1px 3px rgba(80,60,30,.05)'}}>
                         <img src={p.thumb_url + '?size=640'} alt="" loading="lazy"
-                          style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',display:'block',padding:'5%',background:'#fff'}} />
+                          style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',display:'block',background:'#fff'}} />
                         {typeof p.similarity === 'number' && (
                           <span style={{position:'absolute',top:8,left:8,fontSize:9,fontWeight:700,letterSpacing:.5,
                             padding:'3px 7px',borderRadius:4,background:'rgba(255,255,255,.92)',color:'var(--gold)',
