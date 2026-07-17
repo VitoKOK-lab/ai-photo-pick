@@ -143,3 +143,75 @@ def find_similar(
         "similar": similar,
         "mode": "label",
     }
+
+
+# ── 以圖搜款：上傳參考圖 → CLIP 向量 → 找照片庫裡視覺最像的款 ──
+from fastapi import UploadFile, File, Depends
+from api.auth import require_editor
+
+
+@router.post("/search-by-image")
+async def search_by_image(
+    file: UploadFile = File(...),
+    limit: int = Query(12, ge=1, le=30),
+    _user=Depends(require_editor),
+):
+    import tempfile, os
+
+    suffix = Path(file.filename or "ref.jpg").suffix or ".jpg"
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(await file.read())
+            tmp_path = Path(tmp.name)
+
+        # CLIP 向量（跟匯入同一顆模型；第一次呼叫需載入模型，Mac 上約數秒）
+        try:
+            from scripts.classify import embed_image
+            embedding = embed_image(tmp_path)
+        except Exception as e:
+            raise HTTPException(503, f"CLIP 模型不可用：{e}")
+
+        try:
+            from scripts.db_writer import get_chroma_collection
+            col = get_chroma_collection()
+            res = col.query(query_embeddings=[embedding], n_results=limit * 2)
+        except Exception as e:
+            raise HTTPException(503, f"向量庫不可用：{e}")
+
+        ids_raw   = (res.get("ids") or [[]])[0]
+        dists_raw = (res.get("distances") or [[]])[0]
+        pid_dist = []
+        for cid, dist in zip(ids_raw, dists_raw):
+            try:
+                pid_dist.append((int(str(cid).replace("photo_", "")), dist))
+            except ValueError:
+                continue
+        if not pid_dist:
+            return {"results": [], "count": 0}
+
+        conn = _conn()
+        placeholders = ",".join("?" * len(pid_dist))
+        rows = conn.execute(
+            f"SELECT * FROM photos WHERE id IN ({placeholders})",
+            [pid for pid, _ in pid_dist],
+        ).fetchall()
+        conn.close()
+        by_id = {r["id"]: r for r in rows}
+
+        results = []
+        for pid, dist in pid_dist:
+            if pid in by_id:
+                d = _to_dict(by_id[pid])
+                # cosine distance → 相似度百分比（僅供陳列參考）
+                d["similarity"] = round(max(0.0, 1.0 - dist) * 100)
+                results.append(d)
+            if len(results) >= limit:
+                break
+        return {"results": results, "count": len(results)}
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass

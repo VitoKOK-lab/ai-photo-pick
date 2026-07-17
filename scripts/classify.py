@@ -69,6 +69,17 @@ def _get_text_features(dim_name: str, prompts: list, tokenizer, model) -> torch.
     return _text_cache[dim_name]
 
 
+def embed_image(image_path: Path) -> list:
+    """只算 CLIP 影像向量（供以圖搜款），不跑分類 prompts，跟匯入用同一顆模型。"""
+    model, preprocess, _, _ = load_model()
+    image = Image.open(image_path).convert("RGB")
+    image_input = preprocess(image).unsqueeze(0).to(_device)
+    with torch.no_grad():
+        feats = model.encode_image(image_input)
+        feats /= feats.norm(dim=-1, keepdim=True)
+    return feats[0].cpu().tolist()
+
+
 def classify_one(image_path: Path) -> Tuple[Dict, list]:
     """
     對一張照片做分類 + 產生 embedding

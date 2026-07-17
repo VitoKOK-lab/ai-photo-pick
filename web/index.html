@@ -2141,6 +2141,125 @@ function CostCalcPanel({ onClose }) {
   );
 }
 
+/* ══ 以圖搜款：拍下客人的參考圖 → CLIP 找照片庫裡最像的款 ══ */
+function ImageSearchPanel({ onClose, pickHas, togglePick, onQuote }) {
+  const fileRef = React.useRef(null);
+  const [queryUrl,  setQueryUrl]  = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [results,   setResults]   = useState(null);
+  const [error,     setError]     = useState(null);
+
+  const onPickFile = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    setError(null); setResults(null); setSearching(true);
+    const reader = new FileReader();
+    reader.onload = ev => setQueryUrl(ev.target.result);
+    reader.readAsDataURL(f);
+    try {
+      const fd = new FormData();
+      fd.append('file', f);
+      const r = await fetch('/api/photos/search-by-image?limit=12', { method: 'POST', body: fd });
+      if (!r.ok) {
+        const t = await r.json().catch(() => ({}));
+        throw new Error(t.detail || ('搜尋失敗 ' + r.status));
+      }
+      const d = await r.json();
+      setResults(d.results || []);
+    } catch (err) { setError(String(err.message || err)); }
+    setSearching(false);
+  };
+
+  const cols = window.innerWidth >= 1200 ? 4 : window.innerWidth >= 768 ? 3 : 2;
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:940,background:'var(--bg)',display:'flex',flexDirection:'column'}}>
+      <input type="file" accept="image/*" ref={fileRef} style={{display:'none'}} onChange={onPickFile} />
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 16px',background:'var(--surface)',
+        borderBottom:'1px solid var(--border)',flexShrink:0}}>
+        {queryUrl && <img src={queryUrl} alt="" style={{width:38,height:38,borderRadius:8,objectFit:'cover',flexShrink:0,border:'1.5px solid var(--gold)'}} />}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:14,fontWeight:700,color:'var(--text)'}}>📷 找同款</div>
+          <div style={{fontSize:11,color:'var(--text3)'}}>{results ? `找到 ${results.length} 款視覺相似` : '拍下客人的參考圖，AI 找出我們做過最像的款'}</div>
+        </div>
+        {results && (
+          <button onClick={() => fileRef.current && fileRef.current.click()}
+            style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 12px',
+              fontSize:12,fontWeight:600,color:'var(--text2)',cursor:'pointer',whiteSpace:'nowrap'}}>換一張</button>
+        )}
+        <button onClick={onClose} style={{background:'none',border:'none',fontSize:22,color:'var(--text3)',cursor:'pointer',lineHeight:1,padding:'0 4px'}}>×</button>
+      </div>
+
+      <div style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:14}}>
+        {/* 起始：大上傳區 */}
+        {!results && !searching && (
+          <div onClick={() => fileRef.current && fileRef.current.click()}
+            style={{border:'2px dashed rgba(184,147,90,.5)',borderRadius:16,background:'#fffdf8',
+              padding:'56px 24px',textAlign:'center',cursor:'pointer',marginTop:24}}>
+            <div style={{fontSize:40,marginBottom:12}}>📷</div>
+            <div style={{fontSize:15,fontWeight:700,color:'#8a6a3a',marginBottom:6}}>拍照或選擇參考圖</div>
+            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.7}}>
+              客人拿 IG、小紅書的圖來？拍下來，<br/>AI 立刻找出照片庫裡視覺最像的款式
+            </div>
+            {error && <div style={{marginTop:14,fontSize:12,color:'#c62828'}}>⚠ {error}</div>}
+          </div>
+        )}
+        {searching && (
+          <div style={{textAlign:'center',padding:'70px 20px',color:'#a07f4d',fontSize:14,letterSpacing:2}}>
+            ✦ AI 比對中…
+          </div>
+        )}
+        {/* 結果網格 */}
+        {results && !searching && (
+          results.length === 0
+            ? <div style={{textAlign:'center',padding:'60px 20px',fontSize:14,color:'var(--text3)'}}>照片庫裡沒有足夠相似的款式</div>
+            : <div style={{display:'grid',gap:14,gridTemplateColumns:`repeat(${cols}, 1fr)`}}>
+                {results.map(p => {
+                  const on = pickHas ? pickHas(p.id) : false;
+                  return (
+                    <div key={p.id} style={{background:'transparent'}}>
+                      <div style={{position:'relative',background:'#fff',borderRadius:12,overflow:'hidden',
+                        border: on ? '2px solid var(--gold)' : '1px solid var(--border)',
+                        boxShadow:'0 1px 3px rgba(80,60,30,.05)'}}>
+                        <img src={p.thumb_url + '?size=640'} alt="" loading="lazy"
+                          style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',display:'block',padding:'5%',background:'#fff'}} />
+                        {typeof p.similarity === 'number' && (
+                          <span style={{position:'absolute',top:8,left:8,fontSize:9,fontWeight:700,letterSpacing:.5,
+                            padding:'3px 7px',borderRadius:4,background:'rgba(255,255,255,.92)',color:'var(--gold)',
+                            border:'1px solid rgba(184,147,90,.4)'}}>✦ {p.similarity}% 相似</span>
+                        )}
+                        {togglePick && (
+                          <button onClick={() => togglePick(p)}
+                            style={{position:'absolute',top:8,right:8,width:34,height:34,borderRadius:'50%',border:'none',
+                              background: on ? 'linear-gradient(145deg,#e26a8f,#c94069)' : 'rgba(255,255,255,.92)',
+                              color: on ? '#fff' : 'rgba(0,0,0,.35)',fontSize:16,cursor:'pointer',lineHeight:1,
+                              boxShadow:'0 2px 8px rgba(0,0,0,.15)'}}>{on ? '♥' : '♡'}</button>
+                        )}
+                        {onQuote && (
+                          <button onClick={() => onQuote(p)}
+                            style={{position:'absolute',bottom:8,right:8,width:30,height:30,borderRadius:'50%',border:'none',
+                              background:'rgba(255,255,255,.9)',fontSize:13,cursor:'pointer',lineHeight:1,
+                              boxShadow:'0 2px 8px rgba(0,0,0,.12)'}}>💎</button>
+                        )}
+                      </div>
+                      <div style={{padding:'7px 2px 0'}}>
+                        <div style={{fontSize:12,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                          {[p.category, p.gemstone].filter(v => v && v !== '未定' && v !== '無寶石').join('・') || '未分類'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+        )}
+        {error && results && <div style={{marginTop:14,fontSize:12,color:'#c62828',textAlign:'center'}}>⚠ {error}</div>}
+      </div>
+    </div>
+  );
+}
+
 /* ══ 顧問選款模式：介紹 → 選款 → 快速估價 一條龍 ══════════
    給店員拿著平板/手機/電腦向客人介紹用。
    大圖大按鈕、無後台雜訊；手機可切換滑卡手勢，共用同一份選款清單。 */
@@ -2165,6 +2284,7 @@ function ConsultMode({ onClose, role }) {
   const [quoting,  setQuoting]  = useState(null);
   const [quotedIds,setQuotedIds]= useState(new Set());
   const [swipe,    setSwipe]    = useState(false);
+  const [imgSearch,setImgSearch]= useState(false);
   const [shareUrl, setShareUrl] = useState(null);
   const [sharing,  setSharing]  = useState(false);
   const sessionIdRef = useRef(null);
@@ -2337,6 +2457,9 @@ function ConsultMode({ onClose, role }) {
             <div style={{flex:1,textAlign:'center',fontSize:14,fontWeight:700,color:'#8a6a3a',letterSpacing:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
               {name ? name + ' 的選款' : '顧問選款'}
             </div>
+            <button onClick={() => setImgSearch(true)}
+              style={{background:'none',border:'1px solid var(--gold)',borderRadius:8,padding:'4px 10px',
+                fontSize:12,fontWeight:600,color:'var(--gold)',cursor:'pointer',whiteSpace:'nowrap'}}>📷 找同款</button>
             {window.innerWidth < 768 && (
               <button onClick={() => setSwipe(true)}
                 style={{background:'none',border:'1px solid var(--gold)',borderRadius:8,padding:'4px 10px',
@@ -2532,6 +2655,13 @@ function ConsultMode({ onClose, role }) {
         <SwipeMode initFilters={{ ...filters, photo_type:'去背' }} onClose={() => setSwipe(false)}
           isFav={pickHas} toggleFav={togglePick} role={role} />
       )}
+
+      {/* ══ 以圖搜款：找到的款直接 ♥ 進這次選款清單 ══ */}
+      {imgSearch && (
+        <ImageSearchPanel onClose={() => setImgSearch(false)}
+          pickHas={pickHas} togglePick={togglePick}
+          onQuote={p => { setImgSearch(false); setQuoting(p); }} />
+      )}
     </div>
   );
 }
@@ -2545,6 +2675,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [consult,     setConsult]     = useState(false);
   const [costCalc,    setCostCalc]    = useState(false);
   const [quickQuote,  setQuickQuote]  = useState(null);
+  const [imgSearch,   setImgSearch]   = useState(false);
   const [batchMode,  setBatchMode]  = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchPicker, setBatchPicker] = useState(false);
@@ -2633,6 +2764,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
                 : <>
                     <button onClick={() => setBatchMode(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>批量編輯</button>
                     <button onClick={() => setCostCalc(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>快速估價</button>
+                    <button onClick={() => setImgSearch(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>📷 找同款</button>
                   </>
             )}
           </div>
@@ -2713,6 +2845,13 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
 
       {/* 從照片格直接估價：不用先開詳情 */}
       {quickQuote && <QuickQuote photo={quickQuote} onClose={() => setQuickQuote(null)} />}
+
+      {/* 以圖搜款：客人的參考圖 → 找庫裡最像的款 */}
+      {imgSearch && (
+        <ImageSearchPanel onClose={() => setImgSearch(false)}
+          pickHas={id => isFav(id)} togglePick={toggleFav}
+          onQuote={isStaff ? (p => { setImgSearch(false); setQuickQuote(p); }) : null} />
+      )}
     </>
   );
 }
