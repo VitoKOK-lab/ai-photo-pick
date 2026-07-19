@@ -34,6 +34,16 @@
   --font-serif: Georgia, 'Songti TC', 'PMingLiU', 'Noto Serif TC', serif;
 }
 
+/* ── Reduced motion（無障礙強制項）：使用者在系統開了「減少動態」就關掉裝飾動畫 ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ── Base ───────────────────────────────────────────────── */
 html, body {
   height: 100%;
@@ -1142,7 +1152,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
             {/* 標題區：品項 + 寶石 + 價位徽章 */}
             <div style={{padding:'20px 22px 6px'}}>
               <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-                <span style={{fontFamily:'var(--font-serif)',fontSize:23,fontWeight:600,color:'var(--text)',letterSpacing:.5}}>
+                <span style={{fontSize:22,fontWeight:700,color:'var(--text)',letterSpacing:.5}}>
                   {[photo.category, gemDisplay].filter(ok).join(' · ') || '未分類'}
                 </span>
                 {ok(photo.price_band) && (
@@ -3522,7 +3532,7 @@ function QuickQuote({ photo, initialCustomer, onClose }) {
       <div style={{flexShrink:0,background:'var(--accent)',padding:'12px 16px 14px',boxShadow:'0 -4px 20px rgba(0,0,0,.18)'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
           <div>
-            <div style={{fontFamily:'var(--font-serif)',fontSize:26,fontWeight:600,color:'#fff',letterSpacing:.5}}>{fmtNT(finalPrice)}</div>
+            <div style={{fontSize:26,fontWeight:700,color:'#fff',letterSpacing:.5}}>{fmtNT(finalPrice)}</div>
             <div style={{fontSize:11,color:'rgba(255,255,255,.55)',marginTop:2}}>
               區間 {fmtNT(totalMin)} – {fmtNT(totalMax)}
               {diff !== null && (
