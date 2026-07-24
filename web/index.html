@@ -847,38 +847,6 @@ function Sidebar({ filters, onFilter, onClear, counts }) {
 }
 
 /* ── Similar infinite grid ──────────────────────────── */
-function SimilarInfiniteGrid({ items, onSelectPhoto, setView }) {
-  const [displayed, setDisplayed] = React.useState(() => items.map((p, i) => ({...p, _key: i})));
-  const [counter, setCounter]     = React.useState(items.length);
-  const sentinelRef = React.useRef(null);
-
-  React.useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || items.length === 0) return;
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        const shuffled = [...items].sort(() => Math.random() - 0.5);
-        setDisplayed(prev => {
-          const base = prev.length;
-          return [...prev, ...shuffled.map((p, i) => ({...p, _key: base + i + Math.random()}))];
-        });
-      }
-    }, { threshold: 0.1 });
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [items]);
-
-  return (
-    <div className="sim-grid">
-      {displayed.map((p, i) => (
-        <img key={p._key} src={p.thumb_url} alt="" loading="lazy"
-          style={{animationDelay:`${(i % 9) * 0.19}s`}}
-          onClick={() => { onSelectPhoto(p); setView('detail'); }} />
-      ))}
-      <div ref={sentinelRef} style={{gridColumn:'1/-1', height:60}} />
-    </div>
-  );
-}
 
 /* ── Zoom image (button +/−) ────────────────────────── */
 function PinchImage({ src, className }) {
@@ -973,20 +941,16 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
     return () => logEvent(photo.id, 'dwell', { dwell_ms: Date.now() - openedAt.current });
   }, [photo.id]);
 
-  const [view,    setView]    = useState('detail'); // 'detail' | 'similar' | 'edit'
-  const [similar, setSimilar] = useState(null);
-  const [simMode, setSimMode] = useState(null);
-  const [simErr,  setSimErr]  = useState(false);
+  const [view,    setView]    = useState('detail'); // 'detail' | 'quote'
   const [editCat,   setEditCat]   = useState(photo.category        || '');
   const [editSty,   setEditSty]   = useState(photo.style           || '');
   const [editChain, setEditChain] = useState(photo.setting_amount  || '');
   const [editCraft, setEditCraft] = useState(photo.craft_complexity|| '');
   const [editMetal, setEditMetal] = useState(photo.metal_color     || '');
   const [saving,    setSaving]    = useState(false);
-  const simScrollRef = useRef(null);
 
   useEffect(() => {
-    setView('detail'); setSimilar(null); setSimErr(false);
+    setView('detail');
     setEditCat(photo.category || ''); setEditSty(photo.style || '');
     setEditChain(photo.setting_amount || ''); setEditCraft(photo.craft_complexity || '');
     setEditMetal(photo.metal_color || '');
@@ -1012,19 +976,6 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
     await fetch('/api/photos/' + photo.id, { method: 'DELETE' });
     onDeleted && onDeleted(photo.id);
     onClose();
-  };
-
-  const openSimilar = () => {
-    setView('similar');
-    setTimeout(() => { if (simScrollRef.current) simScrollRef.current.scrollTop = 0; }, 0);
-    if (similar !== null) return;
-    setSimErr(false);
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 15000);
-    fetch('/api/photos/' + photo.id + '/similar?limit=12', { signal: ctrl.signal })
-      .then(r => r.json())
-      .then(d => { clearTimeout(timer); setSimilar(d.similar || []); setSimMode(d.mode || null); })
-      .catch(() => { clearTimeout(timer); setSimilar([]); setSimErr(true); });
   };
 
   const fav  = isFav(photo.id);
@@ -1109,31 +1060,6 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   );
 
   /* Similar view */
-  if (view === 'similar') return (
-    <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="det-panel" style={{flexDirection:'column'}}>
-        <div className="det-hd-bar">
-          <button className="det-back" onClick={() => setView('detail')}>←</button>
-          <span className="det-hd-title">
-            {'相似款 · ' + (photo.category || '')}
-            {simMode === 'vector' && <span style={{marginLeft:8,fontSize:10,fontWeight:700,color:'var(--gold)',border:'1px solid rgba(184,147,90,.4)',borderRadius:10,padding:'2px 8px',verticalAlign:'middle'}}>✦ AI 視覺比對</span>}
-          </span>
-          <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
-        </div>
-        <div className="det-scroll" ref={simScrollRef}>
-          {similar === null
-            ? <div className="loading-msg">載入中…</div>
-            : simErr
-              ? <div className="empty-msg">載入失敗，請稍後再試<br/><button style={{marginTop:12,padding:'8px 20px',borderRadius:8,border:'1px solid var(--border)',background:'var(--s3)',fontSize:13,cursor:'pointer'}} onClick={() => { setSimilar(null); setSimErr(false); openSimilar(); }}>重試</button></div>
-              : similar.length === 0
-                ? <div className="empty-msg">找不到相似款</div>
-                : <SimilarInfiniteGrid items={similar} onSelectPhoto={onSelectPhoto} setView={setView} />
-          }
-        </div>
-      </div>
-    </div>
-  );
-
   /* Quote flow view */
   if (view === 'quote') return (
     <QuickQuote photo={photo} onClose={() => setView('detail')} />
@@ -1189,11 +1115,6 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
               <span style={{color:fav?'var(--gold)':'var(--text2)'}}>{fav?'♥':'♡'}</span>
               <span>{fav?'已收藏':'收藏'}</span>
             </button>
-            <button className="det-icon-btn" onClick={openSimilar}>
-              <span>⊞</span>
-              <span>相似款</span>
-            </button>
-            <div className="det-divider" />
             <div style={{flex:1}} />
             <button className="det-cta" onClick={() => setView('quote')}>💎 估價</button>
           </div>
@@ -1429,123 +1350,6 @@ function QRModal({ onClose }) {
 /* ── 金工試算：拉桿組合各項費用，貼合客人預算 ───────── */
 
 /* ══ 以圖搜款：拍下客人的參考圖 → CLIP 找照片庫裡最像的款 ══ */
-function ImageSearchPanel({ onClose, pickHas, togglePick, onQuote }) {
-  const fileRef = React.useRef(null);
-  const [queryUrl,  setQueryUrl]  = useState(null);
-  const [searching, setSearching] = useState(false);
-  const [results,   setResults]   = useState(null);
-  const [error,     setError]     = useState(null);
-
-  const onPickFile = async (e) => {
-    const f = e.target.files && e.target.files[0];
-    e.target.value = '';
-    if (!f) return;
-    setError(null); setResults(null); setSearching(true);
-    const reader = new FileReader();
-    reader.onload = ev => setQueryUrl(ev.target.result);
-    reader.readAsDataURL(f);
-    try {
-      const fd = new FormData();
-      fd.append('file', f);
-      const r = await fetch('/api/photos/search-by-image?limit=12', { method: 'POST', body: fd });
-      if (!r.ok) {
-        const t = await r.json().catch(() => ({}));
-        throw new Error(t.detail || ('搜尋失敗 ' + r.status));
-      }
-      const d = await r.json();
-      setResults(d.results || []);
-    } catch (err) { setError(String(err.message || err)); }
-    setSearching(false);
-  };
-
-  const cols = window.innerWidth >= 1200 ? 4 : window.innerWidth >= 768 ? 3 : 2;
-
-  return (
-    <div style={{position:'fixed',inset:0,zIndex:940,background:'var(--bg)',display:'flex',flexDirection:'column'}}>
-      <input type="file" accept="image/*" ref={fileRef} style={{display:'none'}} onChange={onPickFile} />
-      {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:10,padding:'11px 16px',background:'var(--surface)',
-        borderBottom:'1px solid var(--border)',flexShrink:0}}>
-        {queryUrl && <img src={queryUrl} alt="" style={{width:38,height:38,borderRadius:8,objectFit:'cover',flexShrink:0,border:'1.5px solid var(--gold)'}} />}
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontSize:14,fontWeight:700,color:'var(--text)'}}>📷 找同款</div>
-          <div style={{fontSize:11,color:'var(--text3)'}}>{results ? `找到 ${results.length} 款視覺相似` : '拍下客人的參考圖，AI 找出我們做過最像的款'}</div>
-        </div>
-        {results && (
-          <button onClick={() => fileRef.current && fileRef.current.click()}
-            style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 12px',
-              fontSize:12,fontWeight:600,color:'var(--text2)',cursor:'pointer',whiteSpace:'nowrap'}}>換一張</button>
-        )}
-        <button onClick={onClose} style={{background:'none',border:'none',fontSize:22,color:'var(--text3)',cursor:'pointer',lineHeight:1,padding:'0 4px'}}>×</button>
-      </div>
-
-      <div style={{flex:1,minHeight:0,overflowY:'auto',WebkitOverflowScrolling:'touch',padding:14}}>
-        {/* 起始：大上傳區 */}
-        {!results && !searching && (
-          <div onClick={() => fileRef.current && fileRef.current.click()}
-            style={{border:'2px dashed rgba(184,147,90,.5)',borderRadius:16,background:'#fbfbfd',
-              padding:'56px 24px',textAlign:'center',cursor:'pointer',marginTop:24}}>
-            <div style={{fontSize:40,marginBottom:12}}>📷</div>
-            <div style={{fontSize:15,fontWeight:700,color:'#8a6a3a',marginBottom:6}}>拍照或選擇參考圖</div>
-            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.7}}>
-              客人拿 IG、小紅書的圖來？拍下來，<br/>AI 立刻找出照片庫裡視覺最像的款式
-            </div>
-            {error && <div style={{marginTop:14,fontSize:12,color:'#c62828'}}>⚠ {error}</div>}
-          </div>
-        )}
-        {searching && (
-          <div style={{textAlign:'center',padding:'70px 20px',color:'#a07f4d',fontSize:14,letterSpacing:2}}>
-            ✦ AI 比對中…
-          </div>
-        )}
-        {/* 結果網格 */}
-        {results && !searching && (
-          results.length === 0
-            ? <div style={{textAlign:'center',padding:'60px 20px',fontSize:14,color:'var(--text3)'}}>照片庫裡沒有足夠相似的款式</div>
-            : <div style={{display:'grid',gap:14,gridTemplateColumns:`repeat(${cols}, 1fr)`}}>
-                {results.map(p => {
-                  const on = pickHas ? pickHas(p.id) : false;
-                  return (
-                    <div key={p.id} style={{background:'transparent'}}>
-                      <div style={{position:'relative',background:'#fff',borderRadius:12,overflow:'hidden',
-                        border: on ? '2px solid var(--gold)' : '1px solid var(--border)',
-                        boxShadow:'0 1px 3px rgba(80,60,30,.05)'}}>
-                        <img src={p.thumb_url + '?size=640'} alt="" loading="lazy"
-                          style={{width:'100%',aspectRatio:'1/1',objectFit:'contain',display:'block',background:'#fff'}} />
-                        {typeof p.similarity === 'number' && (
-                          <span style={{position:'absolute',top:8,left:8,fontSize:9,fontWeight:700,letterSpacing:.5,
-                            padding:'3px 7px',borderRadius:4,background:'rgba(255,255,255,.92)',color:'var(--gold)',
-                            border:'1px solid rgba(184,147,90,.4)'}}>✦ {p.similarity}% 相似</span>
-                        )}
-                        {togglePick && (
-                          <button onClick={() => togglePick(p)}
-                            style={{position:'absolute',top:8,right:8,width:34,height:34,borderRadius:'50%',border:'none',
-                              background: on ? 'linear-gradient(145deg,#e26a8f,#c94069)' : 'rgba(255,255,255,.92)',
-                              color: on ? '#fff' : 'rgba(0,0,0,.35)',fontSize:16,cursor:'pointer',lineHeight:1,
-                              boxShadow:'0 2px 8px rgba(0,0,0,.15)'}}>{on ? '♥' : '♡'}</button>
-                        )}
-                        {onQuote && (
-                          <button onClick={() => onQuote(p)}
-                            style={{position:'absolute',bottom:8,right:8,width:30,height:30,borderRadius:'50%',border:'none',
-                              background:'rgba(255,255,255,.9)',fontSize:13,cursor:'pointer',lineHeight:1,
-                              boxShadow:'0 2px 8px rgba(0,0,0,.12)'}}>💎</button>
-                        )}
-                      </div>
-                      <div style={{padding:'7px 2px 0'}}>
-                        <div style={{fontSize:12,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                          {[p.category, p.gemstone].filter(v => v && v !== '未定' && v !== '無寶石').join('・') || '未分類'}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-        )}
-        {error && results && <div style={{marginTop:14,fontSize:12,color:'#c62828',textAlign:'center'}}>⚠ {error}</div>}
-      </div>
-    </div>
-  );
-}
 
 /* ══ 顧問選款模式：介紹 → 選款 → 快速估價 一條龍 ══════════
    給店員拿著平板/手機/電腦向客人介紹用。
@@ -1568,7 +1372,6 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [filters,   setFilters]    = useState({});
   const [counts,    setCounts]     = useState({});
   const [quickQuote,  setQuickQuote]  = useState(null);
-  const [imgSearch,   setImgSearch]   = useState(false);
 
   const allFilters = {
     ...(catFilter ? { category: catFilter } : {}),
@@ -1601,7 +1404,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
     <>
       <div className="browse-hdr">
         <CategoryTabs active={catFilter} onSelect={setCatFilter} />
-        {/* 單列：去背/情境 + 篩選（可橫滑），右邊固定「找同款」 */}
+        {/* 單列：去背/情境 + 篩選（可橫滑） */}
         <div style={{display:'flex',alignItems:'stretch',background:'var(--surface)',borderBottom:'1px solid var(--border)'}}>
           <div className="chips-bar" style={{flex:1,minWidth:0,gap:6,padding:'6px 10px',border:'none'}}>
             <div style={{display:'flex',gap:0,background:'var(--s3)',borderRadius:8,padding:2,flexShrink:0}}>
@@ -1623,12 +1426,6 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
               <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
             )}
           </div>
-          <div style={{flexShrink:0,display:'flex',alignItems:'center',padding:'6px 10px 6px 6px',
-            boxShadow:'-10px 0 10px -8px rgba(0,0,0,.12)',position:'relative',zIndex:1}}>
-            <button className="swipe-launch-btn" onClick={() => setImgSearch(true)} style={{padding:'5px 12px',border:'1px solid var(--gold)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
-              📷 找同款
-            </button>
-          </div>
         </div>
       </div>
       <div className="body-row">
@@ -1640,13 +1437,6 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
 
       {/* 從照片格直接估價：不用先開詳情 */}
       {quickQuote && <QuickQuote photo={quickQuote} onClose={() => setQuickQuote(null)} />}
-
-      {/* 找同款：上傳參考圖 → 找庫裡視覺最像的款 */}
-      {imgSearch && (
-        <ImageSearchPanel onClose={() => setImgSearch(false)}
-          pickHas={id => isFav(id)} togglePick={toggleFav}
-          onQuote={p => { setImgSearch(false); setQuickQuote(p); }} />
-      )}
     </>
   );
 }
