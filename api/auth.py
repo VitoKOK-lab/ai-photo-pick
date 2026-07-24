@@ -120,9 +120,9 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         sub = payload.get("sub", "")
         role = payload.get("role")
-        # PIN-login synthetic tokens skip DB lookup
-        if sub in ("pin_admin", "pin_staff"):
-            return {"id": sub, "role": role, "name": "PIN User", "username": sub}
+        # PIN-login / 來賓 synthetic tokens skip DB lookup
+        if sub in ("pin_admin", "pin_staff", "guest_viewer"):
+            return {"id": sub, "role": role, "name": "來賓" if sub == "guest_viewer" else "PIN User", "username": sub}
         user_id = int(sub)
         conn = get_db()
         row = conn.execute("SELECT * FROM users WHERE id=? AND is_active=1", (user_id,)).fetchone()
@@ -176,6 +176,22 @@ def login(body: dict, request: Request):
     _record_success(request)
     token = create_token(row["id"], row["role"])
     return {"token": token, "user": {"id": row["id"], "name": row["name"], "username": row["username"], "role": row["role"]}}
+
+# 來賓密碼（預設 0000，可用環境變數 GUEST_PASSWORD 覆蓋）。來賓 = viewer：看照片、收藏、估價，不能改估價設定。
+GUEST_PASSWORD = os.environ.get("GUEST_PASSWORD", "0000")
+
+@router.post("/guest")
+def guest_login(body: dict, request: Request):
+    _check_rate_limit(request)
+    if body.get("password", "") != GUEST_PASSWORD:
+        _record_fail(request)
+        raise HTTPException(status_code=401, detail="來賓密碼錯誤")
+    _record_success(request)
+    # 合成 token：sub=guest_viewer 不查 DB，角色 viewer
+    from datetime import datetime as _dt, timedelta as _td
+    expire = _dt.utcnow() + _td(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    token = jwt.encode({"sub": "guest_viewer", "role": "viewer", "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
+    return {"token": token, "user": {"id": "guest_viewer", "name": "來賓", "username": "guest", "role": "viewer"}}
 
 @router.get("/me")
 def me(user=Depends(get_current_user)):

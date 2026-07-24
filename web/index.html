@@ -1195,17 +1195,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
             </button>
             <div className="det-divider" />
             <div style={{flex:1}} />
-            {isStaff && (
-              <button className="det-cta" onClick={() => setView('quote')}>💎 估價</button>
-            )}
-            {isAdmin && (
-              <button className="det-edit-btn" onClick={() => setView('edit')} title="修改 / 刪除">✏️</button>
-            )}
-            {!isAdmin && isStaff && (
-              <button className="det-edit-btn" style={{color:'#c0392b',background:'#fdf0f0'}}
-                onClick={() => confirm('確定移除此照片？') && (onDeleted?.(photo.id), onClose())}
-                title="移除照片">🗑</button>
-            )}
+            <button className="det-cta" onClick={() => setView('quote')}>💎 估價</button>
           </div>
         </div>
       </div>
@@ -2702,38 +2692,8 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [catFilter, setCatFilter]  = useState(null);
   const [filters,   setFilters]    = useState({});
   const [counts,    setCounts]     = useState({});
-  const [consult,     setConsult]     = useState(false);
-  const [costCalc,    setCostCalc]    = useState(false);
   const [quickQuote,  setQuickQuote]  = useState(null);
   const [imgSearch,   setImgSearch]   = useState(false);
-  const [batchMode,  setBatchMode]  = useState(false);
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [batchPicker, setBatchPicker] = useState(false);
-  const [batchSaving, setBatchSaving] = useState(false);
-  const isStaff = role === 'admin' || role === 'editor';
-
-  const toggleSelect = id => setSelectedIds(prev => {
-    const s = new Set(prev);
-    s.has(id) ? s.delete(id) : s.add(id);
-    return s;
-  });
-
-  const exitBatch = () => { setBatchMode(false); setSelectedIds(new Set()); setBatchPicker(false); };
-
-  const batchUpdate = async (field, value) => {
-    if (!selectedIds.size) return;
-    setBatchSaving(true);
-    await fetch('/api/photos/batch/update', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: [...selectedIds], updates: { [field]: value } }),
-    });
-    setBatchSaving(false);
-    setBatchPicker(false);
-    exitBatch();
-    // 重新觸發篩選器讓照片格刷新
-    setFilters(f => ({ ...f }));
-  };
 
   const allFilters = {
     ...(catFilter ? { category: catFilter } : {}),
@@ -2765,8 +2725,8 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   return (
     <>
       <div className="browse-hdr">
-        <CategoryTabs active={catFilter} onSelect={v => { if (!batchMode) setCatFilter(v); }} />
-        {/* 單列：左邊可橫滑（切換+篩選+次要動作），右邊固定 like or not */}
+        <CategoryTabs active={catFilter} onSelect={setCatFilter} />
+        {/* 單列：去背/情境 + 篩選（可橫滑），右邊固定「找同款」 */}
         <div style={{display:'flex',alignItems:'stretch',background:'var(--surface)',borderBottom:'1px solid var(--border)'}}>
           <div className="chips-bar" style={{flex:1,minWidth:0,gap:6,padding:'6px 10px',border:'none'}}>
             <div style={{display:'flex',gap:0,background:'var(--s3)',borderRadius:8,padding:2,flexShrink:0}}>
@@ -2787,100 +2747,30 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
             {(catFilter || Object.keys(filters).length > 0) && (
               <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
             )}
-            <div style={{flex:1,minWidth:8}} />
-            {isStaff && (
-              batchMode
-                ? <button onClick={exitBatch} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',flexShrink:0}}>取消</button>
-                : <>
-                    <button onClick={() => setBatchMode(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>批量編輯</button>
-                    <button onClick={() => setCostCalc(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>快速估價</button>
-                    <button onClick={() => setImgSearch(true)} style={{padding:'5px 12px',border:'1px solid var(--border)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--text2)',whiteSpace:'nowrap',flexShrink:0}}>📷 找同款</button>
-                  </>
-            )}
           </div>
-          {isStaff && !batchMode && (
-            <div style={{flexShrink:0,display:'flex',alignItems:'center',padding:'6px 10px 6px 6px',
-              boxShadow:'-10px 0 10px -8px rgba(0,0,0,.12)',position:'relative',zIndex:1}}>
-              <button className="swipe-launch-btn" onClick={() => setConsult(true)} style={{padding:'5px 12px',border:'1px solid var(--gold)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
-                <span style={{fontSize:12}}>✦</span> 客人選款
-              </button>
-            </div>
-          )}
+          <div style={{flexShrink:0,display:'flex',alignItems:'center',padding:'6px 10px 6px 6px',
+            boxShadow:'-10px 0 10px -8px rgba(0,0,0,.12)',position:'relative',zIndex:1}}>
+            <button className="swipe-launch-btn" onClick={() => setImgSearch(true)} style={{padding:'5px 12px',border:'1px solid var(--gold)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
+              📷 找同款
+            </button>
+          </div>
         </div>
       </div>
       <div className="body-row">
         <div className="main">
           <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role}
-            batchMode={batchMode} selectedIds={selectedIds} onToggleSelect={toggleSelect}
-            onQuickQuote={isStaff ? setQuickQuote : null} />
+            onQuickQuote={setQuickQuote} />
         </div>
       </div>
-
-      {/* 批量操作浮動列 */}
-      {batchMode && (
-        <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:500,
-          background:'var(--surface)',borderTop:'1px solid var(--border)',
-          padding:'12px 16px 24px',display:'flex',alignItems:'center',gap:10,boxShadow:'0 -2px 12px rgba(0,0,0,.08)'}}>
-          <span style={{fontSize:14,color:'var(--text2)',flex:1}}>
-            {selectedIds.size > 0 ? `已選 ${selectedIds.size} 張` : '點選照片以選取'}
-          </span>
-          {selectedIds.size > 0 && (
-            <>
-              <button onClick={() => setBatchPicker(true)} style={{
-                padding:'9px 20px',borderRadius:8,border:'none',
-                background:'var(--accent)',color:'#fff',fontSize:14,fontWeight:600,cursor:'pointer'}}>
-                修改品項
-              </button>
-              <button onClick={() => setSelectedIds(new Set())} style={{
-                padding:'9px 14px',borderRadius:8,border:'1px solid var(--border)',
-                background:'var(--surface)',fontSize:13,cursor:'pointer',color:'var(--text2)'}}>
-                清除選取
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* 品項選擇 bottom sheet */}
-      {batchPicker && (
-        <div style={{position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,.4)'}}
-          onClick={() => setBatchPicker(false)}>
-          <div style={{position:'absolute',bottom:0,left:0,right:0,
-            background:'var(--surface)',borderRadius:'16px 16px 0 0',padding:'20px 16px 40px'}}
-            onClick={e => e.stopPropagation()}>
-            <div style={{fontWeight:600,fontSize:15,marginBottom:16,color:'var(--text)'}}>
-              將 {selectedIds.size} 張照片的品項改為：
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-              {CATS.map(cat => (
-                <button key={cat} disabled={batchSaving} onClick={() => batchUpdate('category', cat)} style={{
-                  padding:'12px 8px',borderRadius:10,border:'1px solid var(--border)',
-                  background:'var(--bg)',fontSize:14,cursor:'pointer',
-                  opacity: batchSaving ? 0.5 : 1,
-                }}>
-                  {cat}
-                </button>
-              ))}
-            </div>
-            {batchSaving && <div style={{textAlign:'center',marginTop:16,color:'var(--text2)',fontSize:13}}>儲存中…</div>}
-          </div>
-        </div>
-      )}
-
-      {/* 金工試算 */}
-      {costCalc && <QuickQuote photo={null} onClose={() => setCostCalc(false)} />}
-
-      {/* 顧問選款模式（大圖選款＋滑卡＋逐件估價） */}
-      {consult && <ConsultMode onClose={() => setConsult(false)} role={role} />}
 
       {/* 從照片格直接估價：不用先開詳情 */}
       {quickQuote && <QuickQuote photo={quickQuote} onClose={() => setQuickQuote(null)} />}
 
-      {/* 以圖搜款：客人的參考圖 → 找庫裡最像的款 */}
+      {/* 找同款：上傳參考圖 → 找庫裡視覺最像的款 */}
       {imgSearch && (
         <ImageSearchPanel onClose={() => setImgSearch(false)}
           pickHas={id => isFav(id)} togglePick={toggleFav}
-          onQuote={isStaff ? (p => { setImgSearch(false); setQuickQuote(p); }) : null} />
+          onQuote={p => { setImgSearch(false); setQuickQuote(p); }} />
       )}
     </>
   );
@@ -3544,14 +3434,9 @@ function QuickQuote({ photo, initialCustomer, onClose }) {
             </div>
           </div>
           <div style={{display:'flex',gap:8}}>
-            <button onClick={copyText} style={{padding:'10px 14px',borderRadius:10,border:'1px solid rgba(255,255,255,.35)',
-              background:'none',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>
-              {copied ? '✓ 已複製' : '複製'}
-            </button>
-            <button onClick={doSave} disabled={saving || !!savedId} style={{padding:'10px 16px',borderRadius:10,border:'none',
-              background: savedId ? '#2e7d32' : 'var(--gold)', color:'#fff', fontSize:13, fontWeight:700,
-              cursor: savedId ? 'default' : 'pointer', whiteSpace:'nowrap', opacity: saving ? .7 : 1}}>
-              {savedId ? '✓ 已存 #' + String(savedId).padStart(4,'0') : (saving ? '儲存中…' : '儲存紀錄')}
+            <button onClick={copyText} style={{padding:'10px 22px',borderRadius:10,border:'none',
+              background:'var(--gold)',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>
+              {copied ? '✓ 已複製報價' : '複製報價'}
             </button>
           </div>
         </div>
@@ -5013,7 +4898,23 @@ function LoginPage({ onAuth }) {
   const [shake,    setShake]    = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [userList, setUserList] = useState([]);
+  const [guestMode, setGuestMode] = useState(false);
+  const [guestPw,   setGuestPw]   = useState('');
   const pwRef = useRef(null);
+
+  async function guestSubmit() {
+    if (!guestPw.trim()) { setErr('請輸入來賓密碼'); return; }
+    setLoading(true); setErr('');
+    try {
+      const res = await fetch('/api/auth/guest', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: guestPw }),
+      });
+      if (res.ok) { storeAndAuth(await res.json()); }
+      else { triggerError('來賓密碼錯誤'); setGuestPw(''); }
+    } catch { triggerError('網路錯誤，請重試'); }
+    finally { setLoading(false); }
+  }
 
   useEffect(() => {
     fetch('/api/auth/user-list').then(r => r.json()).then(setUserList).catch(() => {});
@@ -5074,6 +4975,26 @@ function LoginPage({ onAuth }) {
           <button className="login-btn" onClick={submit} disabled={loading}>
             {loading ? '驗證中…' : '確認'}
           </button>
+
+          {/* 來賓入口：密碼 0000，只能看照片 / 收藏 / 估價，不能改估價設定 */}
+          <div style={{marginTop:18,paddingTop:16,borderTop:'1px solid var(--border)'}}>
+            {!guestMode ? (
+              <button onClick={() => { setGuestMode(true); setErr(''); }}
+                style={{width:'100%',background:'none',border:'1px solid var(--border)',borderRadius:'var(--r)',
+                  padding:'10px',fontSize:14,color:'var(--text2)',cursor:'pointer',fontWeight:600}}>
+                來賓進入
+              </button>
+            ) : (
+              <>
+                <input type="password" style={inputSt} placeholder="來賓密碼" value={guestPw} autoFocus
+                  onChange={e => { setGuestPw(e.target.value); setErr(''); }}
+                  onKeyDown={e => e.key === 'Enter' && guestSubmit()} />
+                <button className="login-btn" onClick={guestSubmit} disabled={loading} style={{marginTop:8}}>
+                  {loading ? '進入中…' : '來賓登入'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -8230,8 +8151,7 @@ function App() {
   const isFav = id => favs.some(p => p.id === id);
 
   const favCount  = favs.length;
-  const roleLabel = '管理員';
-  const logoutLabel = '登出';
+  const roleLabel = role === 'viewer' ? '來賓' : '員工';
 
   if (role === 'guest') {
     return <LoginPage onAuth={setRole} />;
@@ -8240,13 +8160,6 @@ function App() {
   return (
     <React.Fragment>
       {splash && <Splash onDone={() => setSplash(false)} />}
-      {isStaff && (
-        <PricingBanner
-          metalsLastUpdated={metalsLastUpd}
-          onGotoSettings={isAdmin ? () => { setSettingsInitTab('pricing'); setTab('settings'); } : null}
-        />
-      )}
-
 
       <header className="nav">
         <span className="nav-logo" style={{cursor:'pointer'}} onClick={() => setSplash(true)}>Tahir Zainab Selection</span>
@@ -8255,48 +8168,35 @@ function App() {
           <button className={'nav-tab' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
             收藏 {favCount > 0 && <span className="badge">{favCount}</span>}
           </button>
+          <button className={'nav-tab' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>估價</button>
           {isStaff && (
-            <button className={'nav-tab' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>
-              估價<QuotePendingBadge />
-            </button>
-          )}
-          {isAdmin && (
-            <button className={'nav-tab' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>
-              設定
-            </button>
+            <button className={'nav-tab' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>設定</button>
           )}
         </div>
         <div className="nav-right">
           <span className="nav-role">{roleLabel}</span>
-          <button className="nav-logout" onClick={handleLogout}>{logoutLabel}</button>
+          <button className="nav-logout" onClick={handleLogout}>登出</button>
         </div>
       </header>
-      {showDarkBg && (
-        <DarkBgModal
-          onClose={() => setShowDarkBg(false)}
-          onDeleted={() => { setShowDarkBg(false); window.location.reload(); }}
-        />
-      )}
       <div className="content">
         {tab === 'browse'    && <BrowseTab isFav={isFav} toggleFav={toggleFav} role={role} />}
         {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
-        {tab === 'quote'     && isStaff  && <QuoteSection role={role} />}
-        {tab === 'settings'  && isAdmin  && <PricingSettingsTab key={settingsInitTab} initialTab={settingsInitTab} />}
+        {tab === 'settings'  && isStaff && (
+          <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',paddingTop:'var(--nav-h)'}}>
+            <PricingParamsPanel />
+          </div>
+        )}
       </div>
+      {/* 估價：快速報價估算器，全螢幕開啟，× 回照片庫 */}
+      {tab === 'quote' && <QuickQuote photo={null} onClose={() => setTab('browse')} />}
       <nav className="tab-bar">
         <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>照片庫</button>
         <button className={'tab-btn' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
           收藏{favCount > 0 && <span className="tab-badge">{favCount}</span>}
         </button>
+        <button className={'tab-btn' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>估價</button>
         {isStaff && (
-          <button className={'tab-btn' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>
-            估價<QuotePendingBadge />
-          </button>
-        )}
-        {isAdmin && (
-          <button className={'tab-btn' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>
-            設定
-          </button>
+          <button className={'tab-btn' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>設定</button>
         )}
       </nav>
       {idleWarning && (
@@ -8317,8 +8217,6 @@ function App() {
 }
 
 function Root() {
-  const guestToken = React.useMemo(() => new URLSearchParams(window.location.search).get('g'), []);
-  if (guestToken) return React.createElement(GuestApp, { token: guestToken });
   return React.createElement(App);
 }
 ReactDOM.render(React.createElement(Root), document.getElementById('root'));

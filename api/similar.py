@@ -147,14 +147,14 @@ def find_similar(
 
 # ── 以圖搜款：上傳參考圖 → CLIP 向量 → 找照片庫裡視覺最像的款 ──
 from fastapi import UploadFile, File, Depends
-from api.auth import require_editor
+from api.auth import require_auth
 
 
 @router.post("/search-by-image")
 async def search_by_image(
     file: UploadFile = File(...),
     limit: int = Query(12, ge=1, le=30),
-    _user=Depends(require_editor),
+    _user=Depends(require_auth),  # 任何登入者（含來賓 viewer）皆可，唯讀搜尋
 ):
     import tempfile, os
 
