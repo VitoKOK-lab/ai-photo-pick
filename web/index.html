@@ -662,6 +662,18 @@ button { font-family: inherit; cursor: pointer; }
   100% { transform: scale(1); }
 }
 .score-pop { animation: scorePopKf 0.3s cubic-bezier(.34,1.5,.64,1) forwards; }
+
+/* ── 展示模式：柔和淡入 + Ken Burns 緩慢縮放漂移（四種方向，避免死板） ── */
+@keyframes sc-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sc-kb0 { from { transform: scale(1.02) translate(0,0) }        to { transform: scale(1.16) translate(-2.5%,-1.5%) } }
+@keyframes sc-kb1 { from { transform: scale(1.16) translate(2%,-2%) }     to { transform: scale(1.02) translate(0,1%) } }
+@keyframes sc-kb2 { from { transform: scale(1.03) translate(1.8%,1.6%) }  to { transform: scale(1.15) translate(-1.6%,-1%) } }
+@keyframes sc-kb3 { from { transform: scale(1.14) translate(-2%,1.6%) }   to { transform: scale(1.03) translate(1.6%,-1.6%) } }
+.sc-frame { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.sc-frame.fresh { animation: sc-fade 1.4s ease both; }
+.sc-frame img { max-width:88%; max-height:82%; object-fit:contain; will-change:transform;
+  filter: drop-shadow(0 24px 60px rgba(40,40,55,.18)); }
+@keyframes sc-progress { from { width:0% } to { width:100% } }
   </style>
 </head>
 <body>
@@ -1365,6 +1377,119 @@ const CRAFT_ORDER = ['極簡','普通','複雜','極複雜'];
 const CRAFT_PREF_LABELS = ['俐落簡約','日常精緻','細節講究','極致工藝'];
 
 
+/* ══ 展示模式：自動播放，每張緩慢縮放漂移 + 交叉淡入，非死板輪播 ══
+   吃當下的篩選（只篩戒指就只播戒指）；點畫面暫停/續播，× 離開。 */
+function ShowcaseMode({ filters, onClose }) {
+  const [photos, setPhotos] = useState([]);
+  const [idx,    setIdx]    = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [hint,   setHint]   = useState(true);
+  const pageRef = useRef(1), hasMoreRef = useRef(true), loadingRef = useRef(false);
+  const seedRef = useRef(Math.random());
+
+  const DWELL = 5600;   // 每張停留基準（毫秒）
+
+  const loadMore = React.useCallback(async () => {
+    if (loadingRef.current || !hasMoreRef.current) return;
+    loadingRef.current = true;
+    try {
+      const qs = new URLSearchParams({ page: pageRef.current, sort: 'random', _r: seedRef.current });
+      Object.entries(filters || {}).forEach(([k, v]) => v && qs.set(k, v));
+      const r = await fetch('/api/photos?' + qs);
+      const d = await r.json();
+      setPhotos(prev => [...prev, ...(d.photos || [])]);
+      hasMoreRef.current = !!d.has_more;
+      pageRef.current++;
+    } catch {}
+    loadingRef.current = false;
+  }, []);
+
+  useEffect(() => { loadMore(); }, []);
+  useEffect(() => { const t = setTimeout(() => setHint(false), 3200); return () => clearTimeout(t); }, []);
+
+  // 自動前進；接近尾端補載；沒有更多時循環播放
+  useEffect(() => {
+    if (paused || photos.length === 0) return;
+    if (idx >= photos.length - 3 && hasMoreRef.current) loadMore();
+    const dwell = DWELL + (idx % 3) * 700;   // 微幅變速，避免節拍器感
+    const t = setTimeout(() => setIdx(i => i + 1), dwell);
+    return () => clearTimeout(t);
+  }, [idx, paused, photos.length]);
+
+  const len = photos.length;
+  const at  = i => (len ? photos[((i % len) + len) % len] : null);
+
+  const frame = (i, fresh) => {
+    const p = at(i);
+    if (!p) return null;
+    const kb = 'sc-kb' + (((i % 4) + 4) % 4);
+    const dwell = (DWELL + (i % 3) * 700 + 1400);
+    return (
+      <div key={i} className={'sc-frame' + (fresh ? ' fresh' : '')} style={{ zIndex: fresh ? 2 : 1 }}>
+        <img src={(p.thumb_url ? p.thumb_url + '?size=1200' : p.full_url)} alt=""
+          style={{ animation: paused ? 'none' : `${kb} ${dwell}ms linear both` }} />
+      </div>
+    );
+  };
+
+  return (
+    <div onClick={() => { setPaused(x => !x); setHint(false); }}
+      style={{ position:'fixed', inset:0, zIndex:960, overflow:'hidden', cursor:'pointer',
+        background:'radial-gradient(ellipse at 50% 38%, #ffffff 0%, #eef0f3 78%, #e7e9ee 100%)' }}>
+
+      {len === 0 && (
+        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
+          color:'var(--text3)', fontSize:14, letterSpacing:2 }}>載入中…</div>
+      )}
+
+      {/* 兩層交叉淡入：上一張墊底、當前這張淡入蓋上 */}
+      {len > 0 && frame(idx - 1, false)}
+      {len > 0 && frame(idx, true)}
+
+      {/* 底部說明牌 */}
+      {at(idx) && (
+        <div key={'cap'+idx} className="sc-frame fresh" style={{ zIndex:3, alignItems:'flex-end', pointerEvents:'none' }}>
+          <div style={{ width:'100%', textAlign:'center', paddingBottom:'8vh' }}>
+            <div style={{ fontSize:20, fontWeight:600, color:'var(--text)', letterSpacing:1 }}>
+              {[at(idx).category, at(idx).gemstone].filter(v => v && v !== '未定' && v !== '無寶石').join('・') || ' '}
+            </div>
+            <div style={{ fontSize:12, color:'var(--text2)', marginTop:4, letterSpacing:.5 }}>
+              {[at(idx).style, at(idx).stone_shape].filter(v => v && v !== '未定' && v !== '無主石').join('・')}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 暫停指示 */}
+      {paused && (
+        <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:5,
+          width:64, height:64, borderRadius:'50%', background:'rgba(255,255,255,.85)', backdropFilter:'blur(6px)',
+          display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 6px 24px rgba(40,40,55,.18)',
+          color:'var(--gold)', fontSize:24, pointerEvents:'none' }}>▶</div>
+      )}
+
+      {/* 首次提示 */}
+      {hint && (
+        <div style={{ position:'absolute', bottom:'3vh', left:'50%', transform:'translateX(-50%)', zIndex:5,
+          fontSize:11, color:'var(--text3)', letterSpacing:2, pointerEvents:'none' }}>點畫面暫停</div>
+      )}
+
+      {/* 進度細條 */}
+      {len > 0 && (
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:'rgba(0,0,0,.05)', zIndex:6 }}>
+          <div key={idx} style={{ height:'100%', background:'linear-gradient(90deg,rgba(138,106,58,.7),#c9a86c)',
+            width:'0%', animation: paused ? 'none' : `sc-progress ${DWELL + (idx%3)*700}ms linear both` }} />
+        </div>
+      )}
+
+      <button onClick={e => { e.stopPropagation(); onClose(); }}
+        style={{ position:'absolute', top:14, right:16, zIndex:7, width:38, height:38, borderRadius:'50%',
+          border:'none', background:'rgba(255,255,255,.8)', backdropFilter:'blur(6px)', color:'var(--text2)',
+          fontSize:20, cursor:'pointer', boxShadow:'0 2px 10px rgba(40,40,55,.14)' }}>×</button>
+    </div>
+  );
+}
+
 /* ── Browse tab ─────────────────────────────────────── */
 function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [photoMode, setPhotoMode] = useState('去背'); // '去背' | '情境'
@@ -1372,6 +1497,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [filters,   setFilters]    = useState({});
   const [counts,    setCounts]     = useState({});
   const [quickQuote,  setQuickQuote]  = useState(null);
+  const [showcase,    setShowcase]    = useState(false);
 
   const allFilters = {
     ...(catFilter ? { category: catFilter } : {}),
@@ -1426,6 +1552,12 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
               <button className="chip-clr" onClick={() => { setFilters({}); setCatFilter(null); }}>清除</button>
             )}
           </div>
+          <div style={{flexShrink:0,display:'flex',alignItems:'center',padding:'6px 10px 6px 6px',
+            boxShadow:'-10px 0 10px -8px rgba(0,0,0,.12)',position:'relative',zIndex:1}}>
+            <button className="swipe-launch-btn" onClick={() => setShowcase(true)} style={{padding:'5px 12px',border:'1px solid var(--gold)',borderRadius:8,fontSize:12,background:'var(--surface)',cursor:'pointer',color:'var(--gold)',fontWeight:600,display:'flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
+              ▶ 展示
+            </button>
+          </div>
         </div>
       </div>
       <div className="body-row">
@@ -1437,6 +1569,9 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
 
       {/* 從照片格直接估價：不用先開詳情 */}
       {quickQuote && <QuickQuote photo={quickQuote} onClose={() => setQuickQuote(null)} />}
+
+      {/* 展示模式：自動播放當下篩選的照片 */}
+      {showcase && <ShowcaseMode filters={allFilters} onClose={() => setShowcase(false)} />}
     </>
   );
 }
