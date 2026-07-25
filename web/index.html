@@ -674,7 +674,10 @@ button { font-family: inherit; cursor: pointer; }
 .sc-frame img { max-width:88%; max-height:82%; object-fit:contain; will-change:transform;
   filter: drop-shadow(0 24px 60px rgba(40,40,55,.18)); }
 @keyframes sc-progress { from { width:0% } to { width:100% } }
-@keyframes sc-tile { from { opacity:0; transform:scale(1.06) } to { opacity:1; transform:scale(1) } }
+/* 電腦牆：新照片柔和交叉淡入 + 出現後緩慢 zoom in / zoom out（兩方向交錯，絲滑不死板） */
+@keyframes sc-cross { from { opacity:0 } to { opacity:1 } }
+@keyframes sc-zoomin  { from { transform:scale(1.0) }  to { transform:scale(1.11) } }
+@keyframes sc-zoomout { from { transform:scale(1.11) } to { transform:scale(1.0) } }
   </style>
 </head>
 <body>
@@ -1395,7 +1398,8 @@ function ShowcaseMode({ filters, onClose }) {
   const rrRef = useRef(0);       // 輪流換哪一格
 
   const DWELL   = 5600;   // 手機每張停留（毫秒）
-  const SWAP_MS = 2600;   // 電腦每隔多久換掉一格（交錯，8 格約 20 秒全換一輪）
+  const SWAP_MS = 2800;   // 電腦每隔多久換掉一格（交錯，8 格約 22 秒全換一輪）
+  const DWELL_SC = SWAP_MS * N + 2000;  // 每格照片顯示期間緩慢 zoom 的時長（涵蓋整輪停留）
 
   const loadMore = React.useCallback(async () => {
     if (loadingRef.current || !hasMoreRef.current) return;
@@ -1424,22 +1428,22 @@ function ShowcaseMode({ filters, onClose }) {
     return () => clearTimeout(t);
   }, [wide, idx, paused, photos.length]);
 
-  // 電腦：先把 8 格填滿
+  // 電腦：先把 8 格填滿（每格 = { cur 目前照片, prev 上一張(交叉淡入用), n 換過幾次 }）
   useEffect(() => {
     if (!wide) return;
     const target = Math.min(N, photos.length);
     if (slots.length >= target) return;
-    const init = photos.slice(0, target);
+    const init = photos.slice(0, target).map(p => ({ cur: p, prev: null, n: 0 }));
     setSlots(init);
     cursorRef.current = init.length;
   }, [wide, photos.length]);
 
-  // 電腦：每隔 SWAP_MS 換掉「一格」為新照片（輪流），沒新的就補載/循環
+  // 電腦：每隔 SWAP_MS 換掉「一格」為新照片（輪流），舊照片留在底層做交叉淡入，沒新的就補載/循環
   useEffect(() => {
     if (!wide || paused || slots.length < N) return;
     const t = setInterval(() => {
       setSlots(prev => {
-        const shown = new Set(prev.map(p => p && p.id));
+        const shown = new Set(prev.map(s => s && s.cur && s.cur.id));
         let cand = null, guard = 0;
         while (guard++ < photos.length + 2) {
           if (cursorRef.current >= photos.length) { cursorRef.current = 0; if (hasMoreRef.current) loadMore(); }
@@ -1447,8 +1451,10 @@ function ShowcaseMode({ filters, onClose }) {
           if (c && !shown.has(c.id)) { cand = c; break; }
         }
         if (!cand) return prev;                 // 照片太少、全都在牆上了 → 維持不動
+        const i = rrRef.current % N;
+        const old = prev[i];
         const next = prev.slice();
-        next[rrRef.current % N] = cand;
+        next[i] = { cur: cand, prev: old ? old.cur : null, n: (old ? old.n : 0) + 1 };
         rrRef.current++;
         return next;
       });
@@ -1492,14 +1498,23 @@ function ShowcaseMode({ filters, onClose }) {
         <div style={{ position:'absolute', inset:0, display:'grid', gap:18, padding:24, boxSizing:'border-box',
           gridTemplateColumns:'repeat(4, 1fr)', gridTemplateRows:'repeat(2, 1fr)' }}>
           {Array.from({ length: N }).map((_, i) => {
-            const p = slots[i];
+            const s = slots[i];
+            const zoom = s && ((i + s.n) % 2 === 0) ? 'sc-zoomin' : 'sc-zoomout';
+            const imgBase = { position:'absolute', top:'7%', left:'7%', right:'7%', bottom:'7%',
+              width:'86%', height:'86%', objectFit:'contain', willChange:'transform, opacity',
+              filter:'drop-shadow(0 14px 34px rgba(40,40,55,.12))' };
+            const src = p => (p.thumb_url ? p.thumb_url + '?size=800' : p.full_url);
             return (
               <div key={i} style={{ position:'relative', background:'#fff', borderRadius:16, overflow:'hidden',
-                boxShadow:'0 10px 30px rgba(40,40,55,.10)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                {p && (
-                  <img key={p.id} src={(p.thumb_url ? p.thumb_url + '?size=800' : p.full_url)} alt=""
-                    style={{ maxWidth:'86%', maxHeight:'86%', objectFit:'contain',
-                      animation: paused ? 'none' : 'sc-tile .9s ease both' }} />
+                boxShadow:'0 10px 30px rgba(40,40,55,.10)' }}>
+                {s && s.prev && (
+                  <img key={'p' + s.prev.id + '-' + s.n} src={src(s.prev)} alt=""
+                    style={{ ...imgBase, opacity:1 }} />
+                )}
+                {s && s.cur && (
+                  <img key={'c' + s.cur.id + '-' + s.n} src={src(s.cur)} alt=""
+                    style={{ ...imgBase, animation: paused ? 'none'
+                      : `sc-cross 1.6s ease both, ${zoom} ${DWELL_SC}ms ease-in-out both` }} />
                 )}
               </div>
             );
