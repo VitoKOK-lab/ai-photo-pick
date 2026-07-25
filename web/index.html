@@ -1131,6 +1131,12 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
               <span style={{color:fav?'var(--gold)':'var(--text2)'}}>{fav?'♥':'♡'}</span>
               <span>{fav?'已收藏':'收藏'}</span>
             </button>
+            {onDeleted && (
+              <button className="det-icon-btn" onClick={doDelete} title="刪除照片">
+                <span style={{color:'#c0392b'}}>🗑</span>
+                <span>刪除</span>
+              </button>
+            )}
             <div style={{flex:1}} />
             <button className="det-cta" onClick={() => setView('quote')}>💎 估價</button>
           </div>

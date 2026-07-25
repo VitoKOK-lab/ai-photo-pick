@@ -364,7 +364,9 @@ def batch_update_photos(body: BatchUpdateBody, _user=Depends(require_editor)):
     return {"updated": len(body.ids)}
 
 
-def delete_photo(photo_id: int, _user=Depends(require_admin)):
+@router.delete("/{photo_id}")
+def delete_photo(photo_id: int):
+    """永久刪除單張照片（含磁碟檔案）。內部工具，不限身分。"""
     conn = _conn()
     cur = conn.cursor()
     cur.execute("SELECT full_path FROM photos WHERE id = ?", (photo_id,))
