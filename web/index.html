@@ -964,13 +964,18 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   const [editCraft, setEditCraft] = useState(photo.craft_complexity|| '');
   const [editMetal, setEditMetal] = useState(photo.metal_color     || '');
   const [saving,    setSaving]    = useState(false);
+  const [delLeft,   setDelLeft]   = useState(0);   // 刪除倒數；>0 時同一按鍵變成「復原」
+  const delTimer = useRef(null), delTick = useRef(null);
+  const clearDel = () => { clearTimeout(delTimer.current); clearInterval(delTick.current); };
 
   useEffect(() => {
     setView('detail');
+    clearDel(); setDelLeft(0);   // 切換照片時取消未完成的刪除倒數
     setEditCat(photo.category || ''); setEditSty(photo.style || '');
     setEditChain(photo.setting_amount || ''); setEditCraft(photo.craft_complexity || '');
     setEditMetal(photo.metal_color || '');
   }, [photo.id]);
+  useEffect(() => () => clearDel(), []);   // 卸載時清掉計時器
 
   const doSave = async () => {
     setSaving(true);
@@ -987,12 +992,21 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
     setSaving(false);
   };
 
-  const doDelete = async () => {
-    if (!confirm('確定永久刪除這張照片？（檔案會一併刪除，無法復原）')) return;
-    await fetch('/api/photos/' + photo.id, { method: 'DELETE' });
+  // 刪除：按下 → 同一按鍵變「復原」倒數 10 秒；期間不動後端，倒數結束才真的刪
+  const finalizeDelete = () => {
+    clearDel();
+    fetch('/api/photos/' + photo.id, { method: 'DELETE' });
     onDeleted && onDeleted(photo.id);
     onClose();
   };
+  const startDelete = () => {
+    setDelLeft(10);
+    delTick.current  = setInterval(() => setDelLeft(n => (n > 1 ? n - 1 : n)), 1000);
+    delTimer.current = setTimeout(finalizeDelete, 10000);
+  };
+  const undoDelete = () => { clearDel(); setDelLeft(0); };
+  // 關閉面板時：若正在倒數，視為確認刪除（使用者已按下刪除並離開）
+  const handleClose = () => { if (delLeft > 0) finalizeDelete(); else onClose(); };
 
   const fav  = isFav(photo.id);
   const STYLE_VALS = new Set(['無鑽','簡約','輕奢','奢華']);
@@ -1018,7 +1032,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
         <div className="det-hd-bar">
           <button className="det-back" onClick={() => setView('detail')}>←</button>
           <span className="det-hd-title">修改分類</span>
-          <button className="db db-del" onClick={doDelete} title="刪除照片">🗑</button>
+          <button className="db db-del" onClick={() => { startDelete(); setView('detail'); }} title="刪除照片">🗑</button>
           <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
         </div>
         <div className="det-scroll">
@@ -1083,10 +1097,10 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
 
   /* Detail view */
   return (
-    <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="det-ovl" onClick={e => e.target === e.currentTarget && handleClose()}>
       <div className="det-panel">
-        <button className="det-x" onClick={onClose}>×</button>
-        <div className="det-left">
+        <button className="det-x" onClick={handleClose}>×</button>
+        <div className="det-left" style={{opacity: delLeft > 0 ? 0.4 : 1, transition:'opacity .3s'}}>
           <div className="det-handle" />
           <PinchImage className="det-img" src={photo.full_url} />
         </div>
@@ -1131,12 +1145,18 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
               <span style={{color:fav?'var(--gold)':'var(--text2)'}}>{fav?'♥':'♡'}</span>
               <span>{fav?'已收藏':'收藏'}</span>
             </button>
-            {onDeleted && (
-              <button className="det-icon-btn" onClick={doDelete} title="刪除照片">
+            {onDeleted && (delLeft > 0 ? (
+              <button className="det-icon-btn" onClick={undoDelete} title="復原刪除"
+                style={{background:'rgba(184,147,90,.14)'}}>
+                <span style={{color:'var(--gold)'}}>↩</span>
+                <span>復原 {delLeft}</span>
+              </button>
+            ) : (
+              <button className="det-icon-btn" onClick={startDelete} title="刪除照片">
                 <span style={{color:'#c0392b'}}>🗑</span>
                 <span>刪除</span>
               </button>
-            )}
+            ))}
             <div style={{flex:1}} />
             <button className="det-cta" onClick={() => setView('quote')}>💎 估價</button>
           </div>
@@ -1158,7 +1178,6 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
   const [photos,     setPhotos]     = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [detail,     setDetail]     = useState(null);
-  const [pendingDel, setPendingDel] = useState(null); // {id, photo, timer}
   const isAdmin = role === 'admin';
   const isStaff = role === 'admin' || role === 'editor';
 
@@ -1306,35 +1325,9 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
           toggleFav={toggleFav}
           onSelectPhoto={p => setDetail(p)}
           role={role}
-          onDeleted={id => {
-            if (isAdmin) {
-              // Admin: immediate delete
-              setPhotos(prev => prev.filter(p => p.id !== id));
-              setDetail(null);
-            } else {
-              // Staff: delayed delete with undo
-              const photo = photos.find(p => p.id === id);
-              setPhotos(prev => prev.filter(p => p.id !== id));
-              setDetail(null);
-              const timer = setTimeout(() => {
-                fetch('/api/photos/' + id, { method: 'DELETE' });
-                setPendingDel(null);
-              }, 5000);
-              setPendingDel({ id, photo, timer });
-            }
-          }}
+          onDeleted={id => { setPhotos(prev => prev.filter(p => p.id !== id)); setDetail(null); }}
           onUpdated={updated => { setPhotos(prev => prev.map(p => p.id === updated.id ? {...p, ...updated} : p)); setDetail(updated); }}
         />
-      )}
-      {pendingDel && (
-        <div className="undo-toast">
-          <span>已移除照片</span>
-          <button className="undo-btn" onClick={() => {
-            clearTimeout(pendingDel.timer);
-            setPhotos(prev => [pendingDel.photo, ...prev]);
-            setPendingDel(null);
-          }}>復原</button>
-        </div>
       )}
     </>
   );
@@ -1749,7 +1742,6 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
 /* ── Favorites tab ──────────────────────────────────── */
 function FavsTab({ favs, isFav, toggleFav, clearFavs, role }) {
   const [detail, setDetail] = useState(null);
-  const [pendingDel, setPendingDel] = useState(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
   if (favs.length === 0) return (
@@ -1820,32 +1812,8 @@ function FavsTab({ favs, isFav, toggleFav, clearFavs, role }) {
         <PhotoDetail photo={detail} onClose={() => setDetail(null)}
           isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p => setDetail(p)}
           role={role}
-          onDeleted={id => {
-            const isAdmin = role === 'admin';
-            toggleFav(favs.find(p => p.id === id) || {id});
-            setDetail(null);
-            if (!isAdmin) {
-              const photo = favs.find(p => p.id === id);
-              const timer = setTimeout(() => {
-                fetch('/api/photos/' + id, { method: 'DELETE' });
-                setPendingDel(null);
-              }, 5000);
-              setPendingDel({ id, photo, timer });
-            } else {
-              fetch('/api/photos/' + id, { method: 'DELETE' });
-            }
-          }}
+          onDeleted={id => { toggleFav(favs.find(p => p.id === id) || {id}); setDetail(null); }}
           onUpdated={updated => { setDetail(updated); }} />
-      )}
-      {pendingDel && (
-        <div className="undo-toast">
-          <span>已移除照片</span>
-          <button className="undo-btn" onClick={() => {
-            clearTimeout(pendingDel.timer);
-            if (pendingDel.photo) toggleFav(pendingDel.photo);
-            setPendingDel(null);
-          }}>復原</button>
-        </div>
       )}
     </>
   );
