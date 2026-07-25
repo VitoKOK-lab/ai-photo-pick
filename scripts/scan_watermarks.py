@@ -18,6 +18,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import SQLITE_PATH
 from scripts.detect_watermark import detect_text
 
+try:
+    from config.settings import FULL_DIR, THUMB_DIR, MICRO_DIR
+except Exception:
+    FULL_DIR = THUMB_DIR = MICRO_DIR = None
+
+
+def _resolve_path(r):
+    """在多個可能的位置中找出真的存在的照片檔（縮圖優先，快）。找不到回 None。"""
+    cands = [r["thumb_path"], r["full_path"], r["original_path"]]
+    fn = r["filename"]
+    if fn:
+        for d in (THUMB_DIR, FULL_DIR, MICRO_DIR):
+            if d:
+                cands.append(str(Path(d) / fn))
+    for c in cands:
+        if c and Path(c).exists():
+            return c
+    return None
+
 
 def scan(rescan: bool = False, limit: int = 0):
     conn = sqlite3.connect(SQLITE_PATH)
@@ -25,7 +44,7 @@ def scan(rescan: bool = False, limit: int = 0):
     where = "photo_type = '情境'"
     if not rescan:
         where += " AND watermark_flag IS NULL"   # 只掃還沒檢查過的
-    sql = f"SELECT id, full_path, thumb_path, filename FROM photos WHERE {where} ORDER BY id"
+    sql = f"SELECT id, full_path, thumb_path, original_path, filename FROM photos WHERE {where} ORDER BY id"
     if limit:
         sql += f" LIMIT {int(limit)}"
     rows = conn.execute(sql).fetchall()
@@ -35,10 +54,14 @@ def scan(rescan: bool = False, limit: int = 0):
         conn.close()
         return
 
-    flagged = 0
+    flagged = missing = 0
     for i, r in enumerate(rows, 1):
-        # 優先用縮圖（快、省流量），沒有再用原圖
-        path = r["thumb_path"] or r["full_path"]
+        path = _resolve_path(r)
+        if not path:
+            missing += 1
+            if missing <= 5:   # 只印前幾筆，避免洗版
+                print(f"  [{i}/{total}] #{r['id']} 找不到檔案，跳過（DB 記錄：thumb={r['thumb_path']} full={r['full_path']}）")
+            continue
         res = detect_text(path)
         if res["kind"] == "錯誤":
             print(f"  [{i}/{total}] #{r['id']} 偵測失敗，跳過：{res['sample']}")
@@ -59,6 +82,8 @@ def scan(rescan: bool = False, limit: int = 0):
 
     conn.close()
     print(f"\n完成：共標記 {flagged} 張疑似有浮水印/文字。")
+    if missing:
+        print(f"（另有 {missing} 張找不到檔案，已跳過）")
     print("→ 到網頁 App 情境模式，點「⚠ 疑似浮水印」篩選審查後刪除或保留。")
 
 

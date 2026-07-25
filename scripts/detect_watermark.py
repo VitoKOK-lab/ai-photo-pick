@@ -63,7 +63,7 @@ def detect_text(image_path) -> dict:
     偵測失敗時回傳 has_text=False + kind='錯誤'（保守：不誤刪）。"""
     image_path = Path(image_path)
     if not image_path.exists():
-        return {"has_text": False, "kind": "錯誤", "sample": "", "confidence": 0.0}
+        return {"has_text": False, "kind": "錯誤", "sample": f"找不到檔案:{image_path}", "confidence": 0.0}
     try:
         client = _get_client()
         resp = client.models.generate_content(
