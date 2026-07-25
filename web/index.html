@@ -1399,83 +1399,108 @@ function ShowcaseMode({ filters, onClose }) {
     { c:'5 / 6', r:'1 / 2' }, { c:'5 / 6', r:'2 / 3' }, { c:'5 / 6', r:'3 / 4' },// 右欄
   ];
 
-  // 電腦版場景：自動輪播四種版面，看久不膩
+  // 電腦版版面：輪流播放，每個版面先播「去背」再播「情境」，之後換下一個版面
   const SCENES = [
     { key:'wall',      n:8,  swap:1600, cols:4, rows:2, places:null      }, // 八張牆
     { key:'mosaic',    n:12, swap:1200, cols:6, rows:3, places:MOSAIC    }, // 馬賽克拼貼
     { key:'spotlight', n:7,  swap:1400, cols:5, rows:3, places:SPOTLIGHT }, // 聚光燈：一大圖＋環繞小圖
-    { key:'solo',      n:1,  swap:3200, cols:1, rows:1, places:null      }, // 單張全螢幕
   ];
 
-  const [photos, setPhotos] = useState([]);
   const [idx,    setIdx]    = useState(0);      // 手機單張用
   const [slots,  setSlots]  = useState([]);     // 電腦版目前展示的每一格
-  const [scene,  setScene]  = useState(0);      // 電腦版目前場景
+  const [scene,  setScene]  = useState(0);      // 第幾個場景（決定版面 + 去背/情境）
   const [paused, setPaused] = useState(false);
   const [hint,   setHint]   = useState(true);
-  const pageRef = useRef(1), hasMoreRef = useRef(true), loadingRef = useRef(false);
+  const [tick,   setTick]   = useState(0);      // 照片池載入後觸發重繪
   const seedRef = useRef(Math.random());
-  const cursorRef = useRef(0);   // 下一張要換進來的照片
   const rrRef = useRef(0);       // 輪流換哪一格
   const sceneRef = useRef(0);    // 偵測場景切換
+  // 去背 / 情境 各自獨立的照片池與載入狀態
+  const poolsRef = useRef({ '去背': [], '情境': [] });
+  const metaRef  = useRef({ '去背': { page:1, more:true, loading:false, cursor:0 },
+                            '情境': { page:1, more:true, loading:false, cursor:0 } });
 
-  const sc = wide ? SCENES[scene % SCENES.length] : null;
+  const TYPES = ['去背', '情境'];
+  const curType = TYPES[scene % 2];                                       // 每換一個場景就切換去背/情境
+  const sc = wide ? SCENES[Math.floor(scene / 2) % SCENES.length] : null; // 同一版面先去背再情境，才換下個版面
   const N  = sc ? sc.n : 1;
 
   const DWELL    = 5600;                 // 手機每張停留（毫秒）
   const SWAP_MS  = sc ? sc.swap : 2800;  // 電腦每隔多久換掉一格
-  const SCENE_MS = 24000;                // 每個場景播放多久後換版面
+  const SCENE_MS = 22000;                // 每個場景（版面×類型）播放多久
 
-  const loadMore = React.useCallback(async () => {
-    if (loadingRef.current || !hasMoreRef.current) return;
-    loadingRef.current = true;
+  const loadMore = React.useCallback(async (type) => {
+    const meta = metaRef.current[type];
+    if (meta.loading || !meta.more) return;
+    meta.loading = true;
     try {
-      const qs = new URLSearchParams({ page: pageRef.current, sort: 'random', _r: seedRef.current });
-      Object.entries(filters || {}).forEach(([k, v]) => v && qs.set(k, v));
+      const qs = new URLSearchParams({ page: meta.page, sort: 'random', _r: seedRef.current, photo_type: type });
+      Object.entries(filters || {}).forEach(([k, v]) => { if (k !== 'photo_type' && v) qs.set(k, v); });
       const r = await fetch('/api/photos?' + qs);
       const d = await r.json();
-      setPhotos(prev => [...prev, ...(d.photos || [])]);
-      hasMoreRef.current = !!d.has_more;
-      pageRef.current++;
+      poolsRef.current[type] = [...poolsRef.current[type], ...(d.photos || [])];
+      meta.more = !!d.has_more;
+      meta.page++;
     } catch {}
-    loadingRef.current = false;
+    meta.loading = false;
+    setTick(t => t + 1);
   }, []);
 
-  useEffect(() => { loadMore(); }, []);
+  // 一開始就把兩種類型都預載，切換時不用等
+  useEffect(() => { loadMore('去背'); loadMore('情境'); }, []);
   useEffect(() => { const t = setTimeout(() => setHint(false), 3600); return () => clearTimeout(t); }, []);
 
-  // 手機：單張自動前進
+  // 換場景／類型時：確保該類型有照片、手機重頭播
   useEffect(() => {
-    if (wide || paused || photos.length === 0) return;
-    if (idx >= photos.length - 3 && hasMoreRef.current) loadMore();
+    if (poolsRef.current[curType].length === 0) loadMore(curType);
+    if (!wide) setIdx(0);
+  }, [scene]);
+
+  // 每隔 SCENE_MS 換下一個場景（版面 + 去背/情境輪流）
+  useEffect(() => {
+    if (paused) return;
+    const t = setTimeout(() => setScene(s => s + 1), SCENE_MS);
+    return () => clearTimeout(t);
+  }, [paused, scene]);
+
+  // 當前類型完全沒有照片時跳過此場景（另一類型有圖才跳，避免空轉）
+  useEffect(() => {
+    const meta = metaRef.current[curType];
+    if (poolsRef.current[curType].length === 0 && !meta.more && !meta.loading
+        && poolsRef.current[TYPES[(scene + 1) % 2]].length > 0) {
+      setScene(s => s + 1);
+    }
+  }, [scene, tick]);
+
+  // 手機：單張自動前進（讀當前類型池）
+  useEffect(() => {
+    if (wide || paused) return;
+    const pool = poolsRef.current[curType];
+    if (pool.length === 0) return;
+    if (idx >= pool.length - 3 && metaRef.current[curType].more) loadMore(curType);
     const dwell = DWELL + (idx % 3) * 700;
     const t = setTimeout(() => setIdx(i => i + 1), dwell);
     return () => clearTimeout(t);
-  }, [wide, idx, paused, photos.length]);
-
-  // 電腦：每隔 SCENE_MS 換一種版面場景（八張牆 ↔ 馬賽克拼貼）
-  useEffect(() => {
-    if (!wide || paused) return;
-    const t = setTimeout(() => setScene(s => s + 1), SCENE_MS);
-    return () => clearTimeout(t);
-  }, [wide, paused, scene]);
+  }, [wide, idx, paused, scene, tick]);
 
   // 電腦：填滿當前場景的每一格（初次、場景切換、或格數改變時重建）
   // 每格 = { cur 目前照片, prev 上一張(交叉淡入用), n 換過幾次 }
   useEffect(() => {
-    if (!wide || photos.length === 0) return;
+    if (!wide) return;
+    const pool = poolsRef.current[curType];
+    if (pool.length === 0) { loadMore(curType); return; }
     if (slots.length === N && sceneRef.current === scene) return;
+    const meta = metaRef.current[curType];
     const picks = [];
     for (let k = 0; k < N; k++) {
-      if (cursorRef.current >= photos.length) { cursorRef.current = 0; if (hasMoreRef.current) loadMore(); }
-      const c = photos[cursorRef.current % photos.length];
-      cursorRef.current++;
-      picks.push({ cur: c, prev: null, n: 0 });
+      if (meta.cursor >= pool.length) { meta.cursor = 0; if (meta.more) loadMore(curType); }
+      picks.push({ cur: pool[meta.cursor % pool.length], prev: null, n: 0 });
+      meta.cursor++;
     }
     sceneRef.current = scene;
     rrRef.current = 0;
     setSlots(picks);
-  }, [wide, scene, photos.length, N]);
+  }, [wide, scene, N, tick]);
 
   // 電腦：每隔 SWAP_MS 換掉「一格」為新照片（輪流），舊照片留底層做交叉淡入，沒新的就補載/循環
   useEffect(() => {
@@ -1483,11 +1508,13 @@ function ShowcaseMode({ filters, onClose }) {
     const t = setInterval(() => {
       setSlots(prev => {
         if (prev.length < N) return prev;
+        const pool = poolsRef.current[curType];
+        const meta = metaRef.current[curType];
         const shown = new Set(prev.map(s => s && s.cur && s.cur.id));
         let cand = null, guard = 0;
-        while (guard++ < photos.length + 2) {
-          if (cursorRef.current >= photos.length) { cursorRef.current = 0; if (hasMoreRef.current) loadMore(); }
-          const c = photos[cursorRef.current++];
+        while (guard++ < pool.length + 2) {
+          if (meta.cursor >= pool.length) { meta.cursor = 0; if (meta.more) loadMore(curType); }
+          const c = pool[meta.cursor++];
           if (c && !shown.has(c.id)) { cand = c; break; }
         }
         if (!cand) return prev;                 // 照片太少、全都在牆上了 → 維持不動
@@ -1500,10 +1527,11 @@ function ShowcaseMode({ filters, onClose }) {
       });
     }, SWAP_MS);
     return () => clearInterval(t);
-  }, [wide, paused, slots.length, photos.length, scene, N, SWAP_MS]);
+  }, [wide, paused, slots.length, scene, N, SWAP_MS]);
 
-  const len = photos.length;
-  const at  = i => (len ? photos[((i % len) + len) % len] : null);
+  const pool = wide ? null : poolsRef.current[curType];
+  const len  = pool ? pool.length : 0;
+  const at   = i => (len ? pool[((i % len) + len) % len] : null);
 
   const BG = 'radial-gradient(ellipse at 50% 38%, #ffffff 0%, #eef0f3 78%, #e7e9ee 100%)';
   const rootProps = {
@@ -1527,31 +1555,25 @@ function ShowcaseMode({ filters, onClose }) {
       fontSize:11, color:'var(--text3)', letterSpacing:2, pointerEvents:'none' }}>點畫面暫停</div>
   );
 
-  // ── 電腦版：場景輪播（八張牆 / 馬賽克 / 聚光燈 / 單張）──
+  // ── 電腦版：版面輪播（八張牆 / 馬賽克 / 聚光燈），去背與情境輪流 ──
   //   縮放放在「不會隨換圖重置」的底層（sc-breathe 連續呼吸），換照片只做純淡入淡出 → 絲滑不跳。
-  //   照片直接呈現，不加白卡外框/邊，只靠間距分格。
+  //   照片 cover 填滿整格、對齊乾淨，不加白卡外框/邊，只靠間距分格。
   if (wide) {
-    const solo = sc.key === 'solo';
-    const src = p => (p && (p.thumb_url ? p.thumb_url + '?size=' + (solo ? 1200 : 800) : p.full_url));
+    const src = p => (p && (p.thumb_url ? p.thumb_url + '?size=800' : p.full_url));
 
     // 一張照片一層：只做透明度淡入（新圖蓋在舊圖上淡現），不動 transform
-    //   多格場景 → cover 填滿整格，每格同形同位、對齊乾淨（去背白底不再是大小不一的白方塊）
-    //   單張場景 → contain 完整呈現主角
     const photo = (p, isCur) => {
       if (!p) return null;
-      const base = solo
-        ? { top:'4%', left:'4%', width:'92%', height:'92%', objectFit:'contain',
-            filter:'drop-shadow(0 24px 60px rgba(40,40,55,.16))' }
-        : { inset:0, width:'100%', height:'100%', objectFit:'cover' };
       return (
         <img key={(isCur ? 'c' : 'p') + p.id} src={src(p)} alt=""
-          style={{ position:'absolute', ...base, zIndex: isCur ? 2 : 1, opacity: isCur ? undefined : 1,
-            animation: isCur ? `sc-cross ${solo ? 1.5 : 0.9}s ease both` : 'none' }} />
+          style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover',
+            zIndex: isCur ? 2 : 1, opacity: isCur ? undefined : 1,
+            animation: isCur ? 'sc-cross 0.9s ease both' : 'none' }} />
       );
     };
 
-    const gap = solo ? 0 : (sc.cols >= 6 ? 12 : 18);
-    const pad = solo ? 0 : (sc.cols >= 6 ? 16 : 22);
+    const gap = sc.cols >= 6 ? 12 : 18;
+    const pad = sc.cols >= 6 ? 16 : 22;
     return (
       <div {...rootProps}>
         {slots.length === 0 && (
@@ -1569,8 +1591,7 @@ function ShowcaseMode({ filters, onClose }) {
             const dur   = 14 + (i % 5) * 1.7;    // 每格呼吸節奏略不同，避免整齊劃一
             const delay = -(i * 2.3);            // 相位錯開，畫面持續有呼吸感
             return (
-              <div key={i} style={{ position:'relative', ...place,
-                overflow: solo ? 'visible' : 'hidden', borderRadius: solo ? 0 : 10 }}>
+              <div key={i} style={{ position:'relative', ...place, overflow:'hidden', borderRadius:10 }}>
                 {/* 底層：連續緩慢呼吸縮放，換照片時不重置 → 不跳 */}
                 <div style={{ position:'absolute', inset:0, willChange:'transform',
                   animation: `sc-breathe ${dur}s ease-in-out ${delay}s infinite alternate`,
