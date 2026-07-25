@@ -290,6 +290,26 @@ def step4_photo_type():
     log.info(f"STEP 4 完成: OK={ok} 跳過={skip} 錯誤={err}")
 
 
+# ── Step 5: 情境照浮水印/文字偵測（只標記，供 App 審查後刪） ─────
+def step5_watermark():
+    conn = sqlite3.connect(SQLITE_PATH)
+    n = conn.execute(
+        "SELECT COUNT(*) FROM photos WHERE photo_type='情境' AND watermark_flag IS NULL"
+    ).fetchone()[0]
+    conn.close()
+    log.info(f"\n{'='*60}")
+    log.info(f"STEP 5: 情境照浮水印/文字偵測 — 找到 {n} 張需要檢查")
+    log.info(f"{'='*60}")
+    if n == 0:
+        log.info("  沒有需要檢查的情境照，跳過")
+        return
+    try:
+        from scripts.scan_watermarks import scan
+        scan(rescan=False)   # 只掃 watermark_flag IS NULL 的情境照
+    except Exception as e:
+        log.error(f"STEP 5 浮水印偵測失敗（略過，不影響匯入）：{e}")
+
+
 # ── Main ──────────────────────────────────────────────────
 if __name__ == "__main__":
     log.info(f"開始完整匯入流程 {ts}")
@@ -298,6 +318,7 @@ if __name__ == "__main__":
     step2_remove_empty_dirs()
     step3_reclassify()
     step4_photo_type()
+    step5_watermark()
     log.info(f"\n{'='*60}")
     log.info("全部完成！")
     log.info(f"{'='*60}")

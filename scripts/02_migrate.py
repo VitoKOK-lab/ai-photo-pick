@@ -39,6 +39,9 @@ def migrate():
         ("diamond_status",               "TEXT"),
         ("photo_type",                   "TEXT"),
         ("updated_at",                   "TIMESTAMP"),
+        # 浮水印/他牌文字偵測：NULL=未檢查, 0=乾淨, 1=疑似（有文字/浮水印，待審查刪除）
+        ("watermark_flag",               "INTEGER"),
+        ("watermark_note",               "TEXT"),
     ]
     for col, typ in missing_cols:
         try:

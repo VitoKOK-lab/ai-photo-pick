@@ -86,6 +86,8 @@ def _row_to_dict(row) -> dict:
         "craft_complexity":       _safe(row, "craft_complexity"),
         "metal_color":            _safe(row, "metal_color"),
         "photo_type":          _safe(row, "photo_type"),
+        "watermark_flag":      _safe(row, "watermark_flag"),
+        "watermark_note":      _safe(row, "watermark_note"),
         "price_band":          row["price_band"],
         "price_estimate_low":  row["price_estimate_low"],
         "price_estimate_high": row["price_estimate_high"],
@@ -107,6 +109,7 @@ def list_photos(
     stone_size:   Optional[str] = None,
     metal_color:  Optional[str] = None,
     photo_type:   Optional[str] = None,
+    watermark:    Optional[int] = None,   # 1 = 只看疑似有浮水印/文字的
     page:         int = Query(1, ge=1),
     sort:         str = Query("random", pattern="^(random|newest|popular)$"),
     exclude_seen: bool = False,
@@ -138,6 +141,8 @@ def list_photos(
     add_in("stone_size",     stone_size)
     add_in("metal_color",    metal_color)
     add_in("photo_type",     photo_type)
+    if watermark == 1:
+        wheres.append("watermark_flag = 1")
 
     if exclude_seen and session_id:
         wheres.append(
@@ -364,12 +369,25 @@ def batch_update_photos(body: BatchUpdateBody, _user=Depends(require_editor)):
     return {"updated": len(body.ids)}
 
 
+@router.post("/{photo_id}/keep-watermark")
+def keep_watermark(photo_id: int):
+    """審查後決定保留這張（清除疑似浮水印標記）。內部工具，不限身分。"""
+    conn = _conn()
+    conn.execute("UPDATE photos SET watermark_flag = 0, watermark_note = NULL WHERE id = ?", (photo_id,))
+    conn.commit()
+    conn.close()
+    return {"kept": photo_id}
+
+
 @router.delete("/{photo_id}")
 def delete_photo(photo_id: int):
-    """永久刪除單張照片（含磁碟檔案）。內部工具，不限身分。"""
+    """永久刪除單張照片：原圖 + 三種尺寸縮圖 + 向量 + 資料列。內部工具，不限身分。"""
     conn = _conn()
     cur = conn.cursor()
-    cur.execute("SELECT full_path FROM photos WHERE id = ?", (photo_id,))
+    cur.execute(
+        "SELECT original_path, full_path, thumb_path, micro_path FROM photos WHERE id = ?",
+        (photo_id,),
+    )
     row = cur.fetchone()
     if not row:
         conn.close()
@@ -377,10 +395,25 @@ def delete_photo(photo_id: int):
     conn.execute("DELETE FROM photos WHERE id = ?", (photo_id,))
     conn.commit()
     conn.close()
-    # 刪除磁碟上的實際檔案
-    if row["full_path"]:
-        try:
-            Path(row["full_path"]).unlink(missing_ok=True)
-        except Exception:
-            pass
+    # 刪除磁碟上的所有檔案：原圖 + full/thumb/micro
+    for col in ("original_path", "full_path", "thumb_path", "micro_path"):
+        p = row[col] if col in row.keys() else None
+        if p:
+            try:
+                Path(p).unlink(missing_ok=True)
+            except Exception:
+                pass
+    # 刪除快取縮圖（/api/thumb 動態產生的 {id}_{size}.jpg）
+    try:
+        from config.settings import PROCESSED_DIR
+        for f in (PROCESSED_DIR / "thumb").glob(f"{photo_id}_*.jpg"):
+            f.unlink(missing_ok=True)
+    except Exception:
+        pass
+    # 刪除 ChromaDB 向量
+    try:
+        from scripts.db_writer import get_chroma_collection
+        get_chroma_collection().delete(ids=[f"photo_{photo_id}"])
+    except Exception:
+        pass
     return {"deleted": photo_id}
