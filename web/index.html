@@ -2802,115 +2802,6 @@ function QuoteTab({ onBack, onHistory } = {}) {
 }
 
 /* ── LoginPage (full-screen) ── */
-function LoginPage({ onAuth }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [err,      setErr]      = useState('');
-  const [shake,    setShake]    = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [userList, setUserList] = useState([]);
-  const [guestMode, setGuestMode] = useState(false);
-  const [guestPw,   setGuestPw]   = useState('');
-  const pwRef = useRef(null);
-
-  async function guestSubmit() {
-    if (!guestPw.trim()) { setErr('請輸入來賓密碼'); return; }
-    setLoading(true); setErr('');
-    try {
-      const res = await fetch('/api/auth/guest', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: guestPw }),
-      });
-      if (res.ok) { storeAndAuth(await res.json()); }
-      else { triggerError('來賓密碼錯誤'); setGuestPw(''); }
-    } catch { triggerError('網路錯誤，請重試'); }
-    finally { setLoading(false); }
-  }
-
-  useEffect(() => {
-    fetch('/api/auth/user-list').then(r => r.json()).then(setUserList).catch(() => {});
-  }, []);
-
-  function triggerError(msg) {
-    setErr(msg || '帳號或密碼錯誤'); setPassword('');
-    setShake(true);
-    setTimeout(() => setShake(false), 500);
-  }
-
-  function storeAndAuth(data) {
-    // PIN login: {token, role}  |  Account login: {token, user:{id,name,username,role}}
-    const role = data.role || data.user?.role;
-    const u    = data.user  || {};
-    localStorage.setItem('jwt_token', data.token);
-    localStorage.setItem('jwt_user', JSON.stringify({ role, name: u.name || '', username: u.username || '' }));
-    localStorage.setItem('userRole', role);
-    onAuth(role);
-  }
-
-  async function submit() {
-    if (!username.trim() || !password.trim()) { setErr('請選擇帳號並輸入密碼'); return; }
-    setLoading(true); setErr('');
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      if (res.ok) { storeAndAuth(await res.json()); }
-      else { triggerError('帳號或密碼錯誤'); }
-    } catch { triggerError('網路錯誤，請重試'); }
-    finally { setLoading(false); }
-  }
-
-  const inputSt = {
-    width:'100%', padding:'11px 14px', border:'1.5px solid var(--border)', borderRadius:'var(--r)',
-    fontSize:15, outline:'none', boxSizing:'border-box', fontFamily:'inherit',
-    background:'var(--surface)', color:'var(--text)',
-  };
-
-  return (
-    <div className="login-page">
-      <div className="login-brand">Tahir Zainab Selection</div>
-      <div className="login-card">
-        <div className={'login-card-inner' + (shake ? ' shake' : '')}>
-          <div className="login-label">登入</div>
-          <select style={{...inputSt, cursor:'pointer'}} value={username} autoFocus
-            onChange={e => { setUsername(e.target.value); setErr(''); pwRef.current?.focus(); }}>
-            <option value="">— 請選擇帳號 —</option>
-            {userList.map(u => <option key={u.username} value={u.username}>{u.name}</option>)}
-          </select>
-          <input ref={pwRef} type="password" style={inputSt} placeholder="密碼"
-            value={password}
-            onChange={e => { setPassword(e.target.value); setErr(''); }}
-            onKeyDown={e => e.key === 'Enter' && submit()} />
-          <div className="login-err">{err}</div>
-          <button className="login-btn" onClick={submit} disabled={loading}>
-            {loading ? '驗證中…' : '確認'}
-          </button>
-
-          {/* 來賓入口：密碼 0000，只能看照片 / 收藏 / 估價，不能改估價設定 */}
-          <div style={{marginTop:18,paddingTop:16,borderTop:'1px solid var(--border)'}}>
-            {!guestMode ? (
-              <button onClick={() => { setGuestMode(true); setErr(''); }}
-                style={{width:'100%',background:'none',border:'1px solid var(--border)',borderRadius:'var(--r)',
-                  padding:'10px',fontSize:14,color:'var(--text2)',cursor:'pointer',fontWeight:600}}>
-                來賓進入
-              </button>
-            ) : (
-              <>
-                <input type="password" style={inputSt} placeholder="來賓密碼" value={guestPw} autoFocus
-                  onChange={e => { setGuestPw(e.target.value); setErr(''); }}
-                  onKeyDown={e => e.key === 'Enter' && guestSubmit()} />
-                <button className="login-btn" onClick={guestSubmit} disabled={loading} style={{marginTop:8}}>
-                  {loading ? '進入中…' : '來賓登入'}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ── Login modal (JWT, inactive when USE_JWT_AUTH=false) */
 /* ── Agent management section (for admin) ─────────────── */
@@ -4547,70 +4438,17 @@ function GuestFavViewModal({ link, onClose }) {
 
 /* ──────────────────────────────────────────────────────── */
 function App() {
-  const [splash,         setSplash]         = useState(() => !localStorage.getItem('userRole'));
-  const [tab,            setTab]            = useState('browse');
-  const [favs,           setFavs]           = useState(loadFavs);
-  const [showDarkBg,     setShowDarkBg]     = useState(false);
-  const [role,           setRole]           = useState(() => localStorage.getItem('userRole') || 'guest');
-  const [metalsLastUpd,  setMetalsLastUpd]  = useState(null);
-  const [idleWarning,    setIdleWarning]    = useState(false);
-  const [settingsInitTab,setSettingsInitTab]= useState('upload');
+  const [splash,           setSplash]           = useState(() => !sessionStorage.getItem('splashSeen'));
+  const [tab,              setTab]              = useState('browse');
+  const [favs,             setFavs]             = useState(loadFavs);
+  const [settingsUnlocked, setSettingsUnlocked] = useState(false);
 
-  const isAdmin = role === 'admin';
-  const isStaff = role === 'admin' || role === 'editor';
-
-  // 15 分鐘無操作自動登出
+  // 免登入使用；只有「估價設定」需要密碼。401 時重新上鎖設定。
   useEffect(() => {
-    if (role === 'guest') return;
-    const IDLE_MS = 15 * 60 * 1000;
-    const WARN_MS = 13 * 60 * 1000;
-    let idleTimer, warnTimer;
-    function reset() {
-      clearTimeout(idleTimer); clearTimeout(warnTimer);
-      setIdleWarning(false);
-      warnTimer = setTimeout(() => setIdleWarning(true), WARN_MS);
-      idleTimer = setTimeout(() => { clearJwtAuth(); localStorage.removeItem('userRole'); setRole('guest'); }, IDLE_MS);
-    }
-    const evts = ['mousemove','mousedown','keydown','touchstart','scroll','click'];
-    evts.forEach(e => window.addEventListener(e, reset, true));
-    reset();
-    return () => { clearTimeout(idleTimer); clearTimeout(warnTimer); evts.forEach(e => window.removeEventListener(e, reset, true)); };
-  }, [role]);
-
-  // Fetch metals_last_updated for banner
-  useEffect(() => {
-    if (!isStaff) return;
-    fetch('/api/pricing/all')
-      .then(r => r.json())
-      .then(d => { if (d.metals_last_updated) setMetalsLastUpd(d.metals_last_updated); })
-      .catch(() => {});
-  }, [isStaff]);
-
-  // JWT init — restore session from localStorage on page load
-  useEffect(() => {
-    const token = getJwtToken();
-    const user  = getJwtUser();
-    if (token && user) {
-      // verify token is still valid
-      fetch('/api/auth/me')
-        .then(r => r.json())
-        .then(data => {
-          if (!data.authenticated) { clearJwtAuth(); setRole('guest'); }
-          else setRole(data.user?.role || user.role);
-        })
-        .catch(() => {});
-    }
-    // Handle 401 from anywhere in the app
-    const onExpire = () => { clearJwtAuth(); setRole('guest'); };
+    const onExpire = () => { clearJwtAuth(); setSettingsUnlocked(false); };
     window.addEventListener('authExpired', onExpire);
     return () => window.removeEventListener('authExpired', onExpire);
   }, []);
-
-  function handleLogout() {
-    localStorage.removeItem('userRole');
-    clearJwtAuth();
-    setRole('guest');
-  }
 
   const toggleFav = photo => setFavs(prev => {
     const isCurrent = prev.some(p => p.id === photo.id);
@@ -4621,17 +4459,12 @@ function App() {
   });
   const clearFavs = () => { setFavs([]); saveFavs([]); };
   const isFav = id => favs.some(p => p.id === id);
-
-  const favCount  = favs.length;
-  const roleLabel = role === 'viewer' ? '來賓' : '員工';
-
-  if (role === 'guest') {
-    return <LoginPage onAuth={setRole} />;
-  }
+  const favCount = favs.length;
+  const dismissSplash = () => { sessionStorage.setItem('splashSeen', '1'); setSplash(false); };
 
   return (
     <React.Fragment>
-      {splash && <Splash onDone={() => setSplash(false)} />}
+      {splash && <Splash onDone={dismissSplash} />}
 
       <header className="nav">
         <span className="nav-logo" style={{cursor:'pointer'}} onClick={() => setSplash(true)}>Tahir Zainab Selection</span>
@@ -4641,21 +4474,17 @@ function App() {
             收藏 {favCount > 0 && <span className="badge">{favCount}</span>}
           </button>
           <button className={'nav-tab' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>估價</button>
-          {isStaff && (
-            <button className={'nav-tab' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>設定</button>
-          )}
-        </div>
-        <div className="nav-right">
-          <span className="nav-role">{roleLabel}</span>
-          <button className="nav-logout" onClick={handleLogout}>登出</button>
+          <button className={'nav-tab' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>設定</button>
         </div>
       </header>
       <div className="content">
-        {tab === 'browse'    && <BrowseTab isFav={isFav} toggleFav={toggleFav} role={role} />}
-        {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role={role} />}
-        {tab === 'settings'  && isStaff && (
+        {tab === 'browse'    && <BrowseTab isFav={isFav} toggleFav={toggleFav} role="admin" />}
+        {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role="admin" />}
+        {tab === 'settings'  && (
           <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',paddingTop:'var(--nav-h)'}}>
-            <PricingParamsPanel />
+            {settingsUnlocked
+              ? <PricingParamsPanel />
+              : <SettingsGate onUnlock={() => setSettingsUnlocked(true)} />}
           </div>
         )}
       </div>
@@ -4667,24 +4496,48 @@ function App() {
           收藏{favCount > 0 && <span className="tab-badge">{favCount}</span>}
         </button>
         <button className={'tab-btn' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>估價</button>
-        {isStaff && (
-          <button className={'tab-btn' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>設定</button>
-        )}
+        <button className={'tab-btn' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>設定</button>
       </nav>
-      {idleWarning && (
-        <div style={{position:'fixed',bottom:80,left:'50%',transform:'translateX(-50%)',
-          background:'#323232',color:'#fff',borderRadius:12,padding:'12px 20px',
-          zIndex:9999,display:'flex',alignItems:'center',gap:14,boxShadow:'0 4px 20px rgba(0,0,0,.4)',
-          fontSize:13,fontWeight:500,whiteSpace:'nowrap'}}>
-          ⏰ 2 分鐘後自動登出
-          <button onClick={() => setIdleWarning(false)}
-            style={{background:'var(--gold)',color:'#fff',border:'none',borderRadius:8,
-              padding:'5px 14px',fontSize:13,fontWeight:700,cursor:'pointer'}}>
-            繼續使用
-          </button>
-        </div>
-      )}
     </React.Fragment>
+  );
+}
+
+/* ── 設定密碼閘：免登入使用，只有進「設定」改價格才要密碼 ── */
+function SettingsGate({ onUnlock }) {
+  const [pw, setPw] = useState('');
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
+  async function submit() {
+    if (!pw.trim()) return;
+    setLoading(true); setErr('');
+    try {
+      const r = await fetch('/api/auth/unlock-settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      });
+      if (r.ok) { const d = await r.json(); localStorage.setItem('jwt_token', d.token); onUnlock(); }
+      else { setErr('密碼錯誤'); setPw(''); }
+    } catch { setErr('網路錯誤，請重試'); }
+    setLoading(false);
+  }
+  return (
+    <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,padding:24}}>
+      <div style={{fontSize:30,color:'var(--gold)'}}>🔒</div>
+      <div style={{fontSize:16,fontWeight:700,color:'var(--text)',letterSpacing:1}}>估價設定</div>
+      <div style={{fontSize:13,color:'var(--text3)'}}>請輸入密碼以修改價格</div>
+      <input type="password" autoFocus value={pw}
+        onChange={e => { setPw(e.target.value); setErr(''); }}
+        onKeyDown={e => e.key === 'Enter' && submit()}
+        placeholder="密碼"
+        style={{width:'100%',maxWidth:280,border:'1.5px solid var(--border)',borderRadius:12,padding:'12px 16px',
+          fontSize:15,textAlign:'center',outline:'none',background:'var(--surface)',color:'var(--text)',fontFamily:'inherit',marginTop:4}} />
+      {err && <div style={{fontSize:12,color:'#c62828'}}>{err}</div>}
+      <button onClick={submit} disabled={loading}
+        style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:12,padding:'11px 34px',
+          fontSize:14,fontWeight:700,cursor:'pointer',opacity:loading?0.6:1,letterSpacing:2}}>
+        {loading ? '驗證中…' : '解鎖'}
+      </button>
+    </div>
   );
 }
 
