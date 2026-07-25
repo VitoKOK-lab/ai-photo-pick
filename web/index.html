@@ -674,6 +674,7 @@ button { font-family: inherit; cursor: pointer; }
 .sc-frame img { max-width:88%; max-height:82%; object-fit:contain; will-change:transform;
   filter: drop-shadow(0 24px 60px rgba(40,40,55,.18)); }
 @keyframes sc-progress { from { width:0% } to { width:100% } }
+@keyframes sc-tile { from { opacity:0; transform:scale(1.06) } to { opacity:1; transform:scale(1) } }
   </style>
 </head>
 <body>
@@ -1380,14 +1381,21 @@ const CRAFT_PREF_LABELS = ['俐落簡約','日常精緻','細節講究','極致�
 /* ══ 展示模式：自動播放，每張緩慢縮放漂移 + 交叉淡入，非死板輪播 ══
    吃當下的篩選（只篩戒指就只播戒指）；點畫面暫停/續播，× 離開。 */
 function ShowcaseMode({ filters, onClose }) {
+  const wide = useRef(window.innerWidth >= 900).current;  // 電腦版 → 8 張牆；手機 → 單張大圖
+  const N = wide ? 8 : 1;
+
   const [photos, setPhotos] = useState([]);
-  const [idx,    setIdx]    = useState(0);
+  const [idx,    setIdx]    = useState(0);      // 手機單張用
+  const [slots,  setSlots]  = useState([]);     // 電腦牆用：目前展示的 8 張
   const [paused, setPaused] = useState(false);
   const [hint,   setHint]   = useState(true);
   const pageRef = useRef(1), hasMoreRef = useRef(true), loadingRef = useRef(false);
   const seedRef = useRef(Math.random());
+  const cursorRef = useRef(0);   // 下一張要換進來的照片
+  const rrRef = useRef(0);       // 輪流換哪一格
 
-  const DWELL = 5600;   // 每張停留基準（毫秒）
+  const DWELL   = 5600;   // 手機每張停留（毫秒）
+  const SWAP_MS = 2600;   // 電腦每隔多久換掉一格（交錯，8 格約 20 秒全換一輪）
 
   const loadMore = React.useCallback(async () => {
     if (loadingRef.current || !hasMoreRef.current) return;
@@ -1405,20 +1413,104 @@ function ShowcaseMode({ filters, onClose }) {
   }, []);
 
   useEffect(() => { loadMore(); }, []);
-  useEffect(() => { const t = setTimeout(() => setHint(false), 3200); return () => clearTimeout(t); }, []);
+  useEffect(() => { const t = setTimeout(() => setHint(false), 3600); return () => clearTimeout(t); }, []);
 
-  // 自動前進；接近尾端補載；沒有更多時循環播放
+  // 手機：單張自動前進
   useEffect(() => {
-    if (paused || photos.length === 0) return;
+    if (wide || paused || photos.length === 0) return;
     if (idx >= photos.length - 3 && hasMoreRef.current) loadMore();
-    const dwell = DWELL + (idx % 3) * 700;   // 微幅變速，避免節拍器感
+    const dwell = DWELL + (idx % 3) * 700;
     const t = setTimeout(() => setIdx(i => i + 1), dwell);
     return () => clearTimeout(t);
-  }, [idx, paused, photos.length]);
+  }, [wide, idx, paused, photos.length]);
+
+  // 電腦：先把 8 格填滿
+  useEffect(() => {
+    if (!wide) return;
+    const target = Math.min(N, photos.length);
+    if (slots.length >= target) return;
+    const init = photos.slice(0, target);
+    setSlots(init);
+    cursorRef.current = init.length;
+  }, [wide, photos.length]);
+
+  // 電腦：每隔 SWAP_MS 換掉「一格」為新照片（輪流），沒新的就補載/循環
+  useEffect(() => {
+    if (!wide || paused || slots.length < N) return;
+    const t = setInterval(() => {
+      setSlots(prev => {
+        const shown = new Set(prev.map(p => p && p.id));
+        let cand = null, guard = 0;
+        while (guard++ < photos.length + 2) {
+          if (cursorRef.current >= photos.length) { cursorRef.current = 0; if (hasMoreRef.current) loadMore(); }
+          const c = photos[cursorRef.current++];
+          if (c && !shown.has(c.id)) { cand = c; break; }
+        }
+        if (!cand) return prev;                 // 照片太少、全都在牆上了 → 維持不動
+        const next = prev.slice();
+        next[rrRef.current % N] = cand;
+        rrRef.current++;
+        return next;
+      });
+    }, SWAP_MS);
+    return () => clearInterval(t);
+  }, [wide, paused, slots.length, photos.length]);
 
   const len = photos.length;
   const at  = i => (len ? photos[((i % len) + len) % len] : null);
 
+  const BG = 'radial-gradient(ellipse at 50% 38%, #ffffff 0%, #eef0f3 78%, #e7e9ee 100%)';
+  const rootProps = {
+    onClick: () => { setPaused(x => !x); setHint(false); },
+    style: { position:'fixed', inset:0, zIndex:960, overflow:'hidden', cursor:'pointer', background:BG },
+  };
+  const closeBtn = (
+    <button onClick={e => { e.stopPropagation(); onClose(); }}
+      style={{ position:'absolute', top:14, right:16, zIndex:7, width:38, height:38, borderRadius:'50%',
+        border:'none', background:'rgba(255,255,255,.8)', backdropFilter:'blur(6px)', color:'var(--text2)',
+        fontSize:20, cursor:'pointer', boxShadow:'0 2px 10px rgba(40,40,55,.14)' }}>×</button>
+  );
+  const pausedBadge = paused && (
+    <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:5,
+      width:64, height:64, borderRadius:'50%', background:'rgba(255,255,255,.85)', backdropFilter:'blur(6px)',
+      display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 6px 24px rgba(40,40,55,.18)',
+      color:'var(--gold)', fontSize:24, pointerEvents:'none' }}>▶</div>
+  );
+  const hintTip = hint && (
+    <div style={{ position:'absolute', bottom:'3vh', left:'50%', transform:'translateX(-50%)', zIndex:5,
+      fontSize:11, color:'var(--text3)', letterSpacing:2, pointerEvents:'none' }}>點畫面暫停</div>
+  );
+
+  // ── 電腦版：8 張照片牆，交錯輪換 ──
+  if (wide) {
+    return (
+      <div {...rootProps}>
+        {slots.length === 0 && (
+          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
+            color:'var(--text3)', fontSize:14, letterSpacing:2 }}>載入中…</div>
+        )}
+        <div style={{ position:'absolute', inset:0, display:'grid', gap:18, padding:24, boxSizing:'border-box',
+          gridTemplateColumns:'repeat(4, 1fr)', gridTemplateRows:'repeat(2, 1fr)' }}>
+          {Array.from({ length: N }).map((_, i) => {
+            const p = slots[i];
+            return (
+              <div key={i} style={{ position:'relative', background:'#fff', borderRadius:16, overflow:'hidden',
+                boxShadow:'0 10px 30px rgba(40,40,55,.10)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                {p && (
+                  <img key={p.id} src={(p.thumb_url ? p.thumb_url + '?size=800' : p.full_url)} alt=""
+                    style={{ maxWidth:'86%', maxHeight:'86%', objectFit:'contain',
+                      animation: paused ? 'none' : 'sc-tile .9s ease both' }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {pausedBadge}{hintTip}{closeBtn}
+      </div>
+    );
+  }
+
+  // ── 手機版：單張大圖，Ken Burns 緩慢縮放漂移 + 交叉淡入 ──
   const frame = (i, fresh) => {
     const p = at(i);
     if (!p) return null;
@@ -1433,20 +1525,13 @@ function ShowcaseMode({ filters, onClose }) {
   };
 
   return (
-    <div onClick={() => { setPaused(x => !x); setHint(false); }}
-      style={{ position:'fixed', inset:0, zIndex:960, overflow:'hidden', cursor:'pointer',
-        background:'radial-gradient(ellipse at 50% 38%, #ffffff 0%, #eef0f3 78%, #e7e9ee 100%)' }}>
-
+    <div {...rootProps}>
       {len === 0 && (
         <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
           color:'var(--text3)', fontSize:14, letterSpacing:2 }}>載入中…</div>
       )}
-
-      {/* 兩層交叉淡入：上一張墊底、當前這張淡入蓋上 */}
       {len > 0 && frame(idx - 1, false)}
       {len > 0 && frame(idx, true)}
-
-      {/* 底部說明牌 */}
       {at(idx) && (
         <div key={'cap'+idx} className="sc-frame fresh" style={{ zIndex:3, alignItems:'flex-end', pointerEvents:'none' }}>
           <div style={{ width:'100%', textAlign:'center', paddingBottom:'8vh' }}>
@@ -1459,33 +1544,14 @@ function ShowcaseMode({ filters, onClose }) {
           </div>
         </div>
       )}
-
-      {/* 暫停指示 */}
-      {paused && (
-        <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:5,
-          width:64, height:64, borderRadius:'50%', background:'rgba(255,255,255,.85)', backdropFilter:'blur(6px)',
-          display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 6px 24px rgba(40,40,55,.18)',
-          color:'var(--gold)', fontSize:24, pointerEvents:'none' }}>▶</div>
-      )}
-
-      {/* 首次提示 */}
-      {hint && (
-        <div style={{ position:'absolute', bottom:'3vh', left:'50%', transform:'translateX(-50%)', zIndex:5,
-          fontSize:11, color:'var(--text3)', letterSpacing:2, pointerEvents:'none' }}>點畫面暫停</div>
-      )}
-
-      {/* 進度細條 */}
+      {pausedBadge}{hintTip}
       {len > 0 && (
         <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:'rgba(0,0,0,.05)', zIndex:6 }}>
           <div key={idx} style={{ height:'100%', background:'linear-gradient(90deg,rgba(138,106,58,.7),#c9a86c)',
             width:'0%', animation: paused ? 'none' : `sc-progress ${DWELL + (idx%3)*700}ms linear both` }} />
         </div>
       )}
-
-      <button onClick={e => { e.stopPropagation(); onClose(); }}
-        style={{ position:'absolute', top:14, right:16, zIndex:7, width:38, height:38, borderRadius:'50%',
-          border:'none', background:'rgba(255,255,255,.8)', backdropFilter:'blur(6px)', color:'var(--text2)',
-          fontSize:20, cursor:'pointer', boxShadow:'0 2px 10px rgba(40,40,55,.14)' }}>×</button>
+      {closeBtn}
     </div>
   );
 }
