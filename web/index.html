@@ -1401,10 +1401,10 @@ function ShowcaseMode({ filters, onClose }) {
 
   // 電腦版場景：自動輪播四種版面，各有不同動態調性，看久不膩
   const SCENES = [
-    { key:'wall',      n:8,  swap:2800, cols:4, rows:2, tone:'elegant', card:true,  places:null      }, // 八張牆
-    { key:'mosaic',    n:9,  swap:2000, cols:6, rows:4, tone:'lively',  card:true,  places:MOSAIC    }, // 馬賽克拼貼
-    { key:'spotlight', n:13, swap:2400, cols:6, rows:4, tone:'lively',  card:true,  places:SPOTLIGHT }, // 聚光燈：一大圖＋環繞小圖
-    { key:'solo',      n:1,  swap:4800, cols:1, rows:1, tone:'elegant', card:false, places:null      }, // 單張全螢幕
+    { key:'wall',      n:8,  swap:1600, cols:4, rows:2, places:null      }, // 八張牆
+    { key:'mosaic',    n:9,  swap:1200, cols:6, rows:4, places:MOSAIC    }, // 馬賽克拼貼
+    { key:'spotlight', n:13, swap:1400, cols:6, rows:4, places:SPOTLIGHT }, // 聚光燈：一大圖＋環繞小圖
+    { key:'solo',      n:1,  swap:3200, cols:1, rows:1, places:null      }, // 單張全螢幕
   ];
 
   const [photos, setPhotos] = useState([]);
@@ -1532,23 +1532,26 @@ function ShowcaseMode({ filters, onClose }) {
   //   照片直接呈現，不加白卡外框/邊，只靠間距分格。
   if (wide) {
     const solo = sc.key === 'solo';
-    const m = solo ? 4 : 6;   // 照片與格子邊緣的內縮（%）
     const src = p => (p && (p.thumb_url ? p.thumb_url + '?size=' + (solo ? 1200 : 800) : p.full_url));
 
     // 一張照片一層：只做透明度淡入（新圖蓋在舊圖上淡現），不動 transform
+    //   多格場景 → cover 填滿整格，每格同形同位、對齊乾淨（去背白底不再是大小不一的白方塊）
+    //   單張場景 → contain 完整呈現主角
     const photo = (p, isCur) => {
       if (!p) return null;
+      const base = solo
+        ? { top:'4%', left:'4%', width:'92%', height:'92%', objectFit:'contain',
+            filter:'drop-shadow(0 24px 60px rgba(40,40,55,.16))' }
+        : { inset:0, width:'100%', height:'100%', objectFit:'cover' };
       return (
         <img key={(isCur ? 'c' : 'p') + p.id} src={src(p)} alt=""
-          style={{ position:'absolute', top:m + '%', left:m + '%', width:(100 - 2 * m) + '%', height:(100 - 2 * m) + '%',
-            objectFit:'contain', zIndex: isCur ? 2 : 1, opacity: isCur ? undefined : 1,
-            filter:'drop-shadow(0 14px 34px rgba(40,40,55,.14))',
-            animation: isCur ? `sc-cross ${solo ? 2 : 1.6}s ease both` : 'none' }} />
+          style={{ position:'absolute', ...base, zIndex: isCur ? 2 : 1, opacity: isCur ? undefined : 1,
+            animation: isCur ? `sc-cross ${solo ? 1.5 : 0.9}s ease both` : 'none' }} />
       );
     };
 
-    const gap = solo ? 0 : (sc.cols >= 6 ? 14 : 22);
-    const pad = solo ? 0 : (sc.cols >= 6 ? 20 : 26);
+    const gap = solo ? 0 : (sc.cols >= 6 ? 12 : 18);
+    const pad = solo ? 0 : (sc.cols >= 6 ? 16 : 22);
     return (
       <div {...rootProps}>
         {slots.length === 0 && (
@@ -1566,7 +1569,8 @@ function ShowcaseMode({ filters, onClose }) {
             const dur   = 14 + (i % 5) * 1.7;    // 每格呼吸節奏略不同，避免整齊劃一
             const delay = -(i * 2.3);            // 相位錯開，畫面持續有呼吸感
             return (
-              <div key={i} style={{ position:'relative', ...place }}>
+              <div key={i} style={{ position:'relative', ...place,
+                overflow: solo ? 'visible' : 'hidden', borderRadius: solo ? 0 : 10 }}>
                 {/* 底層：連續緩慢呼吸縮放，換照片時不重置 → 不跳 */}
                 <div style={{ position:'absolute', inset:0, willChange:'transform',
                   animation: `sc-breathe ${dur}s ease-in-out ${delay}s infinite alternate`,
