@@ -676,12 +676,8 @@ button { font-family: inherit; cursor: pointer; }
 @keyframes sc-progress { from { width:0% } to { width:100% } }
 /* 電腦牆：新照片柔和交叉淡入 + 出現後緩慢 zoom in / zoom out（兩方向交錯，絲滑不死板） */
 @keyframes sc-cross { from { opacity:0 } to { opacity:1 } }
-@keyframes sc-zoomin  { from { transform:scale(1.0) }  to { transform:scale(1.11) } }
-@keyframes sc-zoomout { from { transform:scale(1.11) } to { transform:scale(1.0) } }
-/* 馬賽克拼貼：活潑一點的漂移與彈跳進場 */
-@keyframes sc-driftL  { from { transform:scale(1.12) translateX(2%) }  to { transform:scale(1.02) translateX(-2%) } }
-@keyframes sc-driftR  { from { transform:scale(1.12) translateX(-2%) } to { transform:scale(1.02) translateX(2%) } }
-@keyframes sc-pop     { 0% { opacity:0; transform:scale(.82) } 55% { opacity:1; transform:scale(1.04) } 100% { opacity:1; transform:scale(1) } }
+/* 底層連續呼吸縮放：不隨換圖重置，換照片只做純淡入淡出 → 絲滑不跳 */
+@keyframes sc-breathe { from { transform:scale(1.0) } to { transform:scale(1.08) } }
   </style>
 </head>
 <body>
@@ -1429,7 +1425,6 @@ function ShowcaseMode({ filters, onClose }) {
   const DWELL    = 5600;                 // 手機每張停留（毫秒）
   const SWAP_MS  = sc ? sc.swap : 2800;  // 電腦每隔多久換掉一格
   const SCENE_MS = 24000;                // 每個場景播放多久後換版面
-  const DWELL_SC = SWAP_MS * N + 2000;   // 每格顯示期間緩慢 zoom 的時長
 
   const loadMore = React.useCallback(async () => {
     if (loadingRef.current || !hasMoreRef.current) return;
@@ -1532,37 +1527,28 @@ function ShowcaseMode({ filters, onClose }) {
       fontSize:11, color:'var(--text3)', letterSpacing:2, pointerEvents:'none' }}>點畫面暫停</div>
   );
 
-  // ── 電腦版：場景輪播（八張牆 / 馬賽克 / 聚光燈 / 單張），交錯輪換 + 交叉淡入 + 緩慢 zoom/漂移 ──
+  // ── 電腦版：場景輪播（八張牆 / 馬賽克 / 聚光燈 / 單張）──
+  //   縮放放在「不會隨換圖重置」的底層（sc-breathe 連續呼吸），換照片只做純淡入淡出 → 絲滑不跳。
+  //   照片直接呈現，不加白卡外框/邊，只靠間距分格。
   if (wide) {
-    const lively = sc.tone === 'lively';
-    const solo   = sc.key === 'solo';
+    const solo = sc.key === 'solo';
+    const m = solo ? 4 : 6;   // 照片與格子邊緣的內縮（%）
     const src = p => (p && (p.thumb_url ? p.thumb_url + '?size=' + (solo ? 1200 : 800) : p.full_url));
-    const zoomFor = (i, n) => lively
-      ? ['sc-zoomin', 'sc-zoomout', 'sc-driftL', 'sc-driftR'][(i + n) % 4]
-      : ['sc-zoomin', 'sc-zoomout'][(i + n) % 2];
 
-    // 每一層 = 一張照片：外層 div 負責緩慢 zoom/漂移（transform），內層 img 負責進場（淡入/彈跳）
-    const Layer = (p, isCur, i, n) => {
+    // 一張照片一層：只做透明度淡入（新圖蓋在舊圖上淡現），不動 transform
+    const photo = (p, isCur) => {
       if (!p) return null;
-      const wrapAnim = paused ? 'none' : `${zoomFor(i, n)} ${DWELL_SC}ms ease-in-out both`;
-      const imgAnim = paused || !isCur ? 'none'
-        : lively ? 'sc-pop .9s cubic-bezier(.34,1.4,.5,1) both'
-                 : `sc-cross ${solo ? 1.9 : 1.6}s ease both`;
       return (
-        <div key={(isCur ? 'c' : 'p') + p.id + '-' + n}
-          style={{ position:'absolute', inset: solo ? '4%' : '6%', display:'flex',
-            alignItems:'center', justifyContent:'center',
-            zIndex: isCur ? 2 : 1, willChange:'transform', animation: isCur ? wrapAnim : 'none' }}>
-          <img src={src(p)} alt="" style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain',
-            filter: solo ? 'drop-shadow(0 24px 60px rgba(40,40,55,.18))'
-                         : 'drop-shadow(0 14px 34px rgba(40,40,55,.12))',
-            opacity: isCur ? undefined : 1, animation: imgAnim }} />
-        </div>
+        <img key={(isCur ? 'c' : 'p') + p.id} src={src(p)} alt=""
+          style={{ position:'absolute', top:m + '%', left:m + '%', width:(100 - 2 * m) + '%', height:(100 - 2 * m) + '%',
+            objectFit:'contain', zIndex: isCur ? 2 : 1, opacity: isCur ? undefined : 1,
+            filter:'drop-shadow(0 14px 34px rgba(40,40,55,.14))',
+            animation: isCur ? `sc-cross ${solo ? 2 : 1.6}s ease both` : 'none' }} />
       );
     };
 
-    const gap = solo ? 0 : (sc.cols >= 6 ? 12 : 18);
-    const pad = solo ? 0 : (sc.cols >= 6 ? 18 : 24);
+    const gap = solo ? 0 : (sc.cols >= 6 ? 14 : 22);
+    const pad = solo ? 0 : (sc.cols >= 6 ? 20 : 26);
     return (
       <div {...rootProps}>
         {slots.length === 0 && (
@@ -1573,17 +1559,21 @@ function ShowcaseMode({ filters, onClose }) {
           gap, padding: pad, boxSizing:'border-box',
           gridTemplateColumns: `repeat(${sc.cols}, 1fr)`,
           gridTemplateRows:    `repeat(${sc.rows}, 1fr)`,
-          animation: paused ? 'none' : 'sc-fade .9s ease both' }}>
+          animation: paused ? 'none' : 'sc-fade 1s ease both' }}>
           {Array.from({ length: N }).map((_, i) => {
             const s = slots[i];
             const place = sc.places && sc.places[i] ? { gridColumn: sc.places[i].c, gridRow: sc.places[i].r } : {};
+            const dur   = 14 + (i % 5) * 1.7;    // 每格呼吸節奏略不同，避免整齊劃一
+            const delay = -(i * 2.3);            // 相位錯開，畫面持續有呼吸感
             return (
-              <div key={i} style={{ position:'relative', overflow:'hidden', ...place,
-                background: sc.card ? '#fff' : 'transparent',
-                borderRadius: solo ? 0 : (sc.cols >= 6 ? 13 : 16),
-                boxShadow: sc.card ? '0 10px 30px rgba(40,40,55,.10)' : 'none' }}>
-                {s && Layer(s.prev, false, i, s.n)}
-                {s && Layer(s.cur,  true,  i, s.n)}
+              <div key={i} style={{ position:'relative', ...place }}>
+                {/* 底層：連續緩慢呼吸縮放，換照片時不重置 → 不跳 */}
+                <div style={{ position:'absolute', inset:0, willChange:'transform',
+                  animation: `sc-breathe ${dur}s ease-in-out ${delay}s infinite alternate`,
+                  animationPlayState: paused ? 'paused' : 'running' }}>
+                  {s && photo(s.prev, false)}
+                  {s && photo(s.cur,  true)}
+                </div>
               </div>
             );
           })}
