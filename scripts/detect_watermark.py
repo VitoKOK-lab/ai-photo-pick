@@ -46,7 +46,13 @@ def _get_client():
         api_key = os.environ.get("GEMINI_API_KEY", "")
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY 未設定，請在 .env 加入 GEMINI_API_KEY=...")
-        _client = genai.Client(api_key=api_key)
+        # 設定每次請求的連線逾時（毫秒），避免單張卡住整個掃描
+        try:
+            from google.genai import types
+            _client = genai.Client(api_key=api_key,
+                                   http_options=types.HttpOptions(timeout=40000))
+        except Exception:
+            _client = genai.Client(api_key=api_key)
     return _client
 
 
@@ -64,25 +70,31 @@ def detect_text(image_path) -> dict:
     image_path = Path(image_path)
     if not image_path.exists():
         return {"has_text": False, "kind": "錯誤", "sample": f"找不到檔案:{image_path}", "confidence": 0.0}
-    try:
-        client = _get_client()
-        resp = client.models.generate_content(
-            model=GEMINI_MODEL, contents=[_PROMPT, _open_image(image_path)]
-        )
-        raw = resp.text.strip()
-        if "```" in raw:
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        d = json.loads(raw.strip())
-        return {
-            "has_text":   bool(d.get("has_text")),
-            "kind":       str(d.get("kind", "") or "無"),
-            "sample":     str(d.get("sample", "") or "")[:120],
-            "confidence": round(min(max(float(d.get("confidence", 0)), 0.0), 1.0), 3),
-        }
-    except Exception as e:
-        return {"has_text": False, "kind": "錯誤", "sample": str(e)[:120], "confidence": 0.0}
+    import time as _t
+    last_err = ""
+    for attempt in range(2):   # 逾時/連線錯誤時重試一次
+        try:
+            client = _get_client()
+            resp = client.models.generate_content(
+                model=GEMINI_MODEL, contents=[_PROMPT, _open_image(image_path)]
+            )
+            raw = resp.text.strip()
+            if "```" in raw:
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            d = json.loads(raw.strip())
+            return {
+                "has_text":   bool(d.get("has_text")),
+                "kind":       str(d.get("kind", "") or "無"),
+                "sample":     str(d.get("sample", "") or "")[:120],
+                "confidence": round(min(max(float(d.get("confidence", 0)), 0.0), 1.0), 3),
+            }
+        except Exception as e:
+            last_err = str(e)[:120]
+            if attempt == 0:
+                _t.sleep(3)   # 短暫等待再重試（避免偶發逾時/限流）
+    return {"has_text": False, "kind": "錯誤", "sample": last_err, "confidence": 0.0}
 
 
 if __name__ == "__main__":
