@@ -379,13 +379,60 @@ def keep_watermark(photo_id: int):
     return {"kept": photo_id}
 
 
+def _purge_files(row):
+    """刪除一張照片在磁碟上的所有檔案 + 快取縮圖（不含 ChromaDB 向量）。"""
+    for col in ("original_path", "full_path", "thumb_path", "micro_path"):
+        p = row[col] if col in row.keys() else None
+        if p:
+            try:
+                Path(p).unlink(missing_ok=True)
+            except Exception:
+                pass
+    try:
+        from config.settings import PROCESSED_DIR
+        for f in (PROCESSED_DIR / "thumb").glob(f"{row['id']}_*.jpg"):
+            f.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def _purge_vectors(ids):
+    """批次刪除 ChromaDB 向量。"""
+    if not ids:
+        return
+    try:
+        from scripts.db_writer import get_chroma_collection
+        get_chroma_collection().delete(ids=[f"photo_{i}" for i in ids])
+    except Exception:
+        pass
+
+
+@router.post("/delete-flagged-watermark")
+def delete_flagged_watermark():
+    """一次刪除所有被標記為疑似浮水印（watermark_flag=1）的照片。內部工具，不限身分。"""
+    conn = _conn()
+    rows = conn.execute(
+        "SELECT id, original_path, full_path, thumb_path, micro_path FROM photos WHERE watermark_flag = 1"
+    ).fetchall()
+    ids = [r["id"] for r in rows]
+    if ids:
+        placeholders = ",".join("?" * len(ids))
+        conn.execute(f"DELETE FROM photos WHERE id IN ({placeholders})", ids)
+        conn.commit()
+    conn.close()
+    for r in rows:
+        _purge_files(r)
+    _purge_vectors(ids)
+    return {"deleted": len(ids)}
+
+
 @router.delete("/{photo_id}")
 def delete_photo(photo_id: int):
     """永久刪除單張照片：原圖 + 三種尺寸縮圖 + 向量 + 資料列。內部工具，不限身分。"""
     conn = _conn()
     cur = conn.cursor()
     cur.execute(
-        "SELECT original_path, full_path, thumb_path, micro_path FROM photos WHERE id = ?",
+        "SELECT id, original_path, full_path, thumb_path, micro_path FROM photos WHERE id = ?",
         (photo_id,),
     )
     row = cur.fetchone()
@@ -395,25 +442,6 @@ def delete_photo(photo_id: int):
     conn.execute("DELETE FROM photos WHERE id = ?", (photo_id,))
     conn.commit()
     conn.close()
-    # 刪除磁碟上的所有檔案：原圖 + full/thumb/micro
-    for col in ("original_path", "full_path", "thumb_path", "micro_path"):
-        p = row[col] if col in row.keys() else None
-        if p:
-            try:
-                Path(p).unlink(missing_ok=True)
-            except Exception:
-                pass
-    # 刪除快取縮圖（/api/thumb 動態產生的 {id}_{size}.jpg）
-    try:
-        from config.settings import PROCESSED_DIR
-        for f in (PROCESSED_DIR / "thumb").glob(f"{photo_id}_*.jpg"):
-            f.unlink(missing_ok=True)
-    except Exception:
-        pass
-    # 刪除 ChromaDB 向量
-    try:
-        from scripts.db_writer import get_chroma_collection
-        get_chroma_collection().delete(ids=[f"photo_{photo_id}"])
-    except Exception:
-        pass
+    _purge_files(row)
+    _purge_vectors([photo_id])
     return {"deleted": photo_id}

@@ -1679,6 +1679,18 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [quickQuote,  setQuickQuote]  = useState(null);
   const [showcase,    setShowcase]    = useState(false);
   const [wmOnly,      setWmOnly]      = useState(false); // 情境：只看疑似浮水印/文字
+  const [wipeKey,     setWipeKey]     = useState(0);     // 全刪後強制重載相片牆
+
+  const deleteAllFlagged = async () => {
+    try {
+      const d = await (await fetch('/api/photos?photo_type=%E6%83%85%E5%A2%83&watermark=1')).json();
+      const n = d.total || 0;
+      if (n === 0) { alert('目前沒有被標記的照片'); return; }
+      if (!confirm(`確定刪除全部 ${n} 張疑似浮水印/文字的照片？\n（會一併刪除原圖與縮圖，無法復原）`)) return;
+      await fetch('/api/photos/delete-flagged-watermark', { method: 'POST' });
+      setWipeKey(k => k + 1);   // 重載相片牆
+    } catch { alert('刪除失敗，請重試'); }
+  };
 
   const allFilters = {
     ...(catFilter ? { category: catFilter } : {}),
@@ -1734,6 +1746,12 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
                 color: wmOnly ? '#c0392b' : 'var(--text3)', whiteSpace:'nowrap',
               }}>⚠ 疑似浮水印</button>
             )}
+            {photoMode === '情境' && wmOnly && (
+              <button onClick={deleteAllFlagged} title="一次刪除全部被標記的照片" style={{
+                flexShrink:0, padding:'4px 12px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer',
+                border:'none', background:'#c0392b', color:'#fff', whiteSpace:'nowrap',
+              }}>🗑 全部刪除</button>
+            )}
             {Object.entries(CFG).map(([field]) => (
               <FilterDropdown key={field} field={field} cur={filters[field] || null}
                 counts={counts[field] || {}} onPick={v => setF(field, v)} />
@@ -1752,7 +1770,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
       </div>
       <div className="body-row">
         <div className="main">
-          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role}
+          <PhotoGrid key={'grid-' + wipeKey} isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role}
             onQuickQuote={setQuickQuote} />
         </div>
       </div>
