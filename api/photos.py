@@ -86,8 +86,6 @@ def _row_to_dict(row) -> dict:
         "craft_complexity":       _safe(row, "craft_complexity"),
         "metal_color":            _safe(row, "metal_color"),
         "photo_type":          _safe(row, "photo_type"),
-        "watermark_flag":      _safe(row, "watermark_flag"),
-        "watermark_note":      _safe(row, "watermark_note"),
         "price_band":          row["price_band"],
         "price_estimate_low":  row["price_estimate_low"],
         "price_estimate_high": row["price_estimate_high"],
@@ -109,7 +107,6 @@ def list_photos(
     stone_size:   Optional[str] = None,
     metal_color:  Optional[str] = None,
     photo_type:   Optional[str] = None,
-    watermark:    Optional[int] = None,   # 1 = 只看疑似有浮水印/文字的
     page:         int = Query(1, ge=1),
     sort:         str = Query("random", pattern="^(random|newest|popular)$"),
     exclude_seen: bool = False,
@@ -141,8 +138,6 @@ def list_photos(
     add_in("stone_size",     stone_size)
     add_in("metal_color",    metal_color)
     add_in("photo_type",     photo_type)
-    if watermark == 1:
-        wheres.append("watermark_flag = 1")
 
     if exclude_seen and session_id:
         wheres.append(
@@ -369,16 +364,6 @@ def batch_update_photos(body: BatchUpdateBody, _user=Depends(require_editor)):
     return {"updated": len(body.ids)}
 
 
-@router.post("/{photo_id}/keep-watermark")
-def keep_watermark(photo_id: int):
-    """審查後決定保留這張（清除疑似浮水印標記）。內部工具，不限身分。"""
-    conn = _conn()
-    conn.execute("UPDATE photos SET watermark_flag = 0, watermark_note = NULL WHERE id = ?", (photo_id,))
-    conn.commit()
-    conn.close()
-    return {"kept": photo_id}
-
-
 def _purge_files(row):
     """刪除一張照片在磁碟上的所有檔案 + 快取縮圖（不含 ChromaDB 向量）。"""
     for col in ("original_path", "full_path", "thumb_path", "micro_path"):
@@ -405,25 +390,6 @@ def _purge_vectors(ids):
         get_chroma_collection().delete(ids=[f"photo_{i}" for i in ids])
     except Exception:
         pass
-
-
-@router.post("/delete-flagged-watermark")
-def delete_flagged_watermark():
-    """一次刪除所有被標記為疑似浮水印（watermark_flag=1）的照片。內部工具，不限身分。"""
-    conn = _conn()
-    rows = conn.execute(
-        "SELECT id, original_path, full_path, thumb_path, micro_path FROM photos WHERE watermark_flag = 1"
-    ).fetchall()
-    ids = [r["id"] for r in rows]
-    if ids:
-        placeholders = ",".join("?" * len(ids))
-        conn.execute(f"DELETE FROM photos WHERE id IN ({placeholders})", ids)
-        conn.commit()
-    conn.close()
-    for r in rows:
-        _purge_files(r)
-    _purge_vectors(ids)
-    return {"deleted": len(ids)}
 
 
 @router.delete("/{photo_id}")

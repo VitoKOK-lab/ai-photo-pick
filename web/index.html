@@ -1008,12 +1008,6 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
   // 關閉面板時：若正在倒數，視為確認刪除（使用者已按下刪除並離開）
   const handleClose = () => { if (delLeft > 0) finalizeDelete(); else onClose(); };
 
-  // 審查：保留這張（清除疑似浮水印標記）
-  const keepPhoto = () => {
-    fetch('/api/photos/' + photo.id + '/keep-watermark', { method: 'POST' });
-    onUpdated && onUpdated({ ...photo, watermark_flag: 0, watermark_note: null });
-  };
-
   const fav  = isFav(photo.id);
   const STYLE_VALS = new Set(['無鑽','簡約','輕奢','奢華']);
   const gemDisplay = STYLE_VALS.has(photo.gemstone) ? null : photo.gemstone;
@@ -1151,12 +1145,6 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
               <span style={{color:fav?'var(--gold)':'var(--text2)'}}>{fav?'♥':'♡'}</span>
               <span>{fav?'已收藏':'收藏'}</span>
             </button>
-            {onDeleted && photo.watermark_flag === 1 && delLeft === 0 && (
-              <button className="det-icon-btn" onClick={keepPhoto} title="保留這張（清除疑似浮水印標記）">
-                <span style={{color:'var(--gold)'}}>✓</span>
-                <span>保留</span>
-              </button>
-            )}
             {onDeleted && (delLeft > 0 ? (
               <button className="det-icon-btn" onClick={undoDelete} title="復原刪除"
                 style={{background:'rgba(184,147,90,.14)'}}>
@@ -1296,11 +1284,6 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
                 <div className="card-media">
                   <img src={p.thumb_url} alt="" loading="lazy" />
                   {badge && <span className="card-badge">{badge}</span>}
-                  {p.watermark_flag === 1 && (
-                    <span style={{position:'absolute',top:6,left:6,background:'rgba(192,57,43,.92)',color:'#fff',
-                      fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:10,letterSpacing:.5,zIndex:2}}
-                      title={p.watermark_note || '疑似有浮水印/文字'}>⚠ 浮水印</span>
-                  )}
                   {batchMode
                     ? <div className="card-check">{isSel ? '✓' : ''}</div>
                     : <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
@@ -1678,25 +1661,11 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
   const [counts,    setCounts]     = useState({});
   const [quickQuote,  setQuickQuote]  = useState(null);
   const [showcase,    setShowcase]    = useState(false);
-  const [wmOnly,      setWmOnly]      = useState(false); // 情境：只看疑似浮水印/文字
-  const [wipeKey,     setWipeKey]     = useState(0);     // 全刪後強制重載相片牆
-
-  const deleteAllFlagged = async () => {
-    try {
-      const d = await (await fetch('/api/photos?photo_type=%E6%83%85%E5%A2%83&watermark=1')).json();
-      const n = d.total || 0;
-      if (n === 0) { alert('目前沒有被標記的照片'); return; }
-      if (!confirm(`確定刪除全部 ${n} 張疑似浮水印/文字的照片？\n（會一併刪除原圖與縮圖，無法復原）`)) return;
-      await fetch('/api/photos/delete-flagged-watermark', { method: 'POST' });
-      setWipeKey(k => k + 1);   // 重載相片牆
-    } catch { alert('刪除失敗，請重試'); }
-  };
 
   const allFilters = {
     ...(catFilter ? { category: catFilter } : {}),
     ...filters,
     photo_type: photoMode,
-    ...(photoMode === '情境' && wmOnly ? { watermark: 1 } : {}),
   };
 
   useEffect(() => {
@@ -1729,7 +1698,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
           <div className="chips-bar" style={{flex:1,minWidth:0,gap:6,padding:'6px 10px',border:'none'}}>
             <div style={{display:'flex',gap:0,background:'var(--s3)',borderRadius:8,padding:2,flexShrink:0}}>
               {['去背','情境'].map(mode => (
-                <button key={mode} onClick={() => { setPhotoMode(mode); if (mode === '去背') setWmOnly(false); }} style={{
+                <button key={mode} onClick={() => setPhotoMode(mode)} style={{
                   padding:'4px 12px', border:'none', borderRadius:6, fontSize:12, fontWeight:600,
                   cursor:'pointer', transition:'all .18s',
                   background: photoMode===mode ? 'var(--surface)' : 'transparent',
@@ -1738,20 +1707,6 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
                 }}>{mode}</button>
               ))}
             </div>
-            {photoMode === '情境' && (
-              <button onClick={() => setWmOnly(v => !v)} title="只看疑似有浮水印/他牌文字的照片" style={{
-                flexShrink:0, padding:'4px 12px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer',
-                border:'1px solid ' + (wmOnly ? '#c0392b' : 'var(--border)'),
-                background: wmOnly ? 'rgba(192,57,43,.1)' : 'var(--surface)',
-                color: wmOnly ? '#c0392b' : 'var(--text3)', whiteSpace:'nowrap',
-              }}>⚠ 疑似浮水印</button>
-            )}
-            {photoMode === '情境' && wmOnly && (
-              <button onClick={deleteAllFlagged} title="一次刪除全部被標記的照片" style={{
-                flexShrink:0, padding:'4px 12px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer',
-                border:'none', background:'#c0392b', color:'#fff', whiteSpace:'nowrap',
-              }}>🗑 全部刪除</button>
-            )}
             {Object.entries(CFG).map(([field]) => (
               <FilterDropdown key={field} field={field} cur={filters[field] || null}
                 counts={counts[field] || {}} onPick={v => setF(field, v)} />
@@ -1770,7 +1725,7 @@ function BrowseTab({ isFav, toggleFav, role, onStartSwipe }) {
       </div>
       <div className="body-row">
         <div className="main">
-          <PhotoGrid key={'grid-' + wipeKey} isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role}
+          <PhotoGrid isFav={isFav} toggleFav={toggleFav} filters={allFilters} role={role}
             onQuickQuote={setQuickQuote} />
         </div>
       </div>

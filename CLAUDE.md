@@ -48,19 +48,16 @@ CLIP 分類的 11 個維度，全部存進 SQLite `photos` 表：
 - `photo_type` 用 CLIP 語意判斷（prompts.json 有定義），新圖匯入自動分類，舊圖補跑 `python3 -m scripts.classify_photo_type`
 - UI 預設只顯示「去背」照片，篩選列點「照片類型」可切換為「情境」或全部
 
-## 情境照浮水印/他牌文字偵測（Gemini）
+## 情境照浮水印/他牌文字偵測（Gemini，匯入時自動刪）
 
-情境照常夾帶別家浮水印/品牌名/文字。用 Gemini 偵測並「標記」（不自動刪），到 App 審查後刪。
+情境照常夾帶別家浮水印/品牌名/文字。`full_ingest` 內建 STEP 5：每次匯入會用
+Gemini 檢查**新的情境照**，偵測到任何文字/浮水印/他牌名/logo 就**直接刪除**
+（連原圖+縮圖+向量一起移除，不進相簿），乾淨的標記 `watermark_flag=0`（已檢查）。
 
-```bash
-python3 -m scripts.02_migrate           # 先補 watermark_flag 欄位（第一次）
-python3 -m scripts.scan_watermarks      # 掃尚未檢查的情境照 → 標記疑似有文字的
-python3 -m scripts.scan_watermarks --rescan   # 全部情境照重掃
-```
-
-- `full_ingest` 已內建 STEP 5：每次匯入自動掃新情境照並標記（需 GEMINI_API_KEY）
-- App 情境模式點「⚠ 疑似浮水印」篩選 → 逐張審查：確認是他牌就刪（刪除同步移除原圖+縮圖+向量），要留的按「保留」清除標記
-- `watermark_flag`：NULL=未檢查、0=乾淨/已保留、1=疑似有浮水印文字
+- 需要 `GEMINI_API_KEY`（在 .env，與分類同一把）
+- 只檢查 `photo_type='情境'` 且 `watermark_flag IS NULL` 的新照片；去背照不檢查
+- 偵測邏輯在 `scripts/detect_watermark.py`（可單獨測：`python3 -m scripts.detect_watermark <圖>`）
+- 偵測是「有任何可見文字就刪」較寬鬆；若怕誤刪可改嚴 `detect_watermark.py` 的提示詞
 
 ## 驗證 DB 是否完整
 

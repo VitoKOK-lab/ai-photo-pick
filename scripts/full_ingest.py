@@ -290,24 +290,82 @@ def step4_photo_type():
     log.info(f"STEP 4 完成: OK={ok} 跳過={skip} 錯誤={err}")
 
 
-# ── Step 5: 情境照浮水印/文字偵測（只標記，供 App 審查後刪） ─────
+# ── Step 5: 情境照浮水印/他牌文字偵測 → 直接刪除（有文字就不留） ─────
+def _resolve_img(r):
+    """找出照片實際存在的檔案（縮圖優先）。找不到回 None。"""
+    from config.settings import MICRO_DIR
+    cands = [r["thumb_path"], r["full_path"], r["original_path"]]
+    if r["filename"]:
+        for d in (THUMB_DIR, FULL_DIR, MICRO_DIR):
+            cands.append(str(Path(d) / r["filename"]))
+    for c in cands:
+        if c and Path(c).exists():
+            return c
+    return None
+
+
+def _delete_photo_row(conn, r):
+    """刪除一張照片：原圖 + full/thumb/micro + 快取縮圖 + 向量 + 資料列。"""
+    from config.settings import PROCESSED_DIR
+    for col in ("original_path", "full_path", "thumb_path", "micro_path"):
+        p = r[col]
+        if p:
+            try: Path(p).unlink(missing_ok=True)
+            except Exception: pass
+    try:
+        for f in (PROCESSED_DIR / "thumb").glob(f"{r['id']}_*.jpg"):
+            f.unlink(missing_ok=True)
+    except Exception: pass
+    try:
+        from scripts.db_writer import get_chroma_collection
+        get_chroma_collection().delete(ids=[f"photo_{r['id']}"])
+    except Exception: pass
+    conn.execute("DELETE FROM photos WHERE id = ?", (r["id"],))
+    conn.commit()
+
+
 def step5_watermark():
     conn = sqlite3.connect(SQLITE_PATH)
-    n = conn.execute(
-        "SELECT COUNT(*) FROM photos WHERE photo_type='情境' AND watermark_flag IS NULL"
-    ).fetchone()[0]
-    conn.close()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT id, filename, original_path, full_path, thumb_path, micro_path "
+        "FROM photos WHERE photo_type='情境' AND watermark_flag IS NULL ORDER BY id"
+    ).fetchall()
+    total = len(rows)
     log.info(f"\n{'='*60}")
-    log.info(f"STEP 5: 情境照浮水印/文字偵測 — 找到 {n} 張需要檢查")
+    log.info(f"STEP 5: 情境照浮水印/他牌文字偵測（有就刪）— 找到 {total} 張需要檢查")
     log.info(f"{'='*60}")
-    if n == 0:
+    if total == 0:
         log.info("  沒有需要檢查的情境照，跳過")
+        conn.close()
         return
     try:
-        from scripts.scan_watermarks import scan
-        scan(rescan=False)   # 只掃 watermark_flag IS NULL 的情境照
+        from scripts.detect_watermark import detect_text
     except Exception as e:
-        log.error(f"STEP 5 浮水印偵測失敗（略過，不影響匯入）：{e}")
+        log.error(f"STEP 5 無法載入偵測模組，略過：{e}")
+        conn.close()
+        return
+
+    deleted = clean = miss = 0
+    for i, r in enumerate(rows, 1):
+        path = _resolve_img(r)
+        if not path:
+            miss += 1
+            continue
+        res = detect_text(path)
+        if res["kind"] == "錯誤":
+            continue   # 偵測失敗 → 留著（watermark_flag 仍 NULL，下次再檢查）
+        if res["has_text"]:
+            _delete_photo_row(conn, r)
+            deleted += 1
+            log.info(f"  [{i}/{total}] 🗑 刪除 #{r['id']} {r['filename']} — {res['kind']}｜{res['sample']}")
+        else:
+            conn.execute("UPDATE photos SET watermark_flag = 0 WHERE id = ?", (r["id"],))
+            conn.commit()
+            clean += 1
+    conn.close()
+    log.info(f"STEP 5 完成：刪除 {deleted} 張（有浮水印/文字）、乾淨 {clean} 張" +
+             (f"、{miss} 張找不到檔案略過" if miss else ""))
 
 
 # ── Main ──────────────────────────────────────────────────
