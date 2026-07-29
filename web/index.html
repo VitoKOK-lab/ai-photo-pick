@@ -1534,7 +1534,8 @@ function ShowcaseMode({ filters, onClose }) {
   const len  = pool ? pool.length : 0;
   const at   = i => (len ? pool[((i % len) + len) % len] : null);
 
-  const BG = 'radial-gradient(ellipse at 50% 38%, #ffffff 0%, #eef0f3 78%, #e7e9ee 100%)';
+  // 暗色精品櫥窗：深色場 + 中央微光，珠寶像被燈打亮的展品
+  const BG = 'radial-gradient(ellipse at 50% 40%, #26262f 0%, #151519 66%, #0a0a0e 100%)';
   const rootProps = {
     onClick: () => { setPaused(x => !x); setHint(false); },
     style: { position:'fixed', inset:0, zIndex:960, overflow:'hidden', cursor:'pointer', background:BG },
@@ -1553,7 +1554,7 @@ function ShowcaseMode({ filters, onClose }) {
   );
   const hintTip = hint && (
     <div style={{ position:'absolute', bottom:'3vh', left:'50%', transform:'translateX(-50%)', zIndex:5,
-      fontSize:11, color:'var(--text3)', letterSpacing:2, pointerEvents:'none' }}>點畫面暫停</div>
+      fontSize:11, color:'rgba(255,255,255,.5)', letterSpacing:2, pointerEvents:'none' }}>點畫面暫停</div>
   );
 
   // ── 電腦版：版面輪播（八張牆 / 馬賽克 / 聚光燈），去背與情境輪流 ──
@@ -1579,7 +1580,7 @@ function ShowcaseMode({ filters, onClose }) {
       <div {...rootProps}>
         {slots.length === 0 && (
           <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
-            color:'var(--text3)', fontSize:14, letterSpacing:2 }}>載入中…</div>
+            color:'rgba(255,255,255,.5)', fontSize:14, letterSpacing:2 }}>載入中…</div>
         )}
         <div key={sc.key + scene} style={{ position:'absolute', inset:0, display:'grid',
           gap, padding: pad, boxSizing:'border-box',
@@ -1592,7 +1593,7 @@ function ShowcaseMode({ filters, onClose }) {
             const delay = -(i * 2.3);            // 相位錯開，畫面持續有呼吸感
             return (
               <div key={i} style={{ position:'relative', ...place, overflow:'hidden', borderRadius:12,
-                boxShadow:'0 16px 38px -14px rgba(40,40,55,.28)',   // 輕微浮起，像裱在牆上的展品
+                boxShadow:'0 22px 50px -12px rgba(0,0,0,.65)',   // 深色場上的展品浮起感
                 animation: `sc-rise .85s cubic-bezier(.22,1,.36,1) ${(i % 12) * 0.06}s both` }}>
                 {/* 底層：連續緩慢呼吸縮放，換照片時不重置 → 不跳 */}
                 <div style={{ position:'absolute', inset:0, willChange:'transform',
@@ -1605,9 +1606,9 @@ function ShowcaseMode({ filters, onClose }) {
             );
           })}
         </div>
-        {/* 柔和暗角：像櫥窗打燈，聚焦中央 */}
+        {/* 櫥窗暗角：四周壓深，聚焦中央打燈區 */}
         <div style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex:4,
-          background:'radial-gradient(ellipse at 50% 44%, transparent 50%, rgba(34,34,48,.11) 100%)' }} />
+          background:'radial-gradient(ellipse at 50% 42%, transparent 42%, rgba(0,0,0,.5) 100%)' }} />
         {pausedBadge}{hintTip}{closeBtn}
       </div>
     );
