@@ -674,10 +674,12 @@ button { font-family: inherit; cursor: pointer; }
 .sc-frame img { max-width:88%; max-height:82%; object-fit:contain; will-change:transform;
   filter: drop-shadow(0 24px 60px rgba(40,40,55,.18)); }
 @keyframes sc-progress { from { width:0% } to { width:100% } }
-/* 電腦牆：新照片柔和交叉淡入 + 出現後緩慢 zoom in / zoom out（兩方向交錯，絲滑不死板） */
+/* 電腦牆：新照片柔和交叉淡入（電影感緩入曲線） */
 @keyframes sc-cross { from { opacity:0 } to { opacity:1 } }
 /* 底層連續呼吸縮放：不隨換圖重置，換照片只做純淡入淡出 → 絲滑不跳 */
-@keyframes sc-breathe { from { transform:scale(1.0) } to { transform:scale(1.08) } }
+@keyframes sc-breathe { from { transform:scale(1.0) } to { transform:scale(1.075) } }
+/* 換場景時：一格一格錯開浮現（精品層次感） */
+@keyframes sc-rise { from { opacity:0; transform:translateY(14px) scale(.985) } to { opacity:1; transform:translateY(0) scale(1) } }
   </style>
 </head>
 <body>
@@ -1567,12 +1569,12 @@ function ShowcaseMode({ filters, onClose }) {
         <img key={(isCur ? 'c' : 'p') + p.id} src={src(p)} alt=""
           style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover',
             zIndex: isCur ? 2 : 1, opacity: isCur ? undefined : 1,
-            animation: isCur ? 'sc-cross 0.9s ease both' : 'none' }} />
+            animation: isCur ? 'sc-cross 1s cubic-bezier(.22,1,.36,1) both' : 'none' }} />
       );
     };
 
-    const gap = sc.cols >= 6 ? 12 : 18;
-    const pad = sc.cols >= 6 ? 16 : 22;
+    const gap = sc.cols >= 6 ? 14 : 20;
+    const pad = sc.cols >= 6 ? 22 : 30;
     return (
       <div {...rootProps}>
         {slots.length === 0 && (
@@ -1582,15 +1584,16 @@ function ShowcaseMode({ filters, onClose }) {
         <div key={sc.key + scene} style={{ position:'absolute', inset:0, display:'grid',
           gap, padding: pad, boxSizing:'border-box',
           gridTemplateColumns: `repeat(${sc.cols}, 1fr)`,
-          gridTemplateRows:    `repeat(${sc.rows}, 1fr)`,
-          animation: paused ? 'none' : 'sc-fade 1s ease both' }}>
+          gridTemplateRows:    `repeat(${sc.rows}, 1fr)` }}>
           {Array.from({ length: N }).map((_, i) => {
             const s = slots[i];
             const place = sc.places && sc.places[i] ? { gridColumn: sc.places[i].c, gridRow: sc.places[i].r } : {};
-            const dur   = 14 + (i % 5) * 1.7;    // 每格呼吸節奏略不同，避免整齊劃一
+            const dur   = 15 + (i % 5) * 1.8;    // 每格呼吸節奏略不同，避免整齊劃一
             const delay = -(i * 2.3);            // 相位錯開，畫面持續有呼吸感
             return (
-              <div key={i} style={{ position:'relative', ...place, overflow:'hidden', borderRadius:10 }}>
+              <div key={i} style={{ position:'relative', ...place, overflow:'hidden', borderRadius:12,
+                boxShadow:'0 16px 38px -14px rgba(40,40,55,.28)',   // 輕微浮起，像裱在牆上的展品
+                animation: `sc-rise .85s cubic-bezier(.22,1,.36,1) ${(i % 12) * 0.06}s both` }}>
                 {/* 底層：連續緩慢呼吸縮放，換照片時不重置 → 不跳 */}
                 <div style={{ position:'absolute', inset:0, willChange:'transform',
                   animation: `sc-breathe ${dur}s ease-in-out ${delay}s infinite alternate`,
@@ -1602,6 +1605,9 @@ function ShowcaseMode({ filters, onClose }) {
             );
           })}
         </div>
+        {/* 柔和暗角：像櫥窗打燈，聚焦中央 */}
+        <div style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex:4,
+          background:'radial-gradient(ellipse at 50% 44%, transparent 50%, rgba(34,34,48,.11) 100%)' }} />
         {pausedBadge}{hintTip}{closeBtn}
       </div>
     );
