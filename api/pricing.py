@@ -4,9 +4,8 @@ import sqlite3
 import sys
 from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from api.auth import require_admin
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config.settings import PRICING_DB_PATH
@@ -568,7 +567,7 @@ def get_all_pricing():
 
 # ─── Admin update endpoints ────────────────────────────────────
 @router.put("/metals/{material}")
-def update_metal(material: str, body: MetalUpdate, _user=Depends(require_admin)):
+def update_metal(material: str, body: MetalUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_metals WHERE material=?", (material,)).fetchone()
     if not r:
@@ -582,7 +581,7 @@ def update_metal(material: str, body: MetalUpdate, _user=Depends(require_admin))
 
 
 @router.put("/labor/{category}/{complexity}")
-def update_labor(category: str, complexity: str, body: LaborUpdate, _user=Depends(require_admin)):
+def update_labor(category: str, complexity: str, body: LaborUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_labor WHERE category=? AND complexity=?", (category, complexity)).fetchone()
     if not r:
@@ -596,7 +595,7 @@ def update_labor(category: str, complexity: str, body: LaborUpdate, _user=Depend
 
 
 @router.put("/stones-invest/{stone_key}/{band}")
-def update_stone_band(stone_key: str, band: str, body: StoneBandUpdate, _user=Depends(require_admin)):
+def update_stone_band(stone_key: str, band: str, body: StoneBandUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_stones_invest WHERE stone_key=? AND band=?", (stone_key, band)).fetchone()
     if not r:
@@ -610,7 +609,7 @@ def update_stone_band(stone_key: str, band: str, body: StoneBandUpdate, _user=De
 
 
 @router.put("/stones-commercial/{stone_key}")
-def update_commercial_stone(stone_key: str, body: CommercialStoneUpdate, _user=Depends(require_admin)):
+def update_commercial_stone(stone_key: str, body: CommercialStoneUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_stones_commercial WHERE stone_key=?", (stone_key,)).fetchone()
     if not r:
@@ -624,7 +623,7 @@ def update_commercial_stone(stone_key: str, body: CommercialStoneUpdate, _user=D
 
 
 @router.put("/sidestones/{label}")
-def update_sidestone(label: str, body: SidestoneUpdate, _user=Depends(require_admin)):
+def update_sidestone(label: str, body: SidestoneUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_sidestones WHERE label=?", (label,)).fetchone()
     if not r:
@@ -638,7 +637,7 @@ def update_sidestone(label: str, body: SidestoneUpdate, _user=Depends(require_ad
 
 
 @router.put("/stones-commercial-carat/{stone_key}/{ct_label}")
-def update_commercial_carat(stone_key: str, ct_label: str, body: CommercialStoneUpdate, _user=Depends(require_admin)):
+def update_commercial_carat(stone_key: str, ct_label: str, body: CommercialStoneUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_commercial_carat WHERE stone_key=? AND ct_label=?", (stone_key, ct_label)).fetchone()
     if not r:
@@ -656,7 +655,7 @@ class WeightUpdate(BaseModel):
     weight_max: float
 
 @router.put("/weights/{label}")
-def update_weight(label: str, body: WeightUpdate, _user=Depends(require_admin)):
+def update_weight(label: str, body: WeightUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_weights WHERE label=?", (label,)).fetchone()
     if not r:
@@ -674,7 +673,7 @@ class PlatingUpdate(BaseModel):
     price_max: int
 
 @router.put("/plating/{label}")
-def update_plating(label: str, body: PlatingUpdate, _user=Depends(require_admin)):
+def update_plating(label: str, body: PlatingUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_plating WHERE label=?", (label,)).fetchone()
     if not r:
@@ -691,7 +690,7 @@ class MultiplierUpdate(BaseModel):
     multiplier: float
 
 @router.put("/stone-origins/{stone_key}/{origin}")
-def update_stone_origin(stone_key: str, origin: str, body: MultiplierUpdate, _user=Depends(require_admin)):
+def update_stone_origin(stone_key: str, origin: str, body: MultiplierUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_stone_origins WHERE stone_key=? AND origin=?", (stone_key, origin)).fetchone()
     if not r:
@@ -705,7 +704,7 @@ def update_stone_origin(stone_key: str, origin: str, body: MultiplierUpdate, _us
 
 
 @router.put("/stone-treatments/{stone_key}/{treatment}")
-def update_stone_treatment(stone_key: str, treatment: str, body: MultiplierUpdate, _user=Depends(require_admin)):
+def update_stone_treatment(stone_key: str, treatment: str, body: MultiplierUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_stone_treatments WHERE stone_key=? AND treatment=?", (stone_key, treatment)).fetchone()
     if not r:
@@ -719,7 +718,7 @@ def update_stone_treatment(stone_key: str, treatment: str, body: MultiplierUpdat
 
 
 @router.put("/stone-colors/{stone_key}/{color_quality}")
-def update_stone_color(stone_key: str, color_quality: str, body: MultiplierUpdate, _user=Depends(require_admin)):
+def update_stone_color(stone_key: str, color_quality: str, body: MultiplierUpdate):
     conn = _conn()
     r = conn.execute("SELECT id FROM pricing_stone_colors WHERE stone_key=? AND color_quality=?", (stone_key, color_quality)).fetchone()
     if not r:
@@ -740,7 +739,7 @@ class SidestonesV2Update(BaseModel):
     price_max: int
 
 @router.put("/labor-config/{key}")
-def update_labor_config(key: str, body: LaborConfigUpdate, _user=Depends(require_admin)):
+def update_labor_config(key: str, body: LaborConfigUpdate):
     conn = _conn()
     conn.execute("INSERT OR REPLACE INTO pricing_labor_config (key, value) VALUES (?,?)", (key, body.value))
     conn.commit()
@@ -748,7 +747,7 @@ def update_labor_config(key: str, body: LaborConfigUpdate, _user=Depends(require
     return {"ok": True}
 
 @router.put("/sidestones-v2/{stone_type}/{qty_band}")
-def update_sidestone_v2(stone_type: str, qty_band: str, body: SidestonesV2Update, _user=Depends(require_admin)):
+def update_sidestone_v2(stone_type: str, qty_band: str, body: SidestonesV2Update):
     conn = _conn()
     conn.execute(
         "INSERT OR REPLACE INTO pricing_sidestones_v2 (stone_type, qty_band, price_min, price_max) VALUES (?,?,?,?)",

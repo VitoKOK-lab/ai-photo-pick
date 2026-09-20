@@ -198,24 +198,13 @@ button { font-family: inherit; cursor: pointer; }
 .det-panel { width: 100%; max-height: 80vh; background: var(--surface); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; overflow: hidden; position: relative; animation: up .25s cubic-bezier(.32,.72,0,1); box-shadow: var(--shadow2); }
 .det-handle { width: 36px; height: 4px; background: var(--s3); border-radius: 2px; margin: 10px auto 0; flex-shrink: 0; }
 .det-x { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%; background: var(--s3); border: none; font-size: 18px; color: var(--text2); display: flex; align-items: center; justify-content: center; z-index: 1; }
-.det-hd-bar { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.det-back { width: 32px; height: 32px; border-radius: 50%; background: var(--s3); border: none; font-size: 16px; display: flex; align-items: center; justify-content: center; color: var(--text); }
-.det-hd-title { font-size: 15px; font-weight: 600; flex: 1; }
 .det-left { flex-shrink: 0; }
 .det-img { width: 100%; aspect-ratio: 1; max-height: none; object-fit: cover; display: block; background: var(--s3); }
 .det-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 .det-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .det-tags { padding: 12px 16px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { padding: 4px 11px; background: var(--s3); border-radius: 20px; font-size: 12px; color: var(--text2); }
-/* Action bar */
-.det-actions { display: flex; align-items: center; padding: 10px 16px 18px; border-top: 1px solid var(--border); gap: 8px; flex-shrink: 0; background: var(--surface); }
-.det-icon-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 10px; min-width: 48px; transition: background .15s; touch-action: manipulation; }
-.det-icon-btn:active { background: var(--s3); }
-.det-icon-btn span:first-child { font-size: 20px; line-height: 1; }
-.det-icon-btn span:last-child { font-size: 10px; color: var(--text3); font-weight: 500; white-space: nowrap; }
-.det-icon-btn.fav-on span:last-child { color: var(--gold); }
 .det-divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
-.det-cta { background: var(--gold); color: #fff; border: none; border-radius: 10px; padding: 11px 20px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; touch-action: manipulation; }
 .det-edit-btn { background: var(--s3); color: var(--text2); border: none; border-radius: 10px; padding: 11px 14px; font-size: 16px; cursor: pointer; touch-action: manipulation; }
 .db { padding: 13px; border-radius: var(--r); border: none; font-size: 13px; font-weight: 600; touch-action: manipulation; position: relative; z-index: 2; }
 .db-fav { background: var(--s3); color: var(--text); }
@@ -224,15 +213,7 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ── Edit panel ─────────────────────────────────────────── */
 .db-edit { background: var(--s3); color: var(--text2); }
-.edit-panel { padding: 14px 16px 20px; }
-.edit-row { margin-bottom: 12px; }
-.edit-label { font-size: 11px; font-weight: 600; letter-spacing: .5px; color: var(--text3); margin-bottom: 6px; }
-.edit-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.edit-chip { padding: 6px 13px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface); font-size: 13px; color: var(--text2); cursor: pointer; }
-.edit-chip.on { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 600; }
 .edit-actions { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 14px; }
-.db-save { background: var(--accent); color: #fff; }
-.db-del { background: none; border: 1px solid #e8c4c4; color: #c0392b; font-size: 11px; font-weight: 400; padding: 0; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
 /* similar view */
 .sim-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 3px; }
@@ -950,67 +931,13 @@ function PinchImage({ src, className }) {
 }
 
 /* ── Photo detail ───────────────────────────────────── */
-function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDeleted, onUpdated, role }) {
-  const isAdmin = role === 'admin';
-  const isStaff = role === 'admin' || role === 'editor';
+function PhotoDetail({ photo, onClose }) {
   const openedAt = useRef(Date.now());
   useEffect(() => {
     logEvent(photo.id, 'view');
     return () => logEvent(photo.id, 'dwell', { dwell_ms: Date.now() - openedAt.current });
   }, [photo.id]);
 
-  const [view,    setView]    = useState('detail'); // 'detail' | 'quote'
-  const [editCat,   setEditCat]   = useState(photo.category        || '');
-  const [editSty,   setEditSty]   = useState(photo.style           || '');
-  const [editChain, setEditChain] = useState(photo.setting_amount  || '');
-  const [editCraft, setEditCraft] = useState(photo.craft_complexity|| '');
-  const [editMetal, setEditMetal] = useState(photo.metal_color     || '');
-  const [saving,    setSaving]    = useState(false);
-  const [delLeft,   setDelLeft]   = useState(0);   // 刪除倒數；>0 時同一按鍵變成「復原」
-  const delTimer = useRef(null), delTick = useRef(null);
-  const clearDel = () => { clearTimeout(delTimer.current); clearInterval(delTick.current); };
-
-  useEffect(() => {
-    setView('detail');
-    clearDel(); setDelLeft(0);   // 切換照片時取消未完成的刪除倒數
-    setEditCat(photo.category || ''); setEditSty(photo.style || '');
-    setEditChain(photo.setting_amount || ''); setEditCraft(photo.craft_complexity || '');
-    setEditMetal(photo.metal_color || '');
-  }, [photo.id]);
-  useEffect(() => () => clearDel(), []);   // 卸載時清掉計時器
-
-  const doSave = async () => {
-    setSaving(true);
-    try {
-      const res = await fetch('/api/photos/' + photo.id, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: editCat, style: editSty, setting_amount: editChain, craft_complexity: editCraft, metal_color: editMetal }),
-      });
-      const updated = await res.json();
-      onUpdated && onUpdated(updated);
-      setView('detail');
-    } catch { alert('儲存失敗'); }
-    setSaving(false);
-  };
-
-  // 刪除：按下 → 同一按鍵變「復原」倒數 10 秒；期間不動後端，倒數結束才真的刪
-  const finalizeDelete = () => {
-    clearDel();
-    fetch('/api/photos/' + photo.id, { method: 'DELETE' });
-    onDeleted && onDeleted(photo.id);
-    onClose();
-  };
-  const startDelete = () => {
-    setDelLeft(10);
-    delTick.current  = setInterval(() => setDelLeft(n => (n > 1 ? n - 1 : n)), 1000);
-    delTimer.current = setTimeout(finalizeDelete, 10000);
-  };
-  const undoDelete = () => { clearDel(); setDelLeft(0); };
-  // 關閉面板時：若正在倒數，視為確認刪除（使用者已按下刪除並離開）
-  const handleClose = () => { if (delLeft > 0) finalizeDelete(); else onClose(); };
-
-  const fav  = isFav(photo.id);
   const STYLE_VALS = new Set(['無鑽','簡約','輕奢','奢華']);
   const gemDisplay = STYLE_VALS.has(photo.gemstone) ? null : photo.gemstone;
   const ok = v => v && v !== '未定';
@@ -1027,82 +954,12 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
     ['用料',   photo.metal_weight],
   ].filter(([, v]) => ok(v));
 
-  /* Edit view */
-  if (view === 'edit') return (
-    <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="det-panel" style={{flexDirection:'column'}}>
-        <div className="det-hd-bar">
-          <button className="det-back" onClick={() => setView('detail')}>←</button>
-          <span className="det-hd-title">修改分類</span>
-          <button className="db db-del" onClick={() => { startDelete(); setView('detail'); }} title="刪除照片">🗑</button>
-          <button className="det-x" style={{position:'static',width:30,height:30}} onClick={onClose}>×</button>
-        </div>
-        <div className="det-scroll">
-          <img src={photo.thumb_url} alt="" style={{width:'100%',maxHeight:220,objectFit:'contain',background:'#f9f9f9'}} />
-          <div className="edit-panel">
-            <div className="edit-row">
-              <div className="edit-label">品項</div>
-              <div className="edit-chips">
-                {CATS.map(v => (
-                  <button key={v} className={'edit-chip' + (editCat === v ? ' on' : '')} onClick={() => setEditCat(v)}>{v}</button>
-                ))}
-              </div>
-            </div>
-            <div className="edit-row">
-              <div className="edit-label">鑽石數量</div>
-              <div className="edit-chips">
-                {CFG.style.values.map(v => (
-                  <button key={v} className={'edit-chip' + (editSty === v ? ' on' : '')} onClick={() => setEditSty(v)}>{v}</button>
-                ))}
-              </div>
-            </div>
-            <div className="edit-row">
-              <div className="edit-label">用料多寡</div>
-              <div className="edit-chips">
-                {['少','正常','多'].map(v => (
-                  <button key={v} className={'edit-chip' + (editChain === v ? ' on' : '')} onClick={() => setEditChain(v)}>{v}</button>
-                ))}
-              </div>
-            </div>
-            <div className="edit-row">
-              <div className="edit-label">做工複雜</div>
-              <div className="edit-chips">
-                {['極簡','普通','複雜','極複雜'].map(v => (
-                  <button key={v} className={'edit-chip' + (editCraft === v ? ' on' : '')} onClick={() => setEditCraft(v)}>{v}</button>
-                ))}
-              </div>
-            </div>
-            <div className="edit-row">
-              <div className="edit-label">金工顏色</div>
-              <div className="edit-chips">
-                {['金','銀'].map(v => (
-                  <button key={v} className={'edit-chip' + (editMetal === v ? ' on' : '')} onClick={() => setEditMetal(v)}>{v}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style={{padding:'10px 16px 20px',borderTop:'1px solid var(--border)',flexShrink:0}}>
-          <button className="db db-save" style={{width:'100%'}} onClick={doSave} disabled={saving}>
-            {saving ? '儲存中…' : '✓ 儲存'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  /* Similar view */
-  /* Quote flow view */
-  if (view === 'quote') return (
-    <QuickQuote photo={photo} onClose={() => setView('detail')} />
-  );
-
-  /* Detail view */
+  /* 純看圖 + 明細：可縮放（PinchImage 內建）、無收藏/刪除/估價 */
   return (
-    <div className="det-ovl" onClick={e => e.target === e.currentTarget && handleClose()}>
+    <div className="det-ovl" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="det-panel">
-        <button className="det-x" onClick={handleClose}>×</button>
-        <div className="det-left" style={{opacity: delLeft > 0 ? 0.4 : 1, transition:'opacity .3s'}}>
+        <button className="det-x" onClick={onClose}>×</button>
+        <div className="det-left">
           <div className="det-handle" />
           <PinchImage className="det-img" src={photo.full_url} />
         </div>
@@ -1129,7 +986,7 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
             </div>
             <div style={{borderTop:'1px solid var(--border)',margin:'12px 22px 0'}} />
             {/* 規格表 */}
-            <div style={{padding:'14px 22px 18px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px 20px'}}>
+            <div style={{padding:'14px 22px 22px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px 20px'}}>
               {SPECS.map(([label, value]) => (
                 <div key={label}>
                   <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:'var(--text3)',marginBottom:3}}>{label}</div>
@@ -1140,27 +997,6 @@ function PhotoDetail({ photo, onClose, isFav, toggleFav, onSelectPhoto, onDelete
                 <div style={{gridColumn:'1 / -1',fontSize:13,color:'var(--text3)'}}>尚未分類</div>
               )}
             </div>
-          </div>
-          {/* Fixed action bar */}
-          <div className="det-actions">
-            <button className={'det-icon-btn' + (fav?' fav-on':'')} onClick={() => toggleFav(photo)}>
-              <span style={{color:fav?'var(--gold)':'var(--text2)'}}>{fav?'♥':'♡'}</span>
-              <span>{fav?'已收藏':'收藏'}</span>
-            </button>
-            {onDeleted && (delLeft > 0 ? (
-              <button className="det-icon-btn" onClick={undoDelete} title="復原刪除"
-                style={{background:'rgba(184,147,90,.14)'}}>
-                <span style={{color:'var(--gold)'}}>↩</span>
-                <span>復原 {delLeft}</span>
-              </button>
-            ) : (
-              <button className="det-icon-btn" onClick={startDelete} title="刪除照片">
-                <span style={{color:'#c0392b'}}>🗑</span>
-                <span>刪除</span>
-              </button>
-            ))}
-            <div style={{flex:1}} />
-            <button className="det-cta" onClick={() => setView('quote')}>💎 估價</button>
           </div>
         </div>
       </div>
@@ -1319,18 +1155,7 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
         <div ref={sentinelRef} className="sentinel" />
       </div>
 
-      {detail && (
-        <PhotoDetail
-          photo={detail}
-          onClose={() => setDetail(null)}
-          isFav={isFav}
-          toggleFav={toggleFav}
-          onSelectPhoto={p => setDetail(p)}
-          role={role}
-          onDeleted={id => { setPhotos(prev => prev.filter(p => p.id !== id)); setDetail(null); }}
-          onUpdated={updated => { setPhotos(prev => prev.map(p => p.id === updated.id ? {...p, ...updated} : p)); setDetail(updated); }}
-        />
-      )}
+      {detail && <PhotoDetail photo={detail} onClose={() => setDetail(null)} />}
     </>
   );
 }
@@ -1815,13 +1640,7 @@ function FavsTab({ favs, isFav, toggleFav, clearFavs, role }) {
           </div>
         </div>
       </div>
-      {detail && (
-        <PhotoDetail photo={detail} onClose={() => setDetail(null)}
-          isFav={isFav} toggleFav={toggleFav} onSelectPhoto={p => setDetail(p)}
-          role={role}
-          onDeleted={id => { toggleFav(favs.find(p => p.id === id) || {id}); setDetail(null); }}
-          onUpdated={updated => { setDetail(updated); }} />
-      )}
+      {detail && <PhotoDetail photo={detail} onClose={() => setDetail(null)} />}
     </>
   );
 }
@@ -4562,15 +4381,7 @@ function GuestFavViewModal({ link, onClose }) {
       {/* PhotoDetail overlay — transform creates new fixed containing block above modal z-index */}
       {selectedPhoto && (
         <div style={{position:'fixed',inset:0,zIndex:900,transform:'translateZ(0)'}}>
-          <PhotoDetail
-            photo={selectedPhoto}
-            onClose={() => setSelectedPhoto(null)}
-            isFav={() => false}
-            toggleFav={() => {}}
-            role={role}
-            onDeleted={null}
-            onUpdated={null}
-          />
+          <PhotoDetail photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
         </div>
       )}
     </>
@@ -4586,14 +4397,6 @@ function App() {
   const [splash,           setSplash]           = useState(() => !sessionStorage.getItem('splashSeen'));
   const [tab,              setTab]              = useState('browse');
   const [favs,             setFavs]             = useState(loadFavs);
-  const [settingsUnlocked, setSettingsUnlocked] = useState(false);
-
-  // 免登入使用；只有「估價設定」需要密碼。401 時重新上鎖設定。
-  useEffect(() => {
-    const onExpire = () => { clearJwtAuth(); setSettingsUnlocked(false); };
-    window.addEventListener('authExpired', onExpire);
-    return () => window.removeEventListener('authExpired', onExpire);
-  }, []);
 
   const toggleFav = photo => setFavs(prev => {
     const isCurrent = prev.some(p => p.id === photo.id);
@@ -4627,9 +4430,7 @@ function App() {
         {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role="admin" />}
         {tab === 'settings'  && (
           <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',paddingTop:'var(--nav-h)'}}>
-            {settingsUnlocked
-              ? <PricingParamsPanel />
-              : <SettingsGate onUnlock={() => setSettingsUnlocked(true)} />}
+            <PricingParamsPanel />
           </div>
         )}
       </div>
@@ -4644,45 +4445,6 @@ function App() {
         <button className={'tab-btn' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>設定</button>
       </nav>
     </React.Fragment>
-  );
-}
-
-/* ── 設定密碼閘：免登入使用，只有進「設定」改價格才要密碼 ── */
-function SettingsGate({ onUnlock }) {
-  const [pw, setPw] = useState('');
-  const [err, setErr] = useState('');
-  const [loading, setLoading] = useState(false);
-  async function submit() {
-    if (!pw.trim()) return;
-    setLoading(true); setErr('');
-    try {
-      const r = await fetch('/api/auth/unlock-settings', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pw }),
-      });
-      if (r.ok) { const d = await r.json(); localStorage.setItem('jwt_token', d.token); onUnlock(); }
-      else { setErr('密碼錯誤'); setPw(''); }
-    } catch { setErr('網路錯誤，請重試'); }
-    setLoading(false);
-  }
-  return (
-    <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,padding:24}}>
-      <div style={{fontSize:30,color:'var(--gold)'}}>🔒</div>
-      <div style={{fontSize:16,fontWeight:700,color:'var(--text)',letterSpacing:1}}>估價設定</div>
-      <div style={{fontSize:13,color:'var(--text3)'}}>請輸入密碼以修改價格</div>
-      <input type="password" autoFocus value={pw}
-        onChange={e => { setPw(e.target.value); setErr(''); }}
-        onKeyDown={e => e.key === 'Enter' && submit()}
-        placeholder="密碼"
-        style={{width:'100%',maxWidth:280,border:'1.5px solid var(--border)',borderRadius:12,padding:'12px 16px',
-          fontSize:15,textAlign:'center',outline:'none',background:'var(--surface)',color:'var(--text)',fontFamily:'inherit',marginTop:4}} />
-      {err && <div style={{fontSize:12,color:'#c62828'}}>{err}</div>}
-      <button onClick={submit} disabled={loading}
-        style={{background:'var(--accent)',color:'#fff',border:'none',borderRadius:12,padding:'11px 34px',
-          fontSize:14,fontWeight:700,cursor:'pointer',opacity:loading?0.6:1,letterSpacing:2}}>
-        {loading ? '驗證中…' : '解鎖'}
-      </button>
-    </div>
   );
 }
 
