@@ -1122,18 +1122,7 @@ function PhotoGrid({ isFav, toggleFav, filters, role, batchMode, selectedIds, on
                 <div className="card-media">
                   <img src={p.thumb_url} alt="" loading="lazy" />
                   {badge && <span className="card-badge">{badge}</span>}
-                  {batchMode
-                    ? <div className="card-check">{isSel ? '✓' : ''}</div>
-                    : <button className={'card-fav' + (isFav(p.id) ? ' on' : '')}
-                        onClick={e => { e.stopPropagation(); toggleFav(p); }}>
-                        {isFav(p.id) ? '♥' : '♡'}
-                      </button>
-                  }
-                  {!batchMode && onQuickQuote && (
-                    <button className="card-quote" onClick={e => { e.stopPropagation(); onQuickQuote(p); }}>
-                      💎
-                    </button>
-                  )}
+                  {batchMode && <div className="card-check">{isSel ? '✓' : ''}</div>}
                 </div>
                 <div className="card-lbl">
                   <div className="card-lbl-title">
@@ -4407,7 +4396,6 @@ function App() {
   });
   const clearFavs = () => { setFavs([]); saveFavs([]); };
   const isFav = id => favs.some(p => p.id === id);
-  const favCount = favs.length;
   const dismissSplash = () => { sessionStorage.setItem('splashSeen', '1'); setSplash(false); };
 
   return (
@@ -4418,30 +4406,19 @@ function App() {
         <span className="nav-logo" style={{cursor:'pointer'}} onClick={() => setSplash(true)}>Tahir Zainab Selection</span>
         <div className="nav-tabs">
           <button className={'nav-tab' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>照片庫</button>
-          <button className={'nav-tab' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
-            收藏 {favCount > 0 && <span className="badge">{favCount}</span>}
-          </button>
-          <button className={'nav-tab' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>估價</button>
           <button className={'nav-tab' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>設定</button>
         </div>
       </header>
       <div className="content">
         {tab === 'browse'    && <BrowseTab isFav={isFav} toggleFav={toggleFav} role="admin" />}
-        {tab === 'favorites' && <FavsTab favs={favs} isFav={isFav} toggleFav={toggleFav} clearFavs={clearFavs} role="admin" />}
         {tab === 'settings'  && (
           <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',paddingTop:'var(--nav-h)'}}>
             <PricingParamsPanel />
           </div>
         )}
       </div>
-      {/* 估價：快速報價估算器，全螢幕開啟，× 回照片庫 */}
-      {tab === 'quote' && <QuickQuote photo={null} onClose={() => setTab('browse')} />}
       <nav className="tab-bar">
         <button className={'tab-btn' + (tab === 'browse' ? ' on' : '')} onClick={() => setTab('browse')}>照片庫</button>
-        <button className={'tab-btn' + (tab === 'favorites' ? ' on' : '')} onClick={() => setTab('favorites')}>
-          收藏{favCount > 0 && <span className="tab-badge">{favCount}</span>}
-        </button>
-        <button className={'tab-btn' + (tab === 'quote' ? ' on' : '')} onClick={() => setTab('quote')}>估價</button>
         <button className={'tab-btn' + (tab === 'settings' ? ' on' : '')} onClick={() => setTab('settings')}>設定</button>
       </nav>
     </React.Fragment>
