@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>線上選品</title>
+<style>
+  :root {
+    --bg:#f1f1f4; --surface:#ffffff; --s3:#e8e8ee; --border:#e0e0e8;
+    --text:#232330; --text2:#5a5a68; --text3:#8d8d99;
+    --gold:#b8935a; --danger:#c0392b; --ok:#2e7d32;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Segoe UI",sans-serif;
+    height:100%; overscroll-behavior:none; }
+  #root { height:100vh; display:flex; flex-direction:column; }
+  button { font-family:inherit; cursor:pointer; touch-action:manipulation; }
+
+  .nav { flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+    padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--border); }
+  .nav-title { font-weight:800; font-size:16px; letter-spacing:1px; }
+  .nav-stats { font-size:12px; color:var(--text3); display:flex; gap:14px; }
+  .nav-stats b { color:var(--text); }
+
+  .upload-btn { border:1px solid var(--border); background:var(--surface); color:var(--text2);
+    border-radius:10px; padding:7px 14px; font-size:13px; font-weight:600; }
+  .upload-btn:active { background:var(--s3); }
+
+  .stage { flex:1; min-height:0; display:flex; align-items:center; justify-content:center;
+    padding:16px; position:relative; }
+  .card { width:100%; max-width:520px; height:100%; max-height:720px; background:var(--surface);
+    border-radius:18px; box-shadow:0 10px 30px rgba(30,30,45,.08); overflow:hidden;
+    display:flex; flex-direction:column; }
+  .card-img-wrap { flex:1; min-height:0; display:flex; align-items:center; justify-content:center;
+    background:#fafafb; position:relative; }
+  .card-img-wrap img { max-width:100%; max-height:100%; object-fit:contain;
+    animation: pop .25s ease both; }
+  @keyframes pop { from{opacity:0; transform:scale(.97)} to{opacity:1; transform:scale(1)} }
+  .card-meta { padding:14px 18px; border-top:1px solid var(--border); font-size:12px; color:var(--text3); }
+  .card-meta b { color:var(--text); font-size:13px; }
+
+  .actions { flex-shrink:0; display:flex; gap:14px; padding:16px 20px 22px; background:var(--bg); }
+  .act-btn { flex:1; border:none; border-radius:14px; padding:16px 0; font-size:16px; font-weight:800;
+    letter-spacing:1px; display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:transform .1s; }
+  .act-btn:active { transform:scale(.96); }
+  .act-del { background:#fdecea; color:var(--danger); }
+  .act-keep { background:var(--gold); color:#fff; }
+
+  .empty { text-align:center; color:var(--text3); }
+  .empty .big { font-size:40px; margin-bottom:8px; }
+
+  .toast { position:fixed; left:50%; bottom:110px; transform:translateX(-50%); z-index:50;
+    background:#1a1a1a; color:#fff; padding:11px 16px; border-radius:12px; font-size:13px;
+    display:flex; align-items:center; gap:12px; box-shadow:0 4px 16px rgba(0,0,0,.3);
+    animation: up .2s ease both; }
+  @keyframes up { from{opacity:0; transform:translate(-50%,10px)} to{opacity:1; transform:translate(-50%,0)} }
+  .toast button { background:var(--gold); color:#fff; border:none; border-radius:8px;
+    padding:6px 14px; font-size:13px; font-weight:700; }
+
+  .upload-zone { position:fixed; inset:0; background:rgba(20,20,30,.55); z-index:60;
+    display:flex; align-items:center; justify-content:center; }
+  .upload-box { background:var(--surface); border-radius:16px; padding:28px 32px; text-align:center;
+    width:90%; max-width:360px; }
+  .upload-box input { margin-top:14px; }
+  .upload-box .close { margin-top:18px; border:none; background:var(--s3); color:var(--text2);
+    border-radius:10px; padding:9px 18px; font-size:13px; }
+  .drop-hint { font-size:12px; color:var(--text3); margin-top:8px; }
+  .progress { font-size:12px; color:var(--text3); margin-top:10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+function App() {
+  const [stats, setStats] = useState({ pending: 0, kept: 0, total: 0 });
+  const [queue, setQueue] = useState([]);   // 本地緩衝的待審照片
+  const [cur, setCur] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null); // { id, photo, timer }
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState("");
+  const fetchingRef = useRef(false);
+
+  const loadStats = useCallback(async () => {
+    try { setStats(await (await fetch("/api/stats")).json()); } catch {}
+  }, []);
+
+  const fillQueue = useCallback(async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    try {
+      const d = await (await fetch("/api/photos?status=pending&limit=40")).json();
+      setQueue((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        const merged = [...prev, ...(d.photos || []).filter((p) => !seen.has(p.id))];
+        if (!cur && merged.length) setCur(merged[0]);
+        return merged;
+      });
+    } catch {}
+    fetchingRef.current = false;
+  }, [cur]);
+
+  useEffect(() => { loadStats(); fillQueue(); }, []);
+
+  useEffect(() => {
+    if (!cur && queue.length) setCur(queue[0]);
+    if (cur && queue.length < 8) fillQueue();
+    setLoading(false);
+  }, [queue, cur, fillQueue]);
+
+  const advance = () => {
+    setQueue((prev) => {
+      const next = prev.filter((p) => p.id !== cur.id);
+      setCur(next[0] || null);
+      return next;
+    });
+  };
+
+  const doKeep = async () => {
+    if (!cur) return;
+    const photo = cur;
+    advance();
+    setStats((s) => ({ ...s, pending: Math.max(0, s.pending - 1), kept: s.kept + 1 }));
+    try { await fetch(`/api/photos/${photo.id}/keep`, { method: "POST" }); } catch {}
+  };
+
+  const finalizeDelete = (id) => {
+    fetch(`/api/photos/${id}`, { method: "DELETE" }).catch(() => {});
+  };
+
+  const doDelete = () => {
+    if (!cur) return;
+    const photo = cur;
+    advance();
+    setStats((s) => ({ ...s, pending: Math.max(0, s.pending - 1), total: Math.max(0, s.total - 1) }));
+    if (toast) clearTimeout(toast.timer);
+    const timer = setTimeout(() => { finalizeDelete(photo.id); setToast(null); }, 6000);
+    setToast({ id: photo.id, photo, timer });
+  };
+
+  const undoDelete = () => {
+    if (!toast) return;
+    clearTimeout(toast.timer);
+    setQueue((prev) => [toast.photo, ...prev]);
+    setStats((s) => ({ ...s, pending: s.pending + 1, total: s.total + 1 }));
+    setToast(null);
+  };
+
+  const onFilesPicked = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    setUploadBusy(true);
+    setUploadMsg(`上傳中 0/${files.length}…`);
+    const form = new FormData();
+    files.forEach((f) => form.append("file", f));
+    try {
+      const res = await fetch("/api/photos", { method: "POST", body: form });
+      const d = await res.json();
+      setUploadMsg(`已新增 ${(d.added || []).length} 張`);
+      await loadStats();
+      await fillQueue();
+    } catch {
+      setUploadMsg("上傳失敗，請重試");
+    }
+    setUploadBusy(false);
+    setTimeout(() => { setShowUpload(false); setUploadMsg(""); }, 1200);
+  };
+
+  const specs = cur
+    ? [cur.category, cur.gemstone, cur.style].filter((v) => v && v !== "未定").join(" · ")
+    : "";
+
+  return (
+    <>
+      <div className="nav">
+        <div className="nav-title">線上選品</div>
+        <div className="nav-stats">
+          <span>待審 <b>{stats.pending}</b></span>
+          <span>已留 <b>{stats.kept}</b></span>
+        </div>
+        <button className="upload-btn" onClick={() => setShowUpload(true)}>+ 新增照片</button>
+      </div>
+
+      <div className="stage">
+        {!loading && !cur && (
+          <div className="empty">
+            <div className="big">✓</div>
+            <div>目前沒有待審的照片了</div>
+          </div>
+        )}
+        {cur && (
+          <div className="card">
+            <div className="card-img-wrap">
+              <img key={cur.id} src={cur.image_url} alt="" />
+            </div>
+            {specs && <div className="card-meta"><b>{cur.filename}</b><br/>{specs}</div>}
+          </div>
+        )}
+      </div>
+
+      {cur && (
+        <div className="actions">
+          <button className="act-btn act-del" onClick={doDelete}>✕ 刪除</button>
+          <button className="act-btn act-keep" onClick={doKeep}>♥ 留下</button>
+        </div>
+      )}
+
+      {toast && (
+        <div className="toast">
+          <span>已刪除照片</span>
+          <button onClick={undoDelete}>復原</button>
+        </div>
+      )}
+
+      {showUpload && (
+        <div className="upload-zone" onClick={(e) => e.target === e.currentTarget && !uploadBusy && setShowUpload(false)}>
+          <div className="upload-box">
+            <div style={{ fontWeight: 700 }}>新增照片</div>
+            <div className="drop-hint">選擇一張或多張照片上傳</div>
+            <input type="file" accept="image/*" multiple
+              disabled={uploadBusy}
+              onChange={(e) => onFilesPicked(e.target.files)} />
+            {uploadMsg && <div className="progress">{uploadMsg}</div>}
+            {!uploadBusy && (
+              <div>
+                <button className="close" onClick={() => setShowUpload(false)}>關閉</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

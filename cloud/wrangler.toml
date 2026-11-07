@@ -1,0 +1,17 @@
+name = "ai-photo-pick"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ai-photo-pick-db"
+database_id = "ea9cd7e4-5ec8-4858-bcf1-95a97da6a0bd"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "ai-photo-pick-images"
