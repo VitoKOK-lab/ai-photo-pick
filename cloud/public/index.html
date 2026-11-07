@@ -13,11 +13,11 @@
   * { box-sizing:border-box; }
   html,body { margin:0; padding:0; background:var(--bg); color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Segoe UI",sans-serif;
-    height:100%; overscroll-behavior:none; }
-  #root { min-height:100vh; display:flex; flex-direction:column; }
+    height:100%; overflow:hidden; overscroll-behavior:none; }
+  #root { height:100vh; height:100svh; display:flex; flex-direction:column; overflow:hidden; }
   button { font-family:inherit; cursor:pointer; touch-action:manipulation; }
 
-  .nav { flex-shrink:0; position:sticky; top:0; z-index:10; display:flex; align-items:center;
+  .nav { flex-shrink:0; display:flex; align-items:center;
     justify-content:space-between; padding:12px 20px; background:var(--surface);
     border-bottom:1px solid var(--border); }
   .nav-title { font-weight:800; font-size:16px; letter-spacing:1px; }
@@ -35,9 +35,9 @@
     font-weight:700; padding:4px 10px; border-radius:6px; }
   .density button.active { background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
-  .grid { flex:1; display:grid; gap:8px; padding:4px 14px 100px; align-content:start; }
+  .grid { flex:1; min-height:0; display:grid; gap:8px; padding:8px 14px; overflow:hidden; }
 
-  .tile { position:relative; aspect-ratio:1; background:var(--surface); border-radius:12px;
+  .tile { position:relative; width:100%; height:100%; background:var(--surface); border-radius:12px;
     overflow:hidden; box-shadow:0 2px 8px rgba(30,30,45,.08); animation: pop .2s ease both;
     border:3px solid transparent; transition:border-color .12s; }
   @keyframes pop { from{opacity:0; transform:scale(.92)} to{opacity:1; transform:scale(1)} }
@@ -49,10 +49,11 @@
   .tile.selected .check { background:var(--gold); color:#fff; border-color:var(--gold); }
   .tile:not(.selected) .check { background:rgba(255,255,255,.35); color:transparent; }
 
-  .empty { grid-column:1/-1; text-align:center; color:var(--text3); padding:60px 0; }
+  .empty { grid-column:1/-1; grid-row:1/-1; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; text-align:center; color:var(--text3); }
   .empty .big { font-size:40px; margin-bottom:8px; }
 
-  .bottom-bar { position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--surface);
+  .bottom-bar { flex-shrink:0; background:var(--surface);
     border-top:1px solid var(--border); padding:12px 20px; display:flex; justify-content:center;
     box-shadow:0 -4px 16px rgba(30,30,45,.06); }
   .next-btn { width:100%; max-width:480px; background:var(--gold); color:#fff; border:none;
@@ -88,9 +89,18 @@
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
 const DESKTOP_BREAKPOINT = 900;
-const PAGE_SIZE_MOBILE = 24;
-const PAGE_SIZE_DESKTOP = 50;
 const UNDO_GRACE_MS = 8000;
+
+// 每種密度＝固定的欄數＋固定的張數，兩個數字對好，畫面才會剛好塞滿、不用往下滑
+const DENSITY_MOBILE = [
+  { key: "large", label: "大圖", cols: 2, size: 8 },
+  { key: "10", label: "10張", cols: 3, size: 9 },
+  { key: "20", label: "20張", cols: 4, size: 20 },
+];
+const DENSITY_DESKTOP = [
+  ...DENSITY_MOBILE,
+  { key: "50", label: "50張", cols: 10, size: 50 },
+];
 
 function App() {
   const [stats, setStats] = useState({ pending: 0, kept: 0, total: 0 });
@@ -103,23 +113,19 @@ function App() {
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadMsg, setUploadMsg] = useState("");
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= DESKTOP_BREAKPOINT);
-  const [cols, setCols] = useState(() => {
+  const [density, setDensity] = useState(() => {
     try {
-      const saved = Number(localStorage.getItem("pp_cols"));
-      if (saved) return saved;
+      const saved = JSON.parse(localStorage.getItem("pp_density") || "null");
+      if (saved && saved.cols && saved.size) return saved;
     } catch {}
-    return window.innerWidth >= DESKTOP_BREAKPOINT ? 6 : 3;
+    return window.innerWidth >= DESKTOP_BREAKPOINT ? DENSITY_DESKTOP[3] : DENSITY_MOBILE[1];
   });
   const excludeRef = useRef(new Set());   // 還在復原時間內、下一批不該再撈到的 id
   const pendingBatchRef = useRef(null);   // 目前這一批的復原計時器
-  const isDesktopRef = useRef(isDesktop);
+  const densityRef = useRef(density);
 
   useEffect(() => {
-    const onResize = () => {
-      const d = window.innerWidth >= DESKTOP_BREAKPOINT;
-      isDesktopRef.current = d;
-      setIsDesktop(d);
-    };
+    const onResize = () => setIsDesktop(window.innerWidth >= DESKTOP_BREAKPOINT);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -131,7 +137,7 @@ function App() {
   const loadPage = useCallback(async () => {
     setLoading(true);
     try {
-      const pageSize = isDesktopRef.current ? PAGE_SIZE_DESKTOP : PAGE_SIZE_MOBILE;
+      const pageSize = densityRef.current.size;
       const d = await (await fetch(`/api/photos?status=pending&limit=${pageSize + excludeRef.current.size}`)).json();
       const fresh = (d.photos || []).filter((p) => !excludeRef.current.has(p.id)).slice(0, pageSize);
       setPage(fresh);
@@ -142,9 +148,11 @@ function App() {
 
   useEffect(() => { loadStats(); loadPage(); }, []);
 
-  const changeCols = (n) => {
-    setCols(n);
-    try { localStorage.setItem("pp_cols", n); } catch {}
+  const changeDensity = (d) => {
+    setDensity(d);
+    densityRef.current = d;
+    try { localStorage.setItem("pp_density", JSON.stringify(d)); } catch {}
+    loadPage();
   };
 
   const toggle = (id) => {
@@ -244,16 +252,17 @@ function App() {
       <div className="hint">
         <span>點選你要的照片，沒點的這頁送出後就會刪掉</span>
         <div className="density">
-          <button className={cols === 2 ? "active" : ""} onClick={() => changeCols(2)}>大圖</button>
-          <button className={cols === 3 ? "active" : ""} onClick={() => changeCols(3)}>10張</button>
-          <button className={cols === 4 ? "active" : ""} onClick={() => changeCols(4)}>20張</button>
-          {isDesktop && (
-            <button className={cols === 6 ? "active" : ""} onClick={() => changeCols(6)}>50張</button>
-          )}
+          {(isDesktop ? DENSITY_DESKTOP : DENSITY_MOBILE).map((d) => (
+            <button key={d.key} className={density.key === d.key ? "active" : ""}
+              onClick={() => changeDensity(d)}>{d.label}</button>
+          ))}
         </div>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+      <div className="grid" style={{
+        gridTemplateColumns: `repeat(${density.cols}, 1fr)`,
+        gridTemplateRows: `repeat(${Math.max(1, Math.ceil(page.length / density.cols))}, 1fr)`,
+      }}>
         {!loading && page.length === 0 && (
           <div className="empty">
             <div className="big">✓</div>
