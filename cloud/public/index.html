@@ -87,7 +87,9 @@
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
-const PAGE_SIZE = 24;
+const DESKTOP_BREAKPOINT = 900;
+const PAGE_SIZE_MOBILE = 24;
+const PAGE_SIZE_DESKTOP = 50;
 const UNDO_GRACE_MS = 8000;
 
 function App() {
@@ -100,11 +102,27 @@ function App() {
   const [showUpload, setShowUpload] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadMsg, setUploadMsg] = useState("");
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= DESKTOP_BREAKPOINT);
   const [cols, setCols] = useState(() => {
-    try { return Number(localStorage.getItem("pp_cols")) || 3; } catch { return 3; }
+    try {
+      const saved = Number(localStorage.getItem("pp_cols"));
+      if (saved) return saved;
+    } catch {}
+    return window.innerWidth >= DESKTOP_BREAKPOINT ? 6 : 3;
   });
   const excludeRef = useRef(new Set());   // 還在復原時間內、下一批不該再撈到的 id
   const pendingBatchRef = useRef(null);   // 目前這一批的復原計時器
+  const isDesktopRef = useRef(isDesktop);
+
+  useEffect(() => {
+    const onResize = () => {
+      const d = window.innerWidth >= DESKTOP_BREAKPOINT;
+      isDesktopRef.current = d;
+      setIsDesktop(d);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const loadStats = useCallback(async () => {
     try { setStats(await (await fetch("/api/stats")).json()); } catch {}
@@ -113,8 +131,9 @@ function App() {
   const loadPage = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await (await fetch(`/api/photos?status=pending&limit=${PAGE_SIZE + excludeRef.current.size}`)).json();
-      const fresh = (d.photos || []).filter((p) => !excludeRef.current.has(p.id)).slice(0, PAGE_SIZE);
+      const pageSize = isDesktopRef.current ? PAGE_SIZE_DESKTOP : PAGE_SIZE_MOBILE;
+      const d = await (await fetch(`/api/photos?status=pending&limit=${pageSize + excludeRef.current.size}`)).json();
+      const fresh = (d.photos || []).filter((p) => !excludeRef.current.has(p.id)).slice(0, pageSize);
       setPage(fresh);
       setSelected(new Set());
     } catch {}
@@ -228,6 +247,9 @@ function App() {
           <button className={cols === 2 ? "active" : ""} onClick={() => changeCols(2)}>大圖</button>
           <button className={cols === 3 ? "active" : ""} onClick={() => changeCols(3)}>10張</button>
           <button className={cols === 4 ? "active" : ""} onClick={() => changeCols(4)}>20張</button>
+          {isDesktop && (
+            <button className={cols === 6 ? "active" : ""} onClick={() => changeCols(6)}>50張</button>
+          )}
         </div>
       </div>
 
