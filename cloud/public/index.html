@@ -25,13 +25,17 @@
   .nav-stats b { color:var(--text); }
 
   .upload-btn { border:1px solid var(--border); background:var(--surface); color:var(--text2);
-    border-radius:10px; padding:7px 14px; font-size:13px; font-weight:600; }
+    border-radius:10px; padding:7px 14px; font-size:13px; font-weight:600; flex-shrink:0; }
   .upload-btn:active { background:var(--s3); }
 
-  .hint { flex-shrink:0; padding:8px 20px; font-size:12px; color:var(--text3); background:var(--bg); }
+  .hint { flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+    padding:8px 20px; font-size:12px; color:var(--text3); background:var(--bg); gap:10px; }
+  .density { flex-shrink:0; display:flex; gap:4px; background:var(--s3); border-radius:8px; padding:3px; }
+  .density button { border:none; background:transparent; color:var(--text3); font-size:11px;
+    font-weight:700; padding:4px 10px; border-radius:6px; }
+  .density button.active { background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
-  .grid { flex:1; display:grid; gap:10px; padding:4px 14px 100px;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); align-content:start; }
+  .grid { flex:1; display:grid; gap:8px; padding:4px 14px 100px; align-content:start; }
 
   .tile { position:relative; aspect-ratio:1; background:var(--surface); border-radius:12px;
     overflow:hidden; box-shadow:0 2px 8px rgba(30,30,45,.08); animation: pop .2s ease both;
@@ -96,6 +100,9 @@ function App() {
   const [showUpload, setShowUpload] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadMsg, setUploadMsg] = useState("");
+  const [cols, setCols] = useState(() => {
+    try { return Number(localStorage.getItem("pp_cols")) || 3; } catch { return 3; }
+  });
   const excludeRef = useRef(new Set());   // 還在復原時間內、下一批不該再撈到的 id
   const pendingBatchRef = useRef(null);   // 目前這一批的復原計時器
 
@@ -115,6 +122,11 @@ function App() {
   }, []);
 
   useEffect(() => { loadStats(); loadPage(); }, []);
+
+  const changeCols = (n) => {
+    setCols(n);
+    try { localStorage.setItem("pp_cols", n); } catch {}
+  };
 
   const toggle = (id) => {
     setSelected((prev) => {
@@ -210,9 +222,16 @@ function App() {
         </div>
         <button className="upload-btn" onClick={() => setShowUpload(true)}>+ 新增照片</button>
       </div>
-      <div className="hint">點選你要的照片，沒點的這頁送出後就會刪掉</div>
+      <div className="hint">
+        <span>點選你要的照片，沒點的這頁送出後就會刪掉</span>
+        <div className="density">
+          <button className={cols === 2 ? "active" : ""} onClick={() => changeCols(2)}>大圖</button>
+          <button className={cols === 3 ? "active" : ""} onClick={() => changeCols(3)}>10張</button>
+          <button className={cols === 4 ? "active" : ""} onClick={() => changeCols(4)}>20張</button>
+        </div>
+      </div>
 
-      <div className="grid">
+      <div className="grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
         {!loading && page.length === 0 && (
           <div className="empty">
             <div className="big">✓</div>
