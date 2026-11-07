@@ -35,32 +35,24 @@
 
   .tile { position:relative; aspect-ratio:1; background:var(--surface); border-radius:12px;
     overflow:hidden; box-shadow:0 2px 8px rgba(30,30,45,.08); animation: pop .2s ease both;
-    border:3px solid transparent; transition:border-color .12s, opacity .12s; }
+    border:3px solid transparent; transition:border-color .12s; }
   @keyframes pop { from{opacity:0; transform:scale(.92)} to{opacity:1; transform:scale(1)} }
-  .tile img { width:100%; height:100%; object-fit:cover; display:block; background:#fafafb;
-    transition:opacity .12s; }
+  .tile img { width:100%; height:100%; object-fit:cover; display:block; background:#fafafb; }
   .tile.selected { border-color:var(--gold); }
-  .tile:not(.selected) img { opacity:.55; }
-  .tile .label { position:absolute; left:0; right:0; bottom:0; padding:5px 8px;
-    background:linear-gradient(transparent, rgba(0,0,0,.55)); color:#fff; font-size:10px;
-    letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    pointer-events:none; }
-  .check { position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700;
-    box-shadow:0 2px 6px rgba(0,0,0,.2); pointer-events:none; }
-  .tile.selected .check { background:var(--gold); color:#fff; }
-  .tile:not(.selected) .check { background:rgba(255,255,255,.85); color:var(--text3); }
+  .check { position:absolute; top:6px; right:6px; width:28px; height:28px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:800; box-shadow:0 2px 6px rgba(0,0,0,.25); pointer-events:none; }
+  .tile.selected .check { background:var(--gold); color:#fff; border-color:var(--gold); }
+  .tile:not(.selected) .check { background:rgba(255,255,255,.35); color:transparent; }
 
   .empty { grid-column:1/-1; text-align:center; color:var(--text3); padding:60px 0; }
   .empty .big { font-size:40px; margin-bottom:8px; }
 
   .bottom-bar { position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--surface);
-    border-top:1px solid var(--border); padding:12px 20px; display:flex; align-items:center;
-    gap:14px; box-shadow:0 -4px 16px rgba(30,30,45,.06); }
-  .bottom-info { flex:1; font-size:13px; color:var(--text2); }
-  .bottom-info b { color:var(--gold); }
-  .next-btn { background:var(--gold); color:#fff; border:none; border-radius:12px;
-    padding:13px 26px; font-size:15px; font-weight:800; letter-spacing:1px; }
+    border-top:1px solid var(--border); padding:12px 20px; display:flex; justify-content:center;
+    box-shadow:0 -4px 16px rgba(30,30,45,.06); }
+  .next-btn { width:100%; max-width:480px; background:var(--gold); color:#fff; border:none;
+    border-radius:12px; padding:13px 26px; font-size:15px; font-weight:800; letter-spacing:1px; }
   .next-btn:disabled { opacity:.4; }
 
   .toast { position:fixed; left:50%; bottom:92px; transform:translateX(-50%); z-index:50;
@@ -241,7 +233,6 @@ function App() {
       </div>
 
       <div className="bottom-bar">
-        <div className="bottom-info">已選 <b>{selected.size}</b> / {page.length} 張要留下</div>
         <button className="next-btn" onClick={nextPage} disabled={busy || page.length === 0}>下一頁</button>
       </div>
 
