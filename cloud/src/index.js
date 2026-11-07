@@ -98,23 +98,34 @@ export default {
         const photoType = form.get("photo_type") || null;
 
         const added = [];
+        const skipped = [];
         for (const file of files) {
+          const buf = await file.arrayBuffer();
+          const hashBuf = await crypto.subtle.digest("SHA-256", buf);
+          const hash = [...new Uint8Array(hashBuf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+
+          // 內容已存在（不論檔名），跳過，不重複上傳 ──
+          const dup = await env.DB.prepare(`SELECT id FROM photos WHERE file_hash = ?`).bind(hash).first();
+          if (dup) {
+            skipped.push({ id: dup.id, filename: file.name || "" });
+            continue;
+          }
+
           const ext = extOf(file.name);
           const key = `photos/${crypto.randomUUID()}.${ext}`;
-          const buf = await file.arrayBuffer();
           await env.IMAGES.put(key, buf, {
             httpMetadata: { contentType: file.type || contentTypeFor(ext) },
           });
           const ins = await env.DB.prepare(
-            `INSERT INTO photos (r2_key, filename, status, content_type, file_size, category, gemstone, style, photo_type)
-             VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO photos (r2_key, filename, status, content_type, file_size, category, gemstone, style, photo_type, file_hash)
+             VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`
           ).bind(
             key, file.name || key, file.type || contentTypeFor(ext), buf.byteLength,
-            category, gemstone, style, photoType
+            category, gemstone, style, photoType, hash
           ).run();
           added.push({ id: ins.meta.last_row_id, filename: file.name || key });
         }
-        return json({ added }, 201);
+        return json({ added, skipped }, 201);
       }
 
       // ── 串流圖片本體（從 R2）──

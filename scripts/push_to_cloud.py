@@ -39,11 +39,13 @@ def _save_progress(done_ids):
 
 
 def _resolve_image(row):
-    """找出照片實際存在的檔案（原圖優先，找不到才退而求其次用縮圖）。"""
-    cands = [row["full_path"], row["thumb_path"]]
+    """找出照片實際存在的檔案。優先用縮圖（400x400，約幾十KB）——
+    線上選品只是要看清楚、做留/刪判斷，不需要原圖（1200x1200，動輒上百KB~MB），
+    縮圖上傳快很多、R2 寫入壓力也小很多。"""
+    cands = [row["thumb_path"], row["full_path"]]
     fn = row["filename"]
     if fn:
-        for d in (FULL_DIR, THUMB_DIR, MICRO_DIR):
+        for d in (THUMB_DIR, FULL_DIR, MICRO_DIR):
             cands.append(str(Path(d) / fn))
     for c in cands:
         if c and Path(c).exists():
@@ -51,8 +53,9 @@ def _resolve_image(row):
     return None
 
 
-def _multipart_upload(path: Path, fields: dict):
-    """純標準庫組 multipart/form-data 上傳一張照片 + 欄位，回傳 (status, body)。"""
+def _multipart_upload(path: Path, fields: dict, retries: int = 3):
+    """純標準庫組 multipart/form-data 上傳一張照片 + 欄位，回傳 (status, body)。
+    R2 偶爾會回暫時性的 500（internal error 10001），自動重試幾次再放棄。"""
     boundary = "----cloudpush" + str(int(time.time() * 1000))
     parts = []
     for k, v in fields.items():
@@ -72,23 +75,31 @@ def _multipart_upload(path: Path, fields: dict):
     parts.append(f"--{boundary}--\r\n".encode())
     body = b"".join(parts)
 
-    req = urllib.request.Request(
-        f"{CLOUD_URL}/api/photos",
-        data=body,
-        method="POST",
-        headers={
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-            # 沒有 User-Agent 會被 Cloudflare 擋掉（code 1010）
-            "User-Agent": "ai-photo-pick-migration/1.0",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            return resp.status, resp.read().decode()
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode()
-    except Exception as e:
-        return 0, str(e)
+    last_status, last_body = 0, ""
+    for attempt in range(retries):
+        req = urllib.request.Request(
+            f"{CLOUD_URL}/api/photos",
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+                # 沒有 User-Agent 會被 Cloudflare 擋掉（code 1010）
+                "User-Agent": "ai-photo-pick-migration/1.0",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                return resp.status, resp.read().decode()
+        except urllib.error.HTTPError as e:
+            last_status, last_body = e.code, e.read().decode()
+        except Exception as e:
+            last_status, last_body = 0, str(e)
+
+        if last_status not in (0, 500, 502, 503, 504):
+            break  # 不是暫時性錯誤（例如 400 格式錯誤），重試也沒用
+        if attempt < retries - 1:
+            time.sleep(1.5 * (attempt + 1))  # 1.5s, 3s
+    return last_status, last_body
 
 
 def run(limit=0, dry_run=False):
