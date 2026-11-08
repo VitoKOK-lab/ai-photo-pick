@@ -24,8 +24,9 @@
   .nav-stats { font-size:12px; color:var(--text3); display:flex; gap:14px; }
   .nav-stats b { color:var(--text); }
 
-  .upload-btn { border:1px solid var(--border); background:var(--surface); color:var(--text2);
-    border-radius:10px; padding:7px 14px; font-size:13px; font-weight:600; flex-shrink:0; }
+  .upload-btn { width:32px; height:32px; flex-shrink:0; border:1px solid var(--border);
+    background:var(--surface); color:var(--gold); border-radius:50%; font-size:18px; font-weight:700;
+    line-height:1; display:flex; align-items:center; justify-content:center; padding:0; }
   .upload-btn:active { background:var(--s3); }
 
   .hint { flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
@@ -227,10 +228,13 @@ function App() {
     setUploadMsg(`上傳中…（共 ${files.length} 張）`);
     const form = new FormData();
     files.forEach((f) => form.append("file", f));
+    form.append("status", "kept"); // 現場上傳＝已經確認可以用，直接算已留，不進審片佇列
     try {
       const res = await fetch("/api/photos", { method: "POST", body: form });
       const d = await res.json();
-      setUploadMsg(`已新增 ${(d.added || []).length} 張`);
+      const addedN = (d.added || []).length;
+      const skippedN = (d.skipped || []).length;
+      setUploadMsg(skippedN ? `已新增 ${addedN} 張（${skippedN} 張重複已跳過）` : `已新增 ${addedN} 張，直接列入已留`);
       await loadStats();
     } catch {
       setUploadMsg("上傳失敗，請重試");
@@ -247,7 +251,7 @@ function App() {
           <span>待審 <b>{stats.pending}</b></span>
           <span>已留 <b>{stats.kept}</b></span>
         </div>
-        <button className="upload-btn" onClick={() => setShowUpload(true)}>+ 新增照片</button>
+        <button className="upload-btn" title="新增照片" onClick={() => setShowUpload(true)}>+</button>
       </div>
       <div className="hint">
         <span>點選你要的照片，沒點的這頁送出後就會刪掉</span>
@@ -297,7 +301,7 @@ function App() {
         <div className="upload-zone" onClick={(e) => e.target === e.currentTarget && !uploadBusy && setShowUpload(false)}>
           <div className="upload-box">
             <div style={{ fontWeight: 700 }}>新增照片</div>
-            <div className="drop-hint">選擇一張或多張照片上傳</div>
+            <div className="drop-hint">選擇一張或多張照片上傳，上傳後直接算「已留」，不會再進審片佇列</div>
             <input type="file" accept="image/*" multiple
               disabled={uploadBusy}
               onChange={(e) => onFilesPicked(e.target.files)} />

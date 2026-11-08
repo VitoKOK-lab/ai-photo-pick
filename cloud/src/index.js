@@ -87,7 +87,8 @@ export default {
       }
 
       // ── 上傳新照片（可一次多檔，multipart/form-data，field name: file）
-      //    可選帶入既有標籤（category/gemstone/style/photo_type），搬遷舊照片時沿用 ──
+      //    可選帶入既有標籤（category/gemstone/style/photo_type），搬遷舊照片時沿用；
+      //    可選帶 status=kept：現場用手機上傳、已經確認可以用的照片，直接算已留，不進審片佇列 ──
       if (pathname === "/api/photos" && request.method === "POST") {
         const form = await request.formData();
         const files = form.getAll("file").filter((f) => f && typeof f.arrayBuffer === "function");
@@ -96,6 +97,7 @@ export default {
         const gemstone = form.get("gemstone") || null;
         const style = form.get("style") || null;
         const photoType = form.get("photo_type") || null;
+        const status = form.get("status") === "kept" ? "kept" : "pending";
 
         const added = [];
         const skipped = [];
@@ -117,11 +119,11 @@ export default {
             httpMetadata: { contentType: file.type || contentTypeFor(ext) },
           });
           const ins = await env.DB.prepare(
-            `INSERT INTO photos (r2_key, filename, status, content_type, file_size, category, gemstone, style, photo_type, file_hash)
-             VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO photos (r2_key, filename, status, content_type, file_size, category, gemstone, style, photo_type, file_hash, decided_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           ).bind(
-            key, file.name || key, file.type || contentTypeFor(ext), buf.byteLength,
-            category, gemstone, style, photoType, hash
+            key, file.name || key, status, file.type || contentTypeFor(ext), buf.byteLength,
+            category, gemstone, style, photoType, hash, status === "kept" ? new Date().toISOString() : null
           ).run();
           added.push({ id: ins.meta.last_row_id, filename: file.name || key });
         }
