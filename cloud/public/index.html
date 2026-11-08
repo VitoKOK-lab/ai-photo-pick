@@ -24,9 +24,9 @@
   .nav-stats { font-size:12px; color:var(--text3); display:flex; gap:14px; }
   .nav-stats b { color:var(--text); }
 
-  .upload-btn { width:32px; height:32px; flex-shrink:0; border:1px solid var(--border);
-    background:var(--surface); color:var(--gold); border-radius:50%; font-size:18px; font-weight:700;
-    line-height:1; display:flex; align-items:center; justify-content:center; padding:0; }
+  .upload-btn { flex-shrink:0; border:1px solid var(--border); background:var(--surface);
+    color:var(--text2); border-radius:14px; font-size:11px; font-weight:700; line-height:1;
+    display:flex; align-items:center; gap:3px; padding:6px 10px; white-space:nowrap; }
   .upload-btn:active { background:var(--s3); }
 
   .hint { flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
@@ -36,7 +36,16 @@
     font-weight:700; padding:4px 10px; border-radius:6px; }
   .density button.active { background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
-  .grid { flex:1; min-height:0; display:grid; gap:8px; padding:8px 14px; overflow:hidden; }
+  .grid-wrap { position:relative; flex:1; min-height:0; }
+  .grid { height:100%; display:grid; gap:8px; padding:8px 14px; overflow:hidden; }
+
+  .selected-tray { position:absolute; top:8px; right:10px; z-index:12; max-width:46%;
+    display:flex; align-items:center; gap:5px; padding:5px 8px; background:rgba(255,255,255,.95);
+    border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.18); }
+  .selected-tray .count { flex-shrink:0; font-size:11px; font-weight:800; color:var(--gold); }
+  .selected-tray .thumbs { display:flex; gap:3px; overflow-x:auto; }
+  .selected-tray img { width:26px; height:26px; object-fit:cover; border-radius:6px; flex-shrink:0;
+    border:1px solid var(--border); }
 
   .tile { position:relative; width:100%; height:100%; background:var(--surface); border-radius:12px;
     overflow:hidden; box-shadow:0 2px 8px rgba(30,30,45,.08); animation: pop .2s ease both;
@@ -77,7 +86,20 @@
   .upload-box .close { margin-top:18px; border:none; background:var(--s3); color:var(--text2);
     border-radius:10px; padding:9px 18px; font-size:13px; }
   .drop-hint { font-size:12px; color:var(--text3); margin-top:8px; }
+  .warn-note { margin-top:12px; padding:10px 12px; background:#fdf3e7; border:1px solid #f0d9b5;
+    border-radius:10px; font-size:12px; color:#8a5a1f; text-align:left; line-height:1.5; }
   .progress { font-size:12px; color:var(--text3); margin-top:10px; }
+
+  .onboard-zone { position:fixed; inset:0; background:rgba(20,20,30,.6); z-index:70;
+    display:flex; align-items:center; justify-content:center; padding:20px; }
+  .onboard-box { background:var(--surface); border-radius:20px; padding:32px 26px; text-align:center;
+    width:100%; max-width:340px; animation: pop .2s ease both; }
+  .onboard-icon { font-size:38px; margin-bottom:10px; }
+  .onboard-title { font-size:19px; font-weight:800; color:var(--text); margin-bottom:10px; }
+  .onboard-sub { font-size:15px; font-weight:700; color:var(--gold); margin-bottom:10px; }
+  .onboard-note { font-size:12px; color:var(--text3); line-height:1.6; margin-bottom:20px; }
+  .onboard-btn { width:100%; background:var(--gold); color:#fff; border:none; border-radius:12px;
+    padding:13px 0; font-size:15px; font-weight:800; letter-spacing:1px; }
 </style>
 </head>
 <body>
@@ -113,6 +135,9 @@ function App() {
   const [showUpload, setShowUpload] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadMsg, setUploadMsg] = useState("");
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try { return !localStorage.getItem("pp_onboarded"); } catch { return true; }
+  });
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= DESKTOP_BREAKPOINT);
   const [density, setDensity] = useState(() => {
     try {
@@ -154,6 +179,11 @@ function App() {
     densityRef.current = d;
     try { localStorage.setItem("pp_density", JSON.stringify(d)); } catch {}
     loadPage();
+  };
+
+  const dismissOnboarding = () => {
+    setShowOnboarding(false);
+    try { localStorage.setItem("pp_onboarded", "1"); } catch {}
   };
 
   const toggle = (id) => {
@@ -251,7 +281,7 @@ function App() {
           <span>待審 <b>{stats.pending}</b></span>
           <span>已留 <b>{stats.kept}</b></span>
         </div>
-        <button className="upload-btn" title="新增照片" onClick={() => setShowUpload(true)}>+</button>
+        <button className="upload-btn" onClick={() => setShowUpload(true)}>＋ 新增照片</button>
       </div>
       <div className="hint">
         <span>點選你要的照片，沒點的這頁送出後就會刪掉</span>
@@ -263,27 +293,40 @@ function App() {
         </div>
       </div>
 
-      <div className="grid" style={{
-        gridTemplateColumns: `repeat(${density.cols}, 1fr)`,
-        gridTemplateRows: `repeat(${Math.max(1, Math.ceil(page.length / density.cols))}, 1fr)`,
-      }}>
-        {!loading && page.length === 0 && (
-          <div className="empty">
-            <div className="big">✓</div>
-            <div>目前沒有待審的照片了</div>
+      <div className="grid-wrap">
+        <div className="grid" style={{
+          gridTemplateColumns: `repeat(${density.cols}, 1fr)`,
+          gridTemplateRows: `repeat(${Math.max(1, Math.ceil(page.length / density.cols))}, 1fr)`,
+        }}>
+          {!loading && page.length === 0 && (
+            <div className="empty">
+              <div className="big">✓</div>
+              <div>目前沒有待審的照片了</div>
+            </div>
+          )}
+          {page.map((p) => {
+            const isSel = selected.has(p.id);
+            const specs = [p.category, p.gemstone, p.style].filter((v) => v && v !== "未定").join(" · ");
+            return (
+              <div key={p.id} className={"tile" + (isSel ? " selected" : "")} onClick={() => toggle(p.id)}>
+                <img src={p.image_url} alt="" loading="lazy" />
+                {specs && <div className="label">{specs}</div>}
+                <div className="check">{isSel ? "✓" : ""}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {selected.size > 0 && (
+          <div className="selected-tray">
+            <span className="count">已選 {selected.size}</span>
+            <div className="thumbs">
+              {page.filter((p) => selected.has(p.id)).map((p) => (
+                <img key={p.id} src={p.image_url} alt="" onClick={() => toggle(p.id)} />
+              ))}
+            </div>
           </div>
         )}
-        {page.map((p) => {
-          const isSel = selected.has(p.id);
-          const specs = [p.category, p.gemstone, p.style].filter((v) => v && v !== "未定").join(" · ");
-          return (
-            <div key={p.id} className={"tile" + (isSel ? " selected" : "")} onClick={() => toggle(p.id)}>
-              <img src={p.image_url} alt="" loading="lazy" />
-              {specs && <div className="label">{specs}</div>}
-              <div className="check">{isSel ? "✓" : ""}</div>
-            </div>
-          );
-        })}
       </div>
 
       <div className="bottom-bar">
@@ -301,7 +344,8 @@ function App() {
         <div className="upload-zone" onClick={(e) => e.target === e.currentTarget && !uploadBusy && setShowUpload(false)}>
           <div className="upload-box">
             <div style={{ fontWeight: 700 }}>新增照片</div>
-            <div className="drop-hint">選擇一張或多張照片上傳，上傳後直接算「已留」，不會再進審片佇列</div>
+            <div className="drop-hint">選擇一張或多張照片上傳</div>
+            <div className="warn-note">⚠️ 限制只能上傳好看、確定可以用的照片。上傳後會直接列入「已留」，不會再經過任何審查。</div>
             <input type="file" accept="image/*" multiple
               disabled={uploadBusy}
               onChange={(e) => onFilesPicked(e.target.files)} />
@@ -311,6 +355,18 @@ function App() {
                 <button className="close" onClick={() => setShowUpload(false)}>關閉</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showOnboarding && (
+        <div className="onboard-zone" onClick={dismissOnboarding}>
+          <div className="onboard-box" onClick={(e) => e.stopPropagation()}>
+            <div className="onboard-icon">👆</div>
+            <div className="onboard-title">請點選好看的照片</div>
+            <div className="onboard-sub">選好之後按「下一頁」送出</div>
+            <div className="onboard-note">不要的不用理它，送出後會自動刪掉</div>
+            <button className="onboard-btn" onClick={dismissOnboarding}>知道了，開始選</button>
           </div>
         </div>
       )}
