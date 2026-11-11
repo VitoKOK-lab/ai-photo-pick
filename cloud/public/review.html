@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>審美資料庫</title>
+<style>
+  :root {
+    --bg:#f1f1f4; --surface:#ffffff; --s3:#e8e8ee; --border:#e0e0e8;
+    --text:#232330; --text2:#5a5a68; --text3:#8d8d99;
+    --gold:#b8935a; --danger:#c0392b;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Segoe UI",sans-serif;
+    height:100%; overflow:hidden; overscroll-behavior:none; }
+  #root { height:100vh; height:100svh; display:flex; flex-direction:column; overflow:hidden; }
+  button { font-family:inherit; cursor:pointer; touch-action:manipulation; }
+
+  .nav { flex-shrink:0; display:flex; align-items:center;
+    justify-content:space-between; padding:12px 20px; background:var(--surface);
+    border-bottom:1px solid var(--border); }
+  .nav-title { font-weight:800; font-size:16px; letter-spacing:1px; }
+  .nav-stats { font-size:12px; color:var(--text3); display:flex; gap:14px; }
+  .nav-stats b { color:var(--text); }
+
+  .upload-btn { flex-shrink:0; border:1px solid var(--border); background:var(--surface);
+    color:var(--text2); border-radius:14px; font-size:11px; font-weight:700; line-height:1;
+    display:flex; align-items:center; gap:3px; padding:6px 10px; white-space:nowrap; }
+  .upload-btn:active { background:var(--s3); }
+
+  .hint { flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+    padding:8px 20px; font-size:12px; color:var(--text3); background:var(--bg); gap:10px; }
+  .density { flex-shrink:0; display:flex; gap:4px; background:var(--s3); border-radius:8px; padding:3px; }
+  .density button { border:none; background:transparent; color:var(--text3); font-size:11px;
+    font-weight:700; padding:4px 10px; border-radius:6px; }
+  .density button.active { background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.1); }
+
+  .grid-wrap { position:relative; flex:1; min-height:0; }
+  .grid { height:100%; display:grid; gap:8px; padding:8px 14px; overflow:hidden; }
+
+  .selected-tray { position:absolute; top:8px; right:10px; z-index:12; max-width:46%;
+    display:flex; align-items:center; gap:5px; padding:5px 8px; background:rgba(255,255,255,.95);
+    border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.18); }
+  .selected-tray .count { flex-shrink:0; font-size:11px; font-weight:800; color:var(--gold); }
+  .selected-tray .thumbs { display:flex; gap:3px; overflow-x:auto; }
+  .selected-tray img { width:26px; height:26px; object-fit:cover; border-radius:6px; flex-shrink:0;
+    border:1px solid var(--border); }
+
+  .tile { position:relative; width:100%; height:100%; background:var(--surface); border-radius:12px;
+    overflow:hidden; box-shadow:0 2px 8px rgba(30,30,45,.08); animation: pop .2s ease both;
+    border:3px solid transparent; transition:border-color .12s; }
+  @keyframes pop { from{opacity:0; transform:scale(.92)} to{opacity:1; transform:scale(1)} }
+  .tile img { width:100%; height:100%; object-fit:cover; display:block; background:#fafafb; }
+  .tile.selected { border-color:var(--gold); }
+  .check { position:absolute; top:6px; right:6px; width:28px; height:28px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:800; box-shadow:0 2px 6px rgba(0,0,0,.25); pointer-events:none; }
+  .tile.selected .check { background:var(--gold); color:#fff; border-color:var(--gold); }
+  .tile:not(.selected) .check { background:rgba(255,255,255,.35); color:transparent; }
+
+  .empty { grid-column:1/-1; grid-row:1/-1; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; text-align:center; color:var(--text3); }
+  .empty .big { font-size:40px; margin-bottom:8px; }
+
+  .bottom-bar { flex-shrink:0; background:var(--surface);
+    border-top:1px solid var(--border); padding:12px 20px; display:flex; justify-content:center;
+    box-shadow:0 -4px 16px rgba(30,30,45,.06); }
+  .next-btn { width:100%; max-width:480px; background:var(--gold); color:#fff; border:none;
+    border-radius:12px; padding:13px 26px; font-size:15px; font-weight:800; letter-spacing:1px; }
+  .next-btn:disabled { opacity:.4; }
+
+  .toast { position:fixed; left:50%; bottom:92px; transform:translateX(-50%); z-index:50;
+    background:#1a1a1a; color:#fff; padding:11px 16px; border-radius:12px; font-size:13px;
+    display:flex; align-items:center; gap:12px; box-shadow:0 4px 16px rgba(0,0,0,.3);
+    animation: up .2s ease both; }
+  @keyframes up { from{opacity:0; transform:translate(-50%,10px)} to{opacity:1; transform:translate(-50%,0)} }
+  .toast button { background:var(--gold); color:#fff; border:none; border-radius:8px;
+    padding:6px 14px; font-size:13px; font-weight:700; white-space:nowrap; }
+
+  .upload-zone { position:fixed; inset:0; background:rgba(20,20,30,.55); z-index:60;
+    display:flex; align-items:center; justify-content:center; }
+  .upload-box { background:var(--surface); border-radius:16px; padding:28px 32px; text-align:center;
+    width:90%; max-width:360px; }
+  .upload-box input { margin-top:14px; }
+  .upload-box .close { margin-top:18px; border:none; background:var(--s3); color:var(--text2);
+    border-radius:10px; padding:9px 18px; font-size:13px; }
+  .drop-hint { font-size:12px; color:var(--text3); margin-top:8px; }
+  .warn-note { margin-top:12px; padding:10px 12px; background:#fdf3e7; border:1px solid #f0d9b5;
+    border-radius:10px; font-size:12px; color:#8a5a1f; text-align:left; line-height:1.5; }
+  .progress { font-size:12px; color:var(--text3); margin-top:10px; }
+
+  .onboard-zone { position:fixed; inset:0; background:rgba(20,20,30,.6); z-index:70;
+    display:flex; align-items:center; justify-content:center; padding:20px; }
+  .onboard-box { background:var(--surface); border-radius:20px; padding:32px 26px; text-align:center;
+    width:100%; max-width:340px; animation: pop .2s ease both; }
+  .onboard-icon { font-size:38px; margin-bottom:10px; }
+  .onboard-title { font-size:19px; font-weight:800; color:var(--text); margin-bottom:10px; }
+  .onboard-sub { font-size:15px; font-weight:700; color:var(--gold); margin-bottom:10px; }
+  .onboard-note { font-size:12px; color:var(--text3); line-height:1.6; margin-bottom:20px; }
+  .onboard-btn { width:100%; background:var(--gold); color:#fff; border:none; border-radius:12px;
+    padding:13px 0; font-size:15px; font-weight:800; letter-spacing:1px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+const DESKTOP_BREAKPOINT = 900;
+const UNDO_GRACE_MS = 8000;
+
+// 每種密度＝固定的欄數＋固定的張數，兩個數字對好，畫面才會剛好塞滿、不用往下滑
+const DENSITY_MOBILE = [
+  { key: "large", label: "大圖", cols: 2, size: 8 },
+  { key: "10", label: "10張", cols: 3, size: 9 },
+  { key: "20", label: "20張", cols: 4, size: 20 },
+];
+const DENSITY_DESKTOP = [
+  ...DENSITY_MOBILE,
+  { key: "50", label: "50張", cols: 10, size: 50 },
+];
+
+function App() {
+  const [stats, setStats] = useState({ pending: 0, kept: 0, total: 0 });
+  const [page, setPage] = useState([]);         // 這一頁顯示的照片
+  const [selected, setSelected] = useState(() => new Set()); // 點過的＝要留下
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);       // 送出中（換頁動畫期間避免重複點）
+  const [toast, setToast] = useState(null);       // { keep, del, timer }
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState("");
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try { return !localStorage.getItem("pp_onboarded"); } catch { return true; }
+  });
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= DESKTOP_BREAKPOINT);
+  const [density, setDensity] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("pp_density") || "null");
+      if (saved && saved.cols && saved.size) return saved;
+    } catch {}
+    return window.innerWidth >= DESKTOP_BREAKPOINT ? DENSITY_DESKTOP[3] : DENSITY_MOBILE[1];
+  });
+  const excludeRef = useRef(new Set());   // 還在復原時間內、下一批不該再撈到的 id
+  const pendingBatchRef = useRef(null);   // 目前這一批的復原計時器
+  const densityRef = useRef(density);
+
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= DESKTOP_BREAKPOINT);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const loadStats = useCallback(async () => {
+    try { setStats(await (await fetch("/api/stats")).json()); } catch {}
+  }, []);
+
+  const loadPage = useCallback(async () => {
+    setLoading(true);
+    try {
+      const pageSize = densityRef.current.size;
+      const d = await (await fetch(`/api/photos?status=pending&limit=${pageSize + excludeRef.current.size}`)).json();
+      const fresh = (d.photos || []).filter((p) => !excludeRef.current.has(p.id)).slice(0, pageSize);
+      setPage(fresh);
+      setSelected(new Set());
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { loadStats(); loadPage(); }, []);
+
+  const changeDensity = (d) => {
+    setDensity(d);
+    densityRef.current = d;
+    try { localStorage.setItem("pp_density", JSON.stringify(d)); } catch {}
+    loadPage();
+  };
+
+  const dismissOnboarding = () => {
+    setShowOnboarding(false);
+    try { localStorage.setItem("pp_onboarded", "1"); } catch {}
+  };
+
+  const toggle = (id) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  // 把上一批「還沒過復原時間」的直接定案（送出真正的 keep/delete），避免同時疊好幾批計時器
+  const finalizePendingBatch = () => {
+    const b = pendingBatchRef.current;
+    if (!b) return;
+    clearTimeout(b.timer);
+    b.keep.forEach((p) => fetch(`/api/photos/${p.id}/keep`, { method: "POST" }).catch(() => {}));
+    b.del.forEach((p) => fetch(`/api/photos/${p.id}`, { method: "DELETE" }).catch(() => {}));
+    b.ids.forEach((id) => excludeRef.current.delete(id));
+    pendingBatchRef.current = null;
+  };
+
+  const nextPage = () => {
+    if (busy || page.length === 0) return;
+    setBusy(true);
+    finalizePendingBatch();
+
+    const keep = page.filter((p) => selected.has(p.id));
+    const del = page.filter((p) => !selected.has(p.id));
+    const ids = page.map((p) => p.id);
+    ids.forEach((id) => excludeRef.current.add(id));
+
+    setStats((s) => ({
+      ...s,
+      pending: Math.max(0, s.pending - page.length),
+      kept: s.kept + keep.length,
+      total: Math.max(0, s.total - del.length),
+    }));
+
+    const timer = setTimeout(() => {
+      keep.forEach((p) => fetch(`/api/photos/${p.id}/keep`, { method: "POST" }).catch(() => {}));
+      del.forEach((p) => fetch(`/api/photos/${p.id}`, { method: "DELETE" }).catch(() => {}));
+      ids.forEach((id) => excludeRef.current.delete(id));
+      pendingBatchRef.current = null;
+      setToast((t) => (t && t.timer === timer ? null : t));
+    }, UNDO_GRACE_MS);
+    pendingBatchRef.current = { keep, del, ids, timer };
+    setToast({ keep: keep.length, del: del.length, timer });
+
+    loadPage().then(() => setBusy(false));
+  };
+
+  const undoLastPage = () => {
+    const b = pendingBatchRef.current;
+    if (!b) return;
+    clearTimeout(b.timer);
+    b.ids.forEach((id) => excludeRef.current.delete(id));
+    pendingBatchRef.current = null;
+    setToast(null);
+    setStats((s) => ({
+      ...s,
+      pending: s.pending + b.ids.length,
+      kept: s.kept - b.keep.length,
+      total: s.total + b.del.length,
+    }));
+    loadPage();
+  };
+
+  const onFilesPicked = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    setUploadBusy(true);
+    setUploadMsg(`上傳中…（共 ${files.length} 張）`);
+    const form = new FormData();
+    files.forEach((f) => form.append("file", f));
+    form.append("status", "kept"); // 現場上傳＝已經確認可以用，直接算已留，不進審片佇列
+    try {
+      const res = await fetch("/api/photos", { method: "POST", body: form });
+      const d = await res.json();
+      const addedN = (d.added || []).length;
+      const skippedN = (d.skipped || []).length;
+      setUploadMsg(skippedN ? `已新增 ${addedN} 張（${skippedN} 張重複已跳過）` : `已新增 ${addedN} 張，直接列入已留`);
+      await loadStats();
+    } catch {
+      setUploadMsg("上傳失敗，請重試");
+    }
+    setUploadBusy(false);
+    setTimeout(() => { setShowUpload(false); setUploadMsg(""); }, 1200);
+  };
+
+  return (
+    <>
+      <div className="nav">
+        <div className="nav-title">審美資料庫</div>
+        <div className="nav-stats">
+          <span>待審 <b>{stats.pending}</b></span>
+          <span>已留 <b>{stats.kept}</b></span>
+        </div>
+        <button className="upload-btn" onClick={() => setShowUpload(true)}>＋ 新增照片</button>
+      </div>
+      <div className="hint">
+        <span>點選你要的照片，沒點的這頁送出後就會刪掉</span>
+        <div className="density">
+          {(isDesktop ? DENSITY_DESKTOP : DENSITY_MOBILE).map((d) => (
+            <button key={d.key} className={density.key === d.key ? "active" : ""}
+              onClick={() => changeDensity(d)}>{d.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid-wrap">
+        <div className="grid" style={{
+          gridTemplateColumns: `repeat(${density.cols}, 1fr)`,
+          gridTemplateRows: `repeat(${Math.max(1, Math.ceil(page.length / density.cols))}, 1fr)`,
+        }}>
+          {!loading && page.length === 0 && (
+            <div className="empty">
+              <div className="big">✓</div>
+              <div>目前沒有待審的照片了</div>
+            </div>
+          )}
+          {page.map((p) => {
+            const isSel = selected.has(p.id);
+            const specs = [p.category, p.gemstone, p.style].filter((v) => v && v !== "未定").join(" · ");
+            return (
+              <div key={p.id} className={"tile" + (isSel ? " selected" : "")} onClick={() => toggle(p.id)}>
+                <img src={p.image_url} alt="" loading="lazy" />
+                {specs && <div className="label">{specs}</div>}
+                <div className="check">{isSel ? "✓" : ""}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {selected.size > 0 && (
+          <div className="selected-tray">
+            <span className="count">已選 {selected.size}</span>
+            <div className="thumbs">
+              {page.filter((p) => selected.has(p.id)).map((p) => (
+                <img key={p.id} src={p.image_url} alt="" onClick={() => toggle(p.id)} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bottom-bar">
+        <button className="next-btn" onClick={nextPage} disabled={busy || page.length === 0}>下一頁</button>
+      </div>
+
+      {toast && (
+        <div className="toast">
+          <span>已留下 {toast.keep} 張、刪除 {toast.del} 張</span>
+          <button onClick={undoLastPage}>復原這頁</button>
+        </div>
+      )}
+
+      {showUpload && (
+        <div className="upload-zone" onClick={(e) => e.target === e.currentTarget && !uploadBusy && setShowUpload(false)}>
+          <div className="upload-box">
+            <div style={{ fontWeight: 700 }}>新增照片</div>
+            <div className="drop-hint">選擇一張或多張照片上傳</div>
+            <div className="warn-note">⚠️ 限制只能上傳好看、確定可以用的照片。上傳後會直接列入「已留」，不會再經過任何審查。</div>
+            <input type="file" accept="image/*" multiple
+              disabled={uploadBusy}
+              onChange={(e) => onFilesPicked(e.target.files)} />
+            {uploadMsg && <div className="progress">{uploadMsg}</div>}
+            {!uploadBusy && (
+              <div>
+                <button className="close" onClick={() => setShowUpload(false)}>關閉</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showOnboarding && (
+        <div className="onboard-zone" onClick={dismissOnboarding}>
+          <div className="onboard-box" onClick={(e) => e.stopPropagation()}>
+            <div className="onboard-icon">👆</div>
+            <div className="onboard-title">請點選好看的照片</div>
+            <div className="onboard-sub">選好之後按「下一頁」送出</div>
+            <div className="onboard-note">不要的不用理它，送出後會自動刪掉</div>
+            <button className="onboard-btn" onClick={dismissOnboarding}>知道了，開始選</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

@@ -1,5 +1,6 @@
-// ai-photo-pick — 線上選品平台（公開無登入，審片佇列：留/刪，決定後不再出現）
-// D1: photos 表；R2: 原圖存放
+// ai-photo-pick — 審美資料庫：客人公開瀏覽＋收藏款式，老闆後台看收藏統計
+// 已經不需要人工審片了，上傳一律直接「已留」；/review.html 是舊的人工審片工具，保留但不再是首頁
+// D1: photos 表（+ favorites 收藏表、settings 設定表）；R2: 原圖存放
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -225,7 +226,8 @@ export default {
 
       // ── 上傳新照片（可一次多檔，multipart/form-data，field name: file）
       //    可選帶入既有標籤（category/color/gemstone/style/photo_type/stone_shape），搬遷舊照片時沿用；
-      //    可選帶 status=kept：現場用手機上傳、已經確認可以用的照片，直接算已留，不進審片佇列 ──
+      //    已經不做人工審片了，所有上傳一律直接算「已留」，客人馬上就看得到；
+      //    可選帶 status=pending 才會丟進審片佇列（保留給 /review.html 這個舊工具用）──
       if (pathname === "/api/photos" && request.method === "POST") {
         const form = await request.formData();
         const files = form.getAll("file").filter((f) => f && typeof f.arrayBuffer === "function");
@@ -236,7 +238,7 @@ export default {
         const style = form.get("style") || null;
         const photoType = form.get("photo_type") || null;
         const stoneShape = form.get("stone_shape") || null;
-        const status = form.get("status") === "kept" ? "kept" : "pending";
+        const status = form.get("status") === "pending" ? "pending" : "kept";
 
         const added = [];
         const skipped = [];
