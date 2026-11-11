@@ -299,6 +299,28 @@ export default {
         return json({ added, skipped }, 201);
       }
 
+      // ── 輕量補欄位：只用檔名比對、純文字 JSON，不用傳整張圖片，拿來補
+      //    category/color/gemstone/style/photo_type/stone_shape 這些本機才有的標籤 ──
+      if (pathname === "/api/photos/backfill" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const filename = String(body.filename || "").trim();
+        if (!filename) return json({ error: "缺少 filename" }, 400);
+        const category = body.category || null;
+        const color = body.color || null;
+        const gemstone = body.gemstone || null;
+        const style = body.style || null;
+        const photoType = body.photo_type || null;
+        const stoneShape = body.stone_shape || null;
+        const r = await env.DB.prepare(
+          `UPDATE photos SET
+             category = COALESCE(category, ?), color = COALESCE(color, ?),
+             gemstone = COALESCE(gemstone, ?), style = COALESCE(style, ?),
+             photo_type = COALESCE(photo_type, ?), stone_shape = COALESCE(stone_shape, ?)
+           WHERE filename = ?`
+        ).bind(category, color, gemstone, style, photoType, stoneShape, filename).run();
+        return json({ updated: r.meta.changes });
+      }
+
       // ── 串流圖片本體（從 R2）──
       const imgMatch = pathname.match(/^\/api\/image\/(\d+)$/);
       if (imgMatch && request.method === "GET") {
