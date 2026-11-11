@@ -32,15 +32,20 @@
 
   .filters { flex-shrink:0; background:var(--surface); border-bottom:1px solid var(--border);
     padding:10px 16px 12px; display:flex; flex-direction:column; gap:8px; }
-  .pills { display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; }
+  .pills-row { display:flex; align-items:center; gap:8px; }
+  .pills { flex:1; min-width:0; display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; }
   .pills button { flex-shrink:0; border:1px solid var(--border); background:var(--bg); color:var(--text2);
     border-radius:16px; padding:6px 12px; font-size:12px; font-weight:600; white-space:nowrap; }
   .pills button.active { background:var(--gold); color:#fff; border-color:var(--gold); }
   .selects { display:flex; gap:8px; }
   .selects select { flex:1; min-width:0; border:1px solid var(--border); background:var(--bg);
     color:var(--text2); border-radius:10px; padding:7px 8px; font-size:12px; }
+  .modes { flex-shrink:0; display:flex; gap:4px; background:var(--s3); border-radius:8px; padding:3px; }
+  .modes button { border:none; background:transparent; color:var(--text3); font-size:11px;
+    font-weight:700; padding:5px 10px; border-radius:6px; white-space:nowrap; }
+  .modes button.active { background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
-  /* ── 單張卡片滑動（全部款式）── */
+  /* ── 快選卡片（單張滑動）── */
   .swipe-wrap { flex:1; min-height:0; position:relative; display:flex; align-items:center;
     justify-content:center; padding:16px; overflow:hidden; }
   .card-stack { position:relative; width:100%; max-width:420px; height:100%; max-height:640px; }
@@ -65,9 +70,9 @@
   .empty-state { text-align:center; color:var(--text3); }
   .empty-state .big { font-size:40px; margin-bottom:8px; }
 
-  /* ── 我的收藏：維持格狀 ── */
+  /* ── 格狀（6張 / 12張 / 我的收藏）── */
   .content { flex:1; min-height:0; overflow-y:auto; padding:14px 14px 30px; }
-  .grid { display:grid; gap:10px; grid-template-columns: repeat(2, 1fr); }
+  .grid { display:grid; gap:10px; }
   .tile { position:relative; aspect-ratio:1; background:var(--surface); border-radius:12px;
     overflow:hidden; box-shadow:0 2px 8px rgba(30,30,45,.08); }
   .tile img { width:100%; height:100%; object-fit:cover; display:block; background:#fafafb; }
@@ -78,6 +83,10 @@
   .heart:not(.active) { color:var(--text3); }
   .empty { grid-column:1/-1; text-align:center; color:var(--text3); padding:60px 0; }
   .empty .big { font-size:40px; margin-bottom:8px; }
+  .more-wrap { display:flex; justify-content:center; padding:20px 0; }
+  .more-btn { border:1px solid var(--border); background:var(--surface); color:var(--text2);
+    border-radius:12px; padding:10px 22px; font-size:13px; font-weight:700; }
+  .more-btn:disabled { opacity:.4; }
 
   .login-zone { position:fixed; inset:0; background:rgba(20,20,30,.6); z-index:60;
     display:flex; align-items:center; justify-content:center; padding:20px; }
@@ -101,7 +110,12 @@
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useCallback, useRef } = React;
-const BATCH_SIZE = 20;
+const MODES = [
+  { key: "6", label: "6張", cols: 2, size: 6 },
+  { key: "12", label: "12張", cols: 3, size: 12 },
+  { key: "card", label: "快選卡片" },
+];
+const CARD_BATCH = 20;
 const REFILL_AT = 5;
 const SWIPE_THRESHOLD = 90;
 
@@ -169,17 +183,34 @@ function App() {
   });
   const [nameInput, setNameInput] = useState("");
   const [tab, setTab] = useState("all"); // all | mine
-  const [filterOptions, setFilterOptions] = useState({ category: [], gemstone: [] });
-  const [filters, setFilters] = useState({ category: "", gemstone: "" });
+  const [mode, setMode] = useState(() => {
+    try { return localStorage.getItem("pp_catalog_mode") || "12"; } catch { return "12"; }
+  });
+  const modeRef = useRef(mode);
+  const [filterOptions, setFilterOptions] = useState({ category: [], color: [] });
+  const [filters, setFilters] = useState({ category: "", color: "" });
+  const EXCLUDE_VALUES = ["其他", "未定"];
+  const cleanOptions = (arr) => (arr || []).filter((v) => !EXCLUDE_VALUES.includes(v));
   const filtersRef = useRef(filters);
+
+  // 格狀（6張／12張）用
+  const [gridItems, setGridItems] = useState([]);
+  const [gridHasMore, setGridHasMore] = useState(true);
+  const [gridLoading, setGridLoading] = useState(false);
+  const gridLastIdRef = useRef(0);
+
+  // 快選卡片用
   const [queue, setQueue] = useState([]);
-  const [myFavorites, setMyFavorites] = useState([]); // 完整照片物件（我的收藏分頁用）
+  const [cardLoading, setCardLoading] = useState(false);
+  const [cardHasMore, setCardHasMore] = useState(true);
+  const cardLastIdRef = useRef(0);
+  const cardLoadingRef = useRef(false);
+  const cardHasMoreRef = useRef(true);
+
+  const [myFavorites, setMyFavorites] = useState([]); // 完整照片物件（個人款式收藏匣用）
   const [favIds, setFavIds] = useState(() => new Set());
-  const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const lastIdRef = useRef(0);
-  const loadingRef = useRef(false);
-  const hasMoreRef = useRef(true);
+  const visitorRef = useRef(visitor);
+  useEffect(() => { visitorRef.current = visitor; }, [visitor]);
 
   useEffect(() => {
     fetch("/api/filters?status=kept").then((r) => r.json()).then(setFilterOptions).catch(() => {});
@@ -197,44 +228,79 @@ function App() {
 
   useEffect(() => { if (visitor) loadMyFavorites(visitor); }, [visitor, loadMyFavorites]);
 
-  const fetchBatch = useCallback(async (reset) => {
-    if (loadingRef.current) return;
-    if (!reset && !hasMoreRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
+  // ── 格狀載入 ──
+  const loadGrid = useCallback(async (reset) => {
+    setGridLoading(true);
     try {
-      const afterId = reset ? 0 : lastIdRef.current;
-      const params = new URLSearchParams({ status: "kept", limit: String(BATCH_SIZE) });
+      const pageSize = MODES.find((m) => m.key === modeRef.current)?.size || 12;
+      const afterId = reset ? 0 : gridLastIdRef.current;
+      const params = new URLSearchParams({ status: "kept", limit: String(pageSize) });
       if (afterId) params.set("after_id", String(afterId));
-      for (const k of ["category", "gemstone"]) {
+      for (const k of ["category", "color"]) {
+        if (filtersRef.current[k]) params.set(k, filtersRef.current[k]);
+      }
+      const d = await (await fetch(`/api/photos?${params.toString()}`)).json();
+      const got = d.photos || [];
+      setGridItems((prev) => (reset ? got : [...prev, ...got]));
+      if (got.length) gridLastIdRef.current = got[got.length - 1].id;
+      setGridHasMore(got.length === pageSize);
+    } catch {}
+    setGridLoading(false);
+  }, []);
+
+  // ── 快選卡片載入 ──
+  const fetchCardBatch = useCallback(async (reset) => {
+    if (cardLoadingRef.current) return;
+    if (!reset && !cardHasMoreRef.current) return;
+    cardLoadingRef.current = true;
+    setCardLoading(true);
+    try {
+      const afterId = reset ? 0 : cardLastIdRef.current;
+      const params = new URLSearchParams({ status: "kept", limit: String(CARD_BATCH) });
+      if (afterId) params.set("after_id", String(afterId));
+      if (visitorRef.current) params.set("exclude_seen_by", visitorRef.current);
+      for (const k of ["category", "color"]) {
         if (filtersRef.current[k]) params.set(k, filtersRef.current[k]);
       }
       const d = await (await fetch(`/api/photos?${params.toString()}`)).json();
       const got = d.photos || [];
       setQueue((prev) => (reset ? got : [...prev, ...got]));
-      if (got.length) lastIdRef.current = got[got.length - 1].id;
-      hasMoreRef.current = got.length === BATCH_SIZE;
-      setHasMore(hasMoreRef.current);
+      if (got.length) cardLastIdRef.current = got[got.length - 1].id;
+      cardHasMoreRef.current = got.length === CARD_BATCH;
+      setCardHasMore(cardHasMoreRef.current);
     } catch {}
-    loadingRef.current = false;
-    setLoading(false);
+    cardLoadingRef.current = false;
+    setCardLoading(false);
   }, []);
 
   useEffect(() => {
     filtersRef.current = filters;
-    if (tab === "all") {
-      lastIdRef.current = 0;
-      hasMoreRef.current = true;
+    modeRef.current = mode;
+    if (tab !== "all") return;
+    if (mode === "card") {
+      cardLastIdRef.current = 0;
+      cardHasMoreRef.current = true;
       setQueue([]);
-      fetchBatch(true);
+      fetchCardBatch(true);
+    } else {
+      gridLastIdRef.current = 0;
+      setGridItems([]);
+      loadGrid(true);
     }
-  }, [filters, tab, fetchBatch]);
+  }, [filters, tab, mode]); // eslint-disable-line
 
   useEffect(() => {
-    if (tab === "all" && queue.length < REFILL_AT && hasMore && !loading) fetchBatch(false);
-  }, [queue, tab, hasMore, loading, fetchBatch]);
+    if (tab === "all" && mode === "card" && queue.length < REFILL_AT && cardHasMore && !cardLoading) {
+      fetchCardBatch(false);
+    }
+  }, [queue, tab, mode, cardHasMore, cardLoading, fetchCardBatch]);
 
   const changeFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value }));
+
+  const changeMode = (m) => {
+    setMode(m);
+    try { localStorage.setItem("pp_catalog_mode", m); } catch {}
+  };
 
   const addFavorite = async (photoId) => {
     if (!visitor) return;
@@ -245,6 +311,17 @@ function App() {
         body: JSON.stringify({ photo_id: photoId, name: visitor }),
       });
       loadMyFavorites(visitor);
+    } catch {}
+  };
+
+  const recordSkip = async (photoId) => {
+    if (!visitor) return;
+    try {
+      await fetch("/api/skips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photo_id: photoId, name: visitor }),
+      });
     } catch {}
   };
 
@@ -266,10 +343,11 @@ function App() {
     } catch {}
   };
 
-  const decide = (dir) => {
+  const decideCard = (dir) => {
     const photo = queue[0];
     if (!photo) return;
     if (dir === "like") addFavorite(photo.id);
+    else recordSkip(photo.id);
     setQueue((prev) => prev.slice(1));
   };
 
@@ -286,6 +364,8 @@ function App() {
     try { localStorage.removeItem("pp_visitor_name"); } catch {}
   };
 
+  const curMode = MODES.find((m) => m.key === mode) || MODES[1];
+
   return (
     <>
       <div className="nav">
@@ -301,32 +381,39 @@ function App() {
       <div className="tabs">
         <button className={tab === "all" ? "active" : ""} onClick={() => setTab("all")}>全部款式</button>
         <button className={tab === "mine" ? "active" : ""} onClick={() => setTab("mine")}>
-          我的收藏{myFavorites.length ? `（${myFavorites.length}）` : ""}
+          個人款式收藏匣{myFavorites.length ? `（${myFavorites.length}）` : ""}
         </button>
       </div>
 
       {tab === "all" && (
         <div className="filters">
-          <div className="pills">
-            <button className={filters.category === "" ? "active" : ""} onClick={() => changeFilter("category", "")}>全部品項</button>
-            {filterOptions.category.map((v) => (
-              <button key={v} className={filters.category === v ? "active" : ""} onClick={() => changeFilter("category", v)}>{v}</button>
-            ))}
+          <div className="pills-row">
+            <div className="pills">
+              <button className={filters.category === "" ? "active" : ""} onClick={() => changeFilter("category", "")}>全部品項</button>
+              {cleanOptions(filterOptions.category).map((v) => (
+                <button key={v} className={filters.category === v ? "active" : ""} onClick={() => changeFilter("category", v)}>{v}</button>
+              ))}
+            </div>
+            <div className="modes">
+              {MODES.map((m) => (
+                <button key={m.key} className={mode === m.key ? "active" : ""} onClick={() => changeMode(m.key)}>{m.label}</button>
+              ))}
+            </div>
           </div>
           <div className="selects">
-            <select value={filters.gemstone} onChange={(e) => changeFilter("gemstone", e.target.value)}>
-              <option value="">全部寶石</option>
-              {filterOptions.gemstone.map((v) => <option key={v} value={v}>{v}</option>)}
+            <select value={filters.color} onChange={(e) => changeFilter("color", e.target.value)}>
+              <option value="">全部顏色</option>
+              {cleanOptions(filterOptions.color).map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
           </div>
         </div>
       )}
 
-      {tab === "all" && (
+      {tab === "all" && mode === "card" && (
         <>
           <div className="swipe-wrap">
             <div className="card-stack">
-              {queue.length === 0 && !loading && (
+              {queue.length === 0 && !cardLoading && (
                 <div className="swipe-wrap" style={{ position: "absolute", inset: 0, padding: 0 }}>
                   <div className="empty-state">
                     <div className="big">✓</div>
@@ -335,22 +422,53 @@ function App() {
                 </div>
               )}
               {queue.slice(0, 2).reverse().map((p, i, arr) => (
-                <SwipeCard key={p.id} photo={p} top={i === arr.length - 1} onDecide={decide} />
+                <SwipeCard key={p.id} photo={p} top={i === arr.length - 1} onDecide={decideCard} />
               ))}
             </div>
           </div>
           {queue.length > 0 && (
             <div className="swipe-actions">
-              <button className="act-circle act-skip" onClick={() => decide("skip")}>✕</button>
-              <button className="act-circle act-like" onClick={() => decide("like")}>♥</button>
+              <button className="act-circle act-skip" onClick={() => decideCard("skip")}>✕</button>
+              <button className="act-circle act-like" onClick={() => decideCard("like")}>♥</button>
             </div>
           )}
         </>
       )}
 
+      {tab === "all" && mode !== "card" && (
+        <div className="content">
+          <div className="grid" style={{ gridTemplateColumns: `repeat(${curMode.cols}, 1fr)` }}>
+            {gridItems.length === 0 && !gridLoading && (
+              <div className="empty">
+                <div className="big">✓</div>
+                <div>沒有符合條件的款式</div>
+              </div>
+            )}
+            {gridItems.map((p) => {
+              const isFav = favIds.has(p.id);
+              return (
+                <div key={p.id} className="tile">
+                  <img src={p.image_url} alt="" loading="lazy" />
+                  <button className={"heart" + (isFav ? " active" : "")} onClick={() => toggleFavorite(p.id)}>
+                    {isFav ? "♥" : "♡"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {gridHasMore && gridItems.length > 0 && (
+            <div className="more-wrap">
+              <button className="more-btn" disabled={gridLoading} onClick={() => loadGrid(false)}>
+                {gridLoading ? "載入中…" : "載入更多"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === "mine" && (
         <div className="content">
-          <div className="grid">
+          <div className="grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
             {myFavorites.length === 0 && (
               <div className="empty">
                 <div className="big">♡</div>

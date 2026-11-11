@@ -52,12 +52,14 @@ export default {
       }
 
       // ── 審片佇列／客人瀏覽清單：status=pending 給審片用，status=kept 給客人瀏覽用
-      //    可選加 category/color/gemstone/stone_shape/photo_type 篩選，after_id 做翻頁 ──
+      //    可選加 category/color/gemstone/stone_shape/photo_type 篩選，after_id 做翻頁；
+      //    可選帶 exclude_seen_by=訪客名字：這個人已經收藏過或跳過的款式不會再出現 ──
       if (pathname === "/api/photos" && request.method === "GET") {
         const status = url.searchParams.get("status") || "pending";
         const limit = Math.min(parseInt(url.searchParams.get("limit") || "60", 10) || 60, 200);
         const order = url.searchParams.get("order") === "random" ? "RANDOM()" : "id ASC";
         const afterId = parseInt(url.searchParams.get("after_id") || "0", 10) || 0;
+        const excludeSeenBy = String(url.searchParams.get("exclude_seen_by") || "").trim();
 
         const conds = ["status = ?"];
         const binds = [status];
@@ -66,6 +68,13 @@ export default {
           if (v) { conds.push(`${col} = ?`); binds.push(v); }
         }
         if (afterId) { conds.push("id > ?"); binds.push(afterId); }
+        if (excludeSeenBy) {
+          conds.push(
+            `id NOT IN (SELECT photo_id FROM favorites WHERE visitor_name = ?
+                        UNION SELECT photo_id FROM skips WHERE visitor_name = ?)`
+          );
+          binds.push(excludeSeenBy, excludeSeenBy);
+        }
         binds.push(limit);
 
         const { results } = await env.DB.prepare(
@@ -75,6 +84,18 @@ export default {
         return json({
           photos: results.map((p) => ({ ...p, image_url: `/api/image/${p.id}` })),
         });
+      }
+
+      // ── 快選卡片「跳過」：記錄這個訪客看過但沒收藏，以後不會再出現給他 ──
+      if (pathname === "/api/skips" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const photoId = parseInt(body.photo_id, 10);
+        const name = String(body.name || "").trim().slice(0, 40);
+        if (!photoId || !name) return json({ error: "缺少 photo_id 或 name" }, 400);
+        await env.DB.prepare(
+          `INSERT INTO skips (photo_id, visitor_name) VALUES (?, ?) ON CONFLICT(photo_id, visitor_name) DO NOTHING`
+        ).bind(photoId, name).run();
+        return json({ ok: true });
       }
 
       // ── 客人瀏覽頁用：目前「已留」照片裡實際出現過哪些分類/顏色/寶石/形狀可選 ──
