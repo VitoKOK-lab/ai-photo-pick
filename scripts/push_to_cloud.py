@@ -106,7 +106,7 @@ def run(limit=0, dry_run=False):
     conn = sqlite3.connect(SQLITE_PATH)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
-        "SELECT id, filename, full_path, thumb_path, category, gemstone, style, photo_type "
+        "SELECT id, filename, full_path, thumb_path, category, color, gemstone, style, photo_type, stone_shape "
         "FROM photos ORDER BY id"
     ).fetchall()
     conn.close()
@@ -133,9 +133,11 @@ def run(limit=0, dry_run=False):
             continue
         status, body = _multipart_upload(path, {
             "category": r["category"],
+            "color": r["color"],
             "gemstone": r["gemstone"],
             "style": r["style"],
             "photo_type": r["photo_type"],
+            "stone_shape": r["stone_shape"],
         })
         if status in (200, 201):
             ok += 1

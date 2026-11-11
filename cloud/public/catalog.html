@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>審美資料庫 · 款式瀏覽</title>
+<style>
+  :root {
+    --bg:#f1f1f4; --surface:#ffffff; --s3:#e8e8ee; --border:#e0e0e8;
+    --text:#232330; --text2:#5a5a68; --text3:#8d8d99;
+    --gold:#b8935a; --danger:#c0392b; --heart:#d64566;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Segoe UI",sans-serif; }
+  #root { min-height:100vh; display:flex; flex-direction:column; }
+  button { font-family:inherit; cursor:pointer; touch-action:manipulation; }
+
+  .nav { flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+    padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--border);
+    position:sticky; top:0; z-index:10; }
+  .nav-title { font-weight:800; font-size:16px; letter-spacing:1px; }
+  .nav-visitor { font-size:12px; color:var(--text3); display:flex; align-items:center; gap:8px; }
+  .nav-visitor b { color:var(--text); }
+  .nav-visitor button { border:none; background:none; color:var(--gold); font-size:12px;
+    text-decoration:underline; padding:0; }
+
+  .tabs { flex-shrink:0; display:flex; gap:6px; padding:10px 16px 0; background:var(--surface); }
+  .tabs button { border:none; background:none; padding:8px 4px; font-size:14px; font-weight:700;
+    color:var(--text3); border-bottom:2px solid transparent; }
+  .tabs button.active { color:var(--text); border-bottom-color:var(--gold); }
+
+  .filters { flex-shrink:0; background:var(--surface); border-bottom:1px solid var(--border);
+    padding:10px 16px 12px; display:flex; flex-direction:column; gap:8px; }
+  .pills { display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; }
+  .pills button { flex-shrink:0; border:1px solid var(--border); background:var(--bg); color:var(--text2);
+    border-radius:16px; padding:6px 12px; font-size:12px; font-weight:600; white-space:nowrap; }
+  .pills button.active { background:var(--gold); color:#fff; border-color:var(--gold); }
+  .selects { display:flex; gap:8px; }
+  .selects select { flex:1; min-width:0; border:1px solid var(--border); background:var(--bg);
+    color:var(--text2); border-radius:10px; padding:7px 8px; font-size:12px; }
+
+  .content { flex:1; padding:14px 14px 30px; }
+  .grid { display:grid; gap:10px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+  .tile { position:relative; aspect-ratio:1; background:var(--surface); border-radius:12px;
+    overflow:hidden; box-shadow:0 2px 8px rgba(30,30,45,.08); }
+  .tile img { width:100%; height:100%; object-fit:cover; display:block; background:#fafafb; }
+  .tile .label { position:absolute; left:0; right:0; bottom:0; padding:6px 8px;
+    background:linear-gradient(transparent, rgba(0,0,0,.6)); color:#fff; font-size:10px;
+    letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
+  .heart { position:absolute; top:6px; right:6px; width:30px; height:30px; border-radius:50%;
+    border:none; background:rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center;
+    font-size:15px; box-shadow:0 2px 6px rgba(0,0,0,.2); }
+  .heart.active { color:var(--heart); }
+  .heart:not(.active) { color:var(--text3); }
+
+  .empty { grid-column:1/-1; text-align:center; color:var(--text3); padding:60px 0; }
+  .empty .big { font-size:40px; margin-bottom:8px; }
+
+  .more-wrap { display:flex; justify-content:center; padding:20px 0; }
+  .more-btn { border:1px solid var(--border); background:var(--surface); color:var(--text2);
+    border-radius:12px; padding:10px 22px; font-size:13px; font-weight:700; }
+  .more-btn:disabled { opacity:.4; }
+
+  .login-zone { position:fixed; inset:0; background:rgba(20,20,30,.6); z-index:60;
+    display:flex; align-items:center; justify-content:center; padding:20px; }
+  .login-box { background:var(--surface); border-radius:20px; padding:32px 26px; text-align:center;
+    width:100%; max-width:340px; }
+  .login-box .icon { font-size:38px; margin-bottom:10px; }
+  .login-box h2 { font-size:18px; margin:0 0 6px; }
+  .login-box p { font-size:12px; color:var(--text3); margin:0 0 18px; }
+  .login-box input { width:100%; border:1px solid var(--border); border-radius:10px; padding:12px;
+    font-size:15px; text-align:center; margin-bottom:14px; }
+  .login-box button { width:100%; background:var(--gold); color:#fff; border:none; border-radius:12px;
+    padding:13px 0; font-size:15px; font-weight:800; letter-spacing:1px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useCallback, useRef } = React;
+const PAGE_SIZE = 60;
+
+function App() {
+  const [visitor, setVisitor] = useState(() => {
+    try { return localStorage.getItem("pp_visitor_name") || ""; } catch { return ""; }
+  });
+  const [nameInput, setNameInput] = useState("");
+  const [tab, setTab] = useState("all"); // all | mine
+  const [filterOptions, setFilterOptions] = useState({ category: [], color: [], gemstone: [], stone_shape: [] });
+  const [filters, setFilters] = useState({ category: "", color: "", gemstone: "", stone_shape: "" });
+  const [items, setItems] = useState([]);
+  const [myFavorites, setMyFavorites] = useState([]); // 完整照片物件（我的收藏分頁用）
+  const [favIds, setFavIds] = useState(() => new Set());
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const lastIdRef = useRef(0);
+
+  useEffect(() => {
+    fetch("/api/filters?status=kept").then((r) => r.json()).then(setFilterOptions).catch(() => {});
+  }, []);
+
+  const loadMyFavorites = useCallback(async (name) => {
+    if (!name) { setMyFavorites([]); setFavIds(new Set()); return; }
+    try {
+      const d = await (await fetch(`/api/favorites?name=${encodeURIComponent(name)}`)).json();
+      const favs = d.favorites || [];
+      setMyFavorites(favs);
+      setFavIds(new Set(favs.map((p) => p.id)));
+    } catch {}
+  }, []);
+
+  useEffect(() => { if (visitor) loadMyFavorites(visitor); }, [visitor, loadMyFavorites]);
+
+  const loadAll = useCallback(async (reset) => {
+    setLoading(true);
+    try {
+      const afterId = reset ? 0 : lastIdRef.current;
+      const params = new URLSearchParams({ status: "kept", limit: String(PAGE_SIZE) });
+      if (afterId) params.set("after_id", String(afterId));
+      for (const k of ["category", "color", "gemstone", "stone_shape"]) {
+        if (filters[k]) params.set(k, filters[k]);
+      }
+      const d = await (await fetch(`/api/photos?${params.toString()}`)).json();
+      const got = d.photos || [];
+      setItems((prev) => (reset ? got : [...prev, ...got]));
+      if (got.length) lastIdRef.current = got[got.length - 1].id;
+      setHasMore(got.length === PAGE_SIZE);
+    } catch {}
+    setLoading(false);
+  }, [filters]);
+
+  useEffect(() => { if (tab === "all") { lastIdRef.current = 0; loadAll(true); } }, [filters, tab]); // eslint-disable-line
+
+  const changeFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value }));
+
+  const toggleFavorite = async (photoId) => {
+    if (!visitor) return;
+    const wasFav = favIds.has(photoId);
+    setFavIds((prev) => {
+      const next = new Set(prev);
+      if (wasFav) next.delete(photoId); else next.add(photoId);
+      return next;
+    });
+    try {
+      await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photo_id: photoId, name: visitor }),
+      });
+      loadMyFavorites(visitor);
+    } catch {}
+  };
+
+  const doLogin = () => {
+    const name = nameInput.trim();
+    if (!name) return;
+    setVisitor(name);
+    try { localStorage.setItem("pp_visitor_name", name); } catch {}
+  };
+
+  const switchVisitor = () => {
+    setVisitor("");
+    setNameInput("");
+    try { localStorage.removeItem("pp_visitor_name"); } catch {}
+  };
+
+  const list = tab === "mine" ? myFavorites : items;
+  const FIELD_LABEL = { category: "品項", color: "顏色", gemstone: "寶石", stone_shape: "形狀" };
+
+  return (
+    <>
+      <div className="nav">
+        <div className="nav-title">審美資料庫</div>
+        {visitor && (
+          <div className="nav-visitor">
+            <span>Hi, <b>{visitor}</b></span>
+            <button onClick={switchVisitor}>換人</button>
+          </div>
+        )}
+      </div>
+
+      <div className="tabs">
+        <button className={tab === "all" ? "active" : ""} onClick={() => setTab("all")}>全部款式</button>
+        <button className={tab === "mine" ? "active" : ""} onClick={() => setTab("mine")}>
+          我的收藏{myFavorites.length ? `（${myFavorites.length}）` : ""}
+        </button>
+      </div>
+
+      {tab === "all" && (
+        <div className="filters">
+          <div className="pills">
+            <button className={filters.category === "" ? "active" : ""} onClick={() => changeFilter("category", "")}>全部品項</button>
+            {filterOptions.category.map((v) => (
+              <button key={v} className={filters.category === v ? "active" : ""} onClick={() => changeFilter("category", v)}>{v}</button>
+            ))}
+          </div>
+          <div className="selects">
+            <select value={filters.color} onChange={(e) => changeFilter("color", e.target.value)}>
+              <option value="">全部顏色</option>
+              {filterOptions.color.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filters.gemstone} onChange={(e) => changeFilter("gemstone", e.target.value)}>
+              <option value="">全部寶石</option>
+              {filterOptions.gemstone.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={filters.stone_shape} onChange={(e) => changeFilter("stone_shape", e.target.value)}>
+              <option value="">全部形狀</option>
+              {filterOptions.stone_shape.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+
+      <div className="content">
+        <div className="grid">
+          {list.length === 0 && !loading && (
+            <div className="empty">
+              <div className="big">{tab === "mine" ? "♡" : "✓"}</div>
+              <div>{tab === "mine" ? "還沒有收藏任何款式" : "沒有符合條件的款式"}</div>
+            </div>
+          )}
+          {list.map((p) => {
+            const specs = [p.category, p.color, p.gemstone, p.stone_shape]
+              .filter((v) => v && v !== "未定").join(" · ");
+            const isFav = favIds.has(p.id);
+            return (
+              <div key={p.id} className="tile">
+                <img src={p.image_url} alt="" loading="lazy" />
+                {specs && <div className="label">{specs}</div>}
+                <button className={"heart" + (isFav ? " active" : "")} onClick={() => toggleFavorite(p.id)}>
+                  {isFav ? "♥" : "♡"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        {tab === "all" && hasMore && list.length > 0 && (
+          <div className="more-wrap">
+            <button className="more-btn" disabled={loading} onClick={() => loadAll(false)}>
+              {loading ? "載入中…" : "載入更多"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {!visitor && (
+        <div className="login-zone">
+          <div className="login-box">
+            <div className="icon">💍</div>
+            <h2>歡迎瀏覽款式</h2>
+            <p>請先留下你的名字或暱稱，就可以開始收藏喜歡的款式</p>
+            <input
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && doLogin()}
+              placeholder="你的名字或暱稱"
+              maxLength={40}
+            />
+            <button onClick={doLogin}>開始瀏覽</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
