@@ -62,6 +62,13 @@
   .login-box button { width:100%; background:var(--gold); color:#fff; border:none; border-radius:12px;
     padding:12px 0; font-size:14px; font-weight:800; letter-spacing:1px; }
   .login-box .err { color:#c0392b; font-size:12px; margin-bottom:10px; }
+  .login-box .ok { color:#2e7d32; font-size:12px; margin-bottom:10px; }
+  .login-box .hint { font-size:11px; color:var(--text3); margin-top:12px; line-height:1.5; }
+
+  .pw-change { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .pw-change input { border:1px solid var(--border); border-radius:8px; padding:7px 10px; font-size:12px; }
+  .pw-change button { border:1px solid var(--border); background:var(--bg); color:var(--text2);
+    border-radius:8px; padding:7px 12px; font-size:12px; font-weight:600; }
 </style>
 </head>
 <body>
@@ -96,9 +103,19 @@ function App() {
     try { return sessionStorage.getItem("pp_admin_pw") || ""; } catch { return ""; }
   });
   const [pwInput, setPwInput] = useState("");
+  const [pwInput2, setPwInput2] = useState("");
   const [err, setErr] = useState("");
+  const [ok, setOk] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [needsSetup, setNeedsSetup] = useState(null); // null=還沒檢查過, true/false=檢查結果
+  const [showChangePw, setShowChangePw] = useState(false);
+  const [oldPwInput, setOldPwInput] = useState("");
+  const [newPwInput, setNewPwInput] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/has-password").then((r) => r.json()).then((d) => setNeedsSetup(!d.hasPassword)).catch(() => setNeedsSetup(false));
+  }, []);
 
   const load = async (pw) => {
     setLoading(true);
@@ -130,6 +147,66 @@ function App() {
     try { sessionStorage.removeItem("pp_admin_pw"); } catch {}
   };
 
+  const doSetup = async () => {
+    setErr("");
+    if (pwInput.length < 4) { setErr("密碼至少需要 4 碼"); return; }
+    if (pwInput !== pwInput2) { setErr("兩次輸入的密碼不一樣"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/set-password", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwInput }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setErr(d.error || "設定失敗"); setLoading(false); return; }
+      setNeedsSetup(false);
+      await load(pwInput);
+    } catch {
+      setErr("連線失敗，請重試");
+      setLoading(false);
+    }
+  };
+
+  const doChangePassword = async () => {
+    setErr(""); setOk("");
+    if (newPwInput.length < 4) { setErr("新密碼至少需要 4 碼"); return; }
+    try {
+      const res = await fetch("/api/admin/change-password", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ old_password: oldPwInput, new_password: newPwInput }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setErr(d.error || "修改失敗"); return; }
+      setOk("密碼修改成功");
+      setPassword(newPwInput);
+      try { sessionStorage.setItem("pp_admin_pw", newPwInput); } catch {}
+      setOldPwInput(""); setNewPwInput(""); setShowChangePw(false);
+    } catch {
+      setErr("連線失敗，請重試");
+    }
+  };
+
+  if (needsSetup === null) return null; // 還在檢查有沒有設定過密碼
+
+  if (needsSetup) {
+    return (
+      <div className="login-zone">
+        <div className="login-box">
+          <div className="icon">🔑</div>
+          <h2>第一次使用，請設定後台密碼</h2>
+          {err && <div className="err">{err}</div>}
+          <input type="password" value={pwInput} onChange={(e) => setPwInput(e.target.value)}
+            placeholder="設定密碼（至少 4 碼）" />
+          <input type="password" value={pwInput2} onChange={(e) => setPwInput2(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && doSetup()}
+            placeholder="再輸入一次確認" />
+          <button disabled={loading} onClick={doSetup}>{loading ? "設定中…" : "設定密碼"}</button>
+          <div className="hint">密碼只有你自己知道，之後登入後台都要用這組密碼。</div>
+        </div>
+      </div>
+    );
+  }
+
   if (!password || !data) {
     return (
       <div className="login-zone">
@@ -156,8 +233,26 @@ function App() {
     <div className="wrap">
       <div className="nav">
         <div className="nav-title">審美資料庫 · 後台統計</div>
-        <button onClick={logout}>登出</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowChangePw((v) => !v)}>修改密碼</button>
+          <button onClick={logout}>登出</button>
+        </div>
       </div>
+
+      {showChangePw && (
+        <div className="wrap" style={{ paddingBottom: 0 }}>
+          <div className="section">
+            <h3>修改密碼</h3>
+            {err && <div className="err" style={{ marginBottom: 8 }}>{err}</div>}
+            {ok && <div className="ok" style={{ marginBottom: 8 }}>{ok}</div>}
+            <div className="pw-change">
+              <input type="password" placeholder="目前密碼" value={oldPwInput} onChange={(e) => setOldPwInput(e.target.value)} />
+              <input type="password" placeholder="新密碼（至少 4 碼）" value={newPwInput} onChange={(e) => setNewPwInput(e.target.value)} />
+              <button onClick={doChangePassword}>確定修改</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="wrap">
         <div className="cards">

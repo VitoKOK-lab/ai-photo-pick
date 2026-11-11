@@ -130,10 +130,44 @@ export default {
         });
       }
 
+      // ── 後台密碼是否已經設定過（還沒設定過的話，前台要顯示「設定密碼」而不是「登入」）──
+      if (pathname === "/api/admin/has-password" && request.method === "GET") {
+        const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = 'admin_password'`).first();
+        return json({ hasPassword: !!(row && row.value) });
+      }
+
+      // ── 第一次設定後台密碼（還沒設定過才能用這個；已經有密碼了要用下面的「修改密碼」）──
+      if (pathname === "/api/admin/set-password" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const newPw = String(body.password || "");
+        if (newPw.length < 4) return json({ error: "密碼至少需要 4 碼" }, 400);
+        const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = 'admin_password'`).first();
+        if (row && row.value) return json({ error: "密碼已經設定過了，請用修改密碼的功能" }, 409);
+        await env.DB.prepare(
+          `INSERT INTO settings (key, value) VALUES ('admin_password', ?)`
+        ).bind(newPw).run();
+        return json({ ok: true });
+      }
+
+      // ── 修改已存在的後台密碼（要先輸入對目前密碼）──
+      if (pathname === "/api/admin/change-password" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const oldPw = String(body.old_password || "");
+        const newPw = String(body.new_password || "");
+        if (newPw.length < 4) return json({ error: "新密碼至少需要 4 碼" }, 400);
+        const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = 'admin_password'`).first();
+        if (!row || !row.value || row.value !== oldPw) return json({ error: "目前密碼錯誤" }, 401);
+        await env.DB.prepare(
+          `UPDATE settings SET value = ? WHERE key = 'admin_password'`
+        ).bind(newPw).run();
+        return json({ ok: true });
+      }
+
       // ── 老闆後台：客人收藏統計（需要密碼）──
       if (pathname === "/api/admin/stats" && request.method === "GET") {
         const pw = url.searchParams.get("password") || request.headers.get("x-admin-password") || "";
-        if (!env.ADMIN_PASSWORD || pw !== env.ADMIN_PASSWORD) {
+        const row = await env.DB.prepare(`SELECT value FROM settings WHERE key = 'admin_password'`).first();
+        if (!row || !row.value || pw !== row.value) {
           return json({ error: "密碼錯誤" }, 401);
         }
         const totals = await env.DB.prepare(
