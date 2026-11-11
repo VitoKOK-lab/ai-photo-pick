@@ -32,23 +32,25 @@
 
   .filters { flex-shrink:0; background:var(--surface); border-bottom:1px solid var(--border);
     padding:10px 16px 12px; display:flex; flex-direction:column; gap:8px; }
-  .pills { display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; }
+  .pills-row { display:flex; align-items:center; gap:8px; }
+  .pills { flex:1; min-width:0; display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; }
   .pills button { flex-shrink:0; border:1px solid var(--border); background:var(--bg); color:var(--text2);
     border-radius:16px; padding:6px 12px; font-size:12px; font-weight:600; white-space:nowrap; }
   .pills button.active { background:var(--gold); color:#fff; border-color:var(--gold); }
   .selects { display:flex; gap:8px; }
   .selects select { flex:1; min-width:0; border:1px solid var(--border); background:var(--bg);
     color:var(--text2); border-radius:10px; padding:7px 8px; font-size:12px; }
+  .density { flex-shrink:0; display:flex; gap:4px; background:var(--s3); border-radius:8px; padding:3px; }
+  .density button { border:none; background:transparent; color:var(--text3); font-size:11px;
+    font-weight:700; padding:5px 10px; border-radius:6px; }
+  .density button.active { background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
   .content { flex:1; padding:14px 14px 30px; }
-  .grid { display:grid; gap:10px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .grid { display:grid; gap:10px; }
 
   .tile { position:relative; aspect-ratio:1; background:var(--surface); border-radius:12px;
     overflow:hidden; box-shadow:0 2px 8px rgba(30,30,45,.08); }
   .tile img { width:100%; height:100%; object-fit:cover; display:block; background:#fafafb; }
-  .tile .label { position:absolute; left:0; right:0; bottom:0; padding:6px 8px;
-    background:linear-gradient(transparent, rgba(0,0,0,.6)); color:#fff; font-size:10px;
-    letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
   .heart { position:absolute; top:6px; right:6px; width:30px; height:30px; border-radius:50%;
     border:none; background:rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center;
     font-size:15px; box-shadow:0 2px 6px rgba(0,0,0,.2); }
@@ -85,7 +87,10 @@
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useCallback, useRef } = React;
-const PAGE_SIZE = 60;
+const DENSITY = [
+  { key: "6", label: "6張", cols: 2, size: 6 },
+  { key: "12", label: "12張", cols: 3, size: 12 },
+];
 
 function App() {
   const [visitor, setVisitor] = useState(() => {
@@ -93,8 +98,16 @@ function App() {
   });
   const [nameInput, setNameInput] = useState("");
   const [tab, setTab] = useState("all"); // all | mine
-  const [filterOptions, setFilterOptions] = useState({ category: [], color: [], gemstone: [], stone_shape: [] });
-  const [filters, setFilters] = useState({ category: "", color: "", gemstone: "", stone_shape: "" });
+  const [filterOptions, setFilterOptions] = useState({ category: [], gemstone: [] });
+  const [filters, setFilters] = useState({ category: "", gemstone: "" });
+  const [density, setDensity] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("pp_catalog_density") || "null");
+      if (saved && saved.cols && saved.size) return saved;
+    } catch {}
+    return DENSITY[1];
+  });
+  const densityRef = useRef(density);
   const [items, setItems] = useState([]);
   const [myFavorites, setMyFavorites] = useState([]); // 完整照片物件（我的收藏分頁用）
   const [favIds, setFavIds] = useState(() => new Set());
@@ -121,17 +134,18 @@ function App() {
   const loadAll = useCallback(async (reset) => {
     setLoading(true);
     try {
+      const pageSize = densityRef.current.size;
       const afterId = reset ? 0 : lastIdRef.current;
-      const params = new URLSearchParams({ status: "kept", limit: String(PAGE_SIZE) });
+      const params = new URLSearchParams({ status: "kept", limit: String(pageSize) });
       if (afterId) params.set("after_id", String(afterId));
-      for (const k of ["category", "color", "gemstone", "stone_shape"]) {
+      for (const k of ["category", "gemstone"]) {
         if (filters[k]) params.set(k, filters[k]);
       }
       const d = await (await fetch(`/api/photos?${params.toString()}`)).json();
       const got = d.photos || [];
       setItems((prev) => (reset ? got : [...prev, ...got]));
       if (got.length) lastIdRef.current = got[got.length - 1].id;
-      setHasMore(got.length === PAGE_SIZE);
+      setHasMore(got.length === pageSize);
     } catch {}
     setLoading(false);
   }, [filters]);
@@ -139,6 +153,13 @@ function App() {
   useEffect(() => { if (tab === "all") { lastIdRef.current = 0; loadAll(true); } }, [filters, tab]); // eslint-disable-line
 
   const changeFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value }));
+
+  const changeDensity = (d) => {
+    setDensity(d);
+    densityRef.current = d;
+    try { localStorage.setItem("pp_catalog_density", JSON.stringify(d)); } catch {}
+    if (tab === "all") { lastIdRef.current = 0; loadAll(true); }
+  };
 
   const toggleFavorite = async (photoId) => {
     if (!visitor) return;
@@ -172,7 +193,6 @@ function App() {
   };
 
   const list = tab === "mine" ? myFavorites : items;
-  const FIELD_LABEL = { category: "品項", color: "顏色", gemstone: "寶石", stone_shape: "形狀" };
 
   return (
     <>
@@ -195,31 +215,31 @@ function App() {
 
       {tab === "all" && (
         <div className="filters">
-          <div className="pills">
-            <button className={filters.category === "" ? "active" : ""} onClick={() => changeFilter("category", "")}>全部品項</button>
-            {filterOptions.category.map((v) => (
-              <button key={v} className={filters.category === v ? "active" : ""} onClick={() => changeFilter("category", v)}>{v}</button>
-            ))}
+          <div className="pills-row">
+            <div className="pills">
+              <button className={filters.category === "" ? "active" : ""} onClick={() => changeFilter("category", "")}>全部品項</button>
+              {filterOptions.category.map((v) => (
+                <button key={v} className={filters.category === v ? "active" : ""} onClick={() => changeFilter("category", v)}>{v}</button>
+              ))}
+            </div>
+            <div className="density">
+              {DENSITY.map((d) => (
+                <button key={d.key} className={density.key === d.key ? "active" : ""}
+                  onClick={() => changeDensity(d)}>{d.label}</button>
+              ))}
+            </div>
           </div>
           <div className="selects">
-            <select value={filters.color} onChange={(e) => changeFilter("color", e.target.value)}>
-              <option value="">全部顏色</option>
-              {filterOptions.color.map((v) => <option key={v} value={v}>{v}</option>)}
-            </select>
             <select value={filters.gemstone} onChange={(e) => changeFilter("gemstone", e.target.value)}>
               <option value="">全部寶石</option>
               {filterOptions.gemstone.map((v) => <option key={v} value={v}>{v}</option>)}
-            </select>
-            <select value={filters.stone_shape} onChange={(e) => changeFilter("stone_shape", e.target.value)}>
-              <option value="">全部形狀</option>
-              {filterOptions.stone_shape.map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
           </div>
         </div>
       )}
 
       <div className="content">
-        <div className="grid">
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${tab === "all" ? density.cols : 2}, 1fr)` }}>
           {list.length === 0 && !loading && (
             <div className="empty">
               <div className="big">{tab === "mine" ? "♡" : "✓"}</div>
@@ -227,13 +247,10 @@ function App() {
             </div>
           )}
           {list.map((p) => {
-            const specs = [p.category, p.color, p.gemstone, p.stone_shape]
-              .filter((v) => v && v !== "未定").join(" · ");
             const isFav = favIds.has(p.id);
             return (
               <div key={p.id} className="tile">
                 <img src={p.image_url} alt="" loading="lazy" />
-                {specs && <div className="label">{specs}</div>}
                 <button className={"heart" + (isFav ? " active" : "")} onClick={() => toggleFavorite(p.id)}>
                   {isFav ? "♥" : "♡"}
                 </button>
