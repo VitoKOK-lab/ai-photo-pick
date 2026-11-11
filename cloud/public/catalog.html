@@ -37,7 +37,7 @@
   .pills button { flex-shrink:0; border:1px solid var(--border); background:var(--bg); color:var(--text2);
     border-radius:16px; padding:6px 12px; font-size:12px; font-weight:600; white-space:nowrap; }
   .pills button.active { background:var(--gold); color:#fff; border-color:var(--gold); }
-  .selects { display:flex; gap:8px; }
+  .selects { flex:1; min-width:0; display:flex; gap:8px; }
   .selects select { flex:1; min-width:0; border:1px solid var(--border); background:var(--bg);
     color:var(--text2); border-radius:10px; padding:7px 8px; font-size:12px; }
   .modes { flex-shrink:0; display:flex; gap:4px; background:var(--s3); border-radius:8px; padding:3px; }
@@ -387,24 +387,24 @@ function App() {
 
       {tab === "all" && (
         <div className="filters">
+          <div className="pills">
+            {cleanOptions(filterOptions.category).map((v) => (
+              <button key={v} className={filters.category === v ? "active" : ""}
+                onClick={() => changeFilter("category", filters.category === v ? "" : v)}>{v}</button>
+            ))}
+          </div>
           <div className="pills-row">
-            <div className="pills">
-              <button className={filters.category === "" ? "active" : ""} onClick={() => changeFilter("category", "")}>全部品項</button>
-              {cleanOptions(filterOptions.category).map((v) => (
-                <button key={v} className={filters.category === v ? "active" : ""} onClick={() => changeFilter("category", v)}>{v}</button>
-              ))}
+            <div className="selects">
+              <select value={filters.color} onChange={(e) => changeFilter("color", e.target.value)}>
+                <option value="">全部顏色</option>
+                {cleanOptions(filterOptions.color).map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
             </div>
             <div className="modes">
               {MODES.map((m) => (
                 <button key={m.key} className={mode === m.key ? "active" : ""} onClick={() => changeMode(m.key)}>{m.label}</button>
               ))}
             </div>
-          </div>
-          <div className="selects">
-            <select value={filters.color} onChange={(e) => changeFilter("color", e.target.value)}>
-              <option value="">全部顏色</option>
-              {cleanOptions(filterOptions.color).map((v) => <option key={v} value={v}>{v}</option>)}
-            </select>
           </div>
         </div>
       )}
