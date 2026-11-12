@@ -83,10 +83,7 @@
   .heart:not(.active) { color:var(--text3); }
   .empty { grid-column:1/-1; text-align:center; color:var(--text3); padding:60px 0; }
   .empty .big { font-size:40px; margin-bottom:8px; }
-  .more-wrap { display:flex; justify-content:center; padding:20px 0; }
-  .more-btn { border:1px solid var(--border); background:var(--surface); color:var(--text2);
-    border-radius:12px; padding:10px 22px; font-size:13px; font-weight:700; }
-  .more-btn:disabled { opacity:.4; }
+  .scroll-loading { text-align:center; color:var(--text3); font-size:12px; padding:16px 0; }
 
   .login-zone { position:fixed; inset:0; background:rgba(20,20,30,.6); z-index:60;
     display:flex; align-items:center; justify-content:center; padding:20px; }
@@ -190,7 +187,7 @@ function App() {
   const [filterOptions, setFilterOptions] = useState({ category: [], color: [] });
   const [filters, setFilters] = useState({ category: "", color: "" });
   const EXCLUDE_VALUES = ["其他", "未定"];
-  const cleanOptions = (arr) => (arr || []).filter((v) => !EXCLUDE_VALUES.includes(v));
+  const cleanOptions = (arr) => (arr || []).filter((o) => !EXCLUDE_VALUES.includes(o.value));
   const filtersRef = useRef(filters);
 
   // 格狀（6張／12張）用
@@ -198,6 +195,7 @@ function App() {
   const [gridHasMore, setGridHasMore] = useState(true);
   const [gridLoading, setGridLoading] = useState(false);
   const gridLastIdRef = useRef(0);
+  const gridScrollRef = useRef(null);
 
   // 快選卡片用
   const [queue, setQueue] = useState([]);
@@ -229,7 +227,13 @@ function App() {
   useEffect(() => { if (visitor) loadMyFavorites(visitor); }, [visitor, loadMyFavorites]);
 
   // ── 格狀載入 ──
+  const gridLoadingRef = useRef(false);
+  const gridHasMoreRef = useRef(true);
+
   const loadGrid = useCallback(async (reset) => {
+    if (gridLoadingRef.current) return;
+    if (!reset && !gridHasMoreRef.current) return;
+    gridLoadingRef.current = true;
     setGridLoading(true);
     try {
       const pageSize = MODES.find((m) => m.key === modeRef.current)?.size || 12;
@@ -243,10 +247,27 @@ function App() {
       const got = d.photos || [];
       setGridItems((prev) => (reset ? got : [...prev, ...got]));
       if (got.length) gridLastIdRef.current = got[got.length - 1].id;
-      setGridHasMore(got.length === pageSize);
+      gridHasMoreRef.current = got.length === pageSize;
+      setGridHasMore(gridHasMoreRef.current);
     } catch {}
+    gridLoadingRef.current = false;
     setGridLoading(false);
   }, []);
+
+  const handleGridScroll = () => {
+    const el = gridScrollRef.current;
+    if (!el || gridLoadingRef.current || !gridHasMoreRef.current) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 600) loadGrid(false);
+  };
+
+  // 這一批撈回來後畫面還塞不滿（沒東西可捲），就直接預先多撈一批，
+  // 不然使用者根本捲不動、也就永遠不會觸發捲動載入 ──
+  useEffect(() => {
+    if (tab !== "all" || mode === "card") return;
+    const el = gridScrollRef.current;
+    if (!el || gridLoadingRef.current || !gridHasMoreRef.current) return;
+    if (el.scrollHeight <= el.clientHeight + 600) loadGrid(false);
+  }, [gridItems, tab, mode, loadGrid]);
 
   // ── 快選卡片載入 ──
   const fetchCardBatch = useCallback(async (reset) => {
@@ -284,6 +305,7 @@ function App() {
       fetchCardBatch(true);
     } else {
       gridLastIdRef.current = 0;
+      gridHasMoreRef.current = true;
       setGridItems([]);
       loadGrid(true);
     }
@@ -388,16 +410,18 @@ function App() {
       {tab === "all" && (
         <div className="filters">
           <div className="pills">
-            {cleanOptions(filterOptions.category).map((v) => (
-              <button key={v} className={filters.category === v ? "active" : ""}
-                onClick={() => changeFilter("category", filters.category === v ? "" : v)}>{v}</button>
+            {cleanOptions(filterOptions.category).map((o) => (
+              <button key={o.value} className={filters.category === o.value ? "active" : ""}
+                onClick={() => changeFilter("category", filters.category === o.value ? "" : o.value)}>{o.value}（{o.count}）</button>
             ))}
           </div>
           <div className="pills-row">
             <div className="selects">
               <select value={filters.color} onChange={(e) => changeFilter("color", e.target.value)}>
                 <option value="">全部顏色</option>
-                {cleanOptions(filterOptions.color).map((v) => <option key={v} value={v}>{v}</option>)}
+                {cleanOptions(filterOptions.color).map((o) => (
+                  <option key={o.value} value={o.value}>{o.value}（{o.count}）</option>
+                ))}
               </select>
             </div>
             <div className="modes">
@@ -436,7 +460,7 @@ function App() {
       )}
 
       {tab === "all" && mode !== "card" && (
-        <div className="content">
+        <div className="content" ref={gridScrollRef} onScroll={handleGridScroll}>
           <div className="grid" style={{ gridTemplateColumns: `repeat(${curMode.cols}, 1fr)` }}>
             {gridItems.length === 0 && !gridLoading && (
               <div className="empty">
@@ -456,13 +480,7 @@ function App() {
               );
             })}
           </div>
-          {gridHasMore && gridItems.length > 0 && (
-            <div className="more-wrap">
-              <button className="more-btn" disabled={gridLoading} onClick={() => loadGrid(false)}>
-                {gridLoading ? "載入中…" : "載入更多"}
-              </button>
-            </div>
-          )}
+          {gridLoading && gridItems.length > 0 && <div className="scroll-loading">載入中…</div>}
         </div>
       )}
 

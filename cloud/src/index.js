@@ -104,9 +104,11 @@ export default {
         const out = {};
         for (const col of ["category", "color", "gemstone", "stone_shape"]) {
           const { results } = await env.DB.prepare(
-            `SELECT DISTINCT ${col} AS v FROM photos WHERE status = ? AND ${col} IS NOT NULL AND ${col} != '' ORDER BY ${col}`
+            `SELECT ${col} AS v, COUNT(*) AS cnt FROM photos
+             WHERE status = ? AND ${col} IS NOT NULL AND ${col} != ''
+             GROUP BY ${col} ORDER BY ${col}`
           ).bind(status).all();
-          out[col] = results.map((r) => r.v);
+          out[col] = results.map((r) => ({ value: r.v, count: r.cnt }));
         }
         return json(out);
       }
