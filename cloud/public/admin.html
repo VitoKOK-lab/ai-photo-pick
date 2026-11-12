@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>審美資料庫 · 後台統計</title>
+<title>珠寶款式資料庫 · 後台統計</title>
 <style>
   :root {
     --bg:#f1f1f4; --surface:#ffffff; --s3:#e8e8ee; --border:#e0e0e8;
@@ -227,12 +227,12 @@ function App() {
     );
   }
 
-  const { totals, top, byCategory, byColor, byGemstone, byShape, byVisitor } = data;
+  const { totals, top, byCategory, byColor, byGemstone, byShape, byVisitor, recentUploads } = data;
 
   return (
     <div className="wrap">
       <div className="nav">
-        <div className="nav-title">審美資料庫 · 後台統計</div>
+        <div className="nav-title">珠寶款式資料庫 · 後台統計</div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => setShowChangePw((v) => !v)}>修改密碼</button>
           <button onClick={logout}>登出</button>
@@ -259,6 +259,21 @@ function App() {
           <div className="card"><div className="num">{totals.totalFavorites || 0}</div><div className="label">總收藏次數</div></div>
           <div className="card"><div className="num">{totals.totalVisitors || 0}</div><div className="label">收藏過的客人數</div></div>
           <div className="card"><div className="num">{totals.totalPhotos || 0}</div><div className="label">被收藏的款式數</div></div>
+          <div className="card"><div className="num">{totals.totalUploads || 0}</div><div className="label">客人上傳張數</div></div>
+          <div className="card"><div className="num">{totals.totalUploaders || 0}</div><div className="label">上傳過的客人數</div></div>
+        </div>
+
+        <div className="section">
+          <h3>客人個人上傳</h3>
+          {(!recentUploads || recentUploads.length === 0) && <div className="empty">目前還沒有客人自己上傳照片</div>}
+          <div className="top-grid">
+            {(recentUploads || []).map((p) => (
+              <div className="top-tile" key={p.id}>
+                <img src={p.image_url} alt="" loading="lazy" />
+                <div className="label">{p.uploaded_by}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="section">

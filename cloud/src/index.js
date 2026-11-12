@@ -200,6 +200,14 @@ export default {
                   COUNT(DISTINCT photo_id) AS totalPhotos
            FROM favorites`
         ).first();
+        const uploadTotals = await env.DB.prepare(
+          `SELECT COUNT(*) AS totalUploads, COUNT(DISTINCT uploaded_by) AS totalUploaders
+           FROM photos WHERE status = 'personal'`
+        ).first();
+        const { results: recentUploads } = await env.DB.prepare(
+          `SELECT id, filename, uploaded_by, created_at FROM photos
+           WHERE status = 'personal' ORDER BY created_at DESC LIMIT 100`
+        ).all();
         const { results: top } = await env.DB.prepare(
           `SELECT p.id, p.filename, p.category, p.gemstone, p.color, p.stone_shape, COUNT(f.id) AS cnt
            FROM favorites f JOIN photos p ON p.id = f.photo_id
@@ -219,9 +227,10 @@ export default {
           `SELECT visitor_name, COUNT(*) AS cnt FROM favorites GROUP BY visitor_name ORDER BY cnt DESC LIMIT 60`
         ).all();
         return json({
-          totals,
+          totals: { ...totals, ...uploadTotals },
           top: top.map((p) => ({ ...p, image_url: `/api/image/${p.id}` })),
           byCategory, byColor, byGemstone, byShape, byVisitor,
+          recentUploads: recentUploads.map((p) => ({ ...p, image_url: `/api/image/${p.id}` })),
         });
       }
 
@@ -244,6 +253,8 @@ export default {
         if (!row) return json({ error: "Photo not found" }, 404);
         await env.IMAGES.delete(row.r2_key);
         await env.DB.prepare(`DELETE FROM photos WHERE id=?`).bind(id).run();
+        await env.DB.prepare(`DELETE FROM favorites WHERE photo_id=?`).bind(id).run();
+        await env.DB.prepare(`DELETE FROM skips WHERE photo_id=?`).bind(id).run();
         return json({ deleted: Number(id) });
       }
 
@@ -261,11 +272,28 @@ export default {
         const style = form.get("style") || null;
         const photoType = form.get("photo_type") || null;
         const stoneShape = form.get("stone_shape") || null;
-        const status = form.get("status") === "pending" ? "pending" : "kept";
+        const uploadedBy = String(form.get("uploaded_by") || "").trim().slice(0, 40) || null;
+        const status = uploadedBy ? "personal" : (form.get("status") === "pending" ? "pending" : "kept");
+
+        // 客人自己上傳（個人收集用）：一人一天最多 5 張 ──
+        let remainingToday = Infinity;
+        if (uploadedBy) {
+          const row = await env.DB.prepare(
+            `SELECT COUNT(*) AS c FROM photos
+             WHERE uploaded_by = ? AND status = 'personal' AND date(created_at) = date('now')`
+          ).bind(uploadedBy).first();
+          remainingToday = Math.max(0, 5 - (row.c || 0));
+        }
 
         const added = [];
         const skipped = [];
+        const limited = [];
         for (const file of files) {
+          if (uploadedBy && remainingToday <= 0) {
+            limited.push({ filename: file.name || "" });
+            continue;
+          }
+
           const buf = await file.arrayBuffer();
           const hashBuf = await crypto.subtle.digest("SHA-256", buf);
           const hash = [...new Uint8Array(hashBuf)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -290,15 +318,25 @@ export default {
             httpMetadata: { contentType: file.type || contentTypeFor(ext) },
           });
           const ins = await env.DB.prepare(
-            `INSERT INTO photos (r2_key, filename, status, content_type, file_size, category, color, gemstone, style, photo_type, stone_shape, file_hash, decided_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO photos (r2_key, filename, status, content_type, file_size, category, color, gemstone, style, photo_type, stone_shape, file_hash, decided_at, uploaded_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           ).bind(
             key, file.name || key, status, file.type || contentTypeFor(ext), buf.byteLength,
-            category, color, gemstone, style, photoType, stoneShape, hash, status === "kept" ? new Date().toISOString() : null
+            category, color, gemstone, style, photoType, stoneShape, hash,
+            status === "kept" ? new Date().toISOString() : null, uploadedBy
           ).run();
-          added.push({ id: ins.meta.last_row_id, filename: file.name || key });
+          const newId = ins.meta.last_row_id;
+          added.push({ id: newId, filename: file.name || key });
+
+          if (uploadedBy) {
+            await env.DB.prepare(
+              `INSERT INTO favorites (photo_id, visitor_name) VALUES (?, ?)
+               ON CONFLICT(photo_id, visitor_name) DO NOTHING`
+            ).bind(newId, uploadedBy).run();
+            remainingToday -= 1;
+          }
         }
-        return json({ added, skipped }, 201);
+        return json({ added, skipped, limited }, 201);
       }
 
       // ── 輕量補欄位：只用檔名比對、純文字 JSON，不用傳整張圖片，拿來補

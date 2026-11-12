@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>審美資料庫 · 款式瀏覽</title>
+<title>珠寶款式資料庫</title>
 <style>
   :root {
     --bg:#f1f1f4; --surface:#ffffff; --s3:#e8e8ee; --border:#e0e0e8;
@@ -84,6 +84,21 @@
   .empty { grid-column:1/-1; text-align:center; color:var(--text3); padding:60px 0; }
   .empty .big { font-size:40px; margin-bottom:8px; }
   .scroll-loading { text-align:center; color:var(--text3); font-size:12px; padding:16px 0; }
+
+  .upload-btn { flex-shrink:0; border:1px solid var(--border); background:var(--surface);
+    color:var(--text2); border-radius:14px; font-size:12px; font-weight:700;
+    padding:9px 14px; margin-bottom:12px; }
+
+  .upload-zone { position:fixed; inset:0; background:rgba(20,20,30,.6); z-index:65;
+    display:flex; align-items:center; justify-content:center; padding:20px; }
+  .upload-box { background:var(--surface); border-radius:20px; padding:28px 24px; text-align:center;
+    width:100%; max-width:340px; }
+  .upload-box h2 { font-size:17px; margin:0 0 10px; }
+  .upload-box input[type=file] { margin-top:8px; font-size:13px; }
+  .upload-box .hint { font-size:12px; color:var(--text3); margin:10px 0 0; line-height:1.6; }
+  .upload-box .progress { font-size:12px; color:var(--text2); margin-top:12px; }
+  .upload-box .close { margin-top:18px; border:none; background:var(--s3); color:var(--text2);
+    border-radius:10px; padding:9px 18px; font-size:13px; }
 
   .login-zone { position:fixed; inset:0; background:rgba(20,20,30,.6); z-index:60;
     display:flex; align-items:center; justify-content:center; padding:20px; }
@@ -207,6 +222,9 @@ function App() {
 
   const [myFavorites, setMyFavorites] = useState([]); // 完整照片物件（個人款式收藏匣用）
   const [favIds, setFavIds] = useState(() => new Set());
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState("");
   const visitorRef = useRef(visitor);
   useEffect(() => { visitorRef.current = visitor; }, [visitor]);
 
@@ -347,6 +365,54 @@ function App() {
     } catch {}
   };
 
+  // 壓縮後再上傳：長邊縮到最多 1280px、轉成 JPEG 品質 0.8，檔案小很多，上傳也快很多
+  const compressImage = (file) => new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const maxSide = 1280;
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", 0.8);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+
+  const onFilesPicked = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length || !visitor) return;
+    setUploadBusy(true);
+    setUploadMsg(`上傳中…（共 ${files.length} 張）`);
+    try {
+      const form = new FormData();
+      form.append("uploaded_by", visitor);
+      for (const f of files) {
+        const compressed = await compressImage(f);
+        form.append("file", compressed, f.name || "photo.jpg");
+      }
+      const res = await fetch("/api/photos", { method: "POST", body: form });
+      const d = await res.json();
+      const addedN = (d.added || []).length;
+      const limitedN = (d.limited || []).length;
+      setUploadMsg(
+        limitedN
+          ? `已新增 ${addedN} 張，${limitedN} 張超過今日上限（一天最多 5 張）沒有上傳`
+          : `已新增 ${addedN} 張到你的收集`
+      );
+      loadMyFavorites(visitor);
+    } catch {
+      setUploadMsg("上傳失敗，請重試");
+    }
+    setUploadBusy(false);
+    setTimeout(() => { setShowUpload(false); setUploadMsg(""); }, 1800);
+  };
+
   const toggleFavorite = async (photoId) => {
     if (!visitor) return;
     const wasFav = favIds.has(photoId);
@@ -391,7 +457,7 @@ function App() {
   return (
     <>
       <div className="nav">
-        <div className="nav-title">審美資料庫</div>
+        <div className="nav-title">珠寶款式資料庫</div>
         {visitor && (
           <div className="nav-visitor">
             <span>Hi, <b>{visitor}</b></span>
@@ -486,6 +552,7 @@ function App() {
 
       {tab === "mine" && (
         <div className="content">
+          <button className="upload-btn" onClick={() => setShowUpload(true)}>＋ 上傳我喜歡的款式</button>
           <div className="grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
             {myFavorites.length === 0 && (
               <div className="empty">
@@ -499,6 +566,24 @@ function App() {
                 <button className="heart active" onClick={() => toggleFavorite(p.id)}>♥</button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {showUpload && (
+        <div className="upload-zone" onClick={(e) => e.target === e.currentTarget && !uploadBusy && setShowUpload(false)}>
+          <div className="upload-box">
+            <h2>上傳我喜歡的款式</h2>
+            <input type="file" accept="image/*" multiple
+              disabled={uploadBusy}
+              onChange={(e) => onFilesPicked(e.target.files)} />
+            <div className="hint">從手機相簿選照片，或直接拍照上傳；一天最多 5 張，會自動壓縮後存進你的個人收集</div>
+            {uploadMsg && <div className="progress">{uploadMsg}</div>}
+            {!uploadBusy && (
+              <div>
+                <button className="close" onClick={() => setShowUpload(false)}>關閉</button>
+              </div>
+            )}
           </div>
         </div>
       )}
