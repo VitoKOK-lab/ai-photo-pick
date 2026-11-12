@@ -44,6 +44,8 @@
   .modes button { border:none; background:transparent; color:var(--text3); font-size:11px;
     font-weight:700; padding:5px 10px; border-radius:6px; white-space:nowrap; }
   .modes button.active { background:var(--surface); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.1); }
+  .reset-btn { flex-shrink:0; border:1px solid var(--border); background:var(--bg); color:var(--text3);
+    border-radius:10px; padding:6px 10px; font-size:11px; font-weight:700; }
 
   /* ── 快選卡片（單張滑動）── */
   .swipe-wrap { flex:1; min-height:0; position:relative; display:flex; align-items:center;
@@ -189,6 +191,42 @@ function SwipeCard({ photo, onDecide, top }) {
   );
 }
 
+function GridTile({ photo, isFav, onToggleFavorite, onScrolledPast, scrollRoot }) {
+  const ref = useRef(null);
+  const wasVisibleRef = useRef(false);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !scrollRoot) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          wasVisibleRef.current = true;
+          return;
+        }
+        const rootTop = entry.rootBounds ? entry.rootBounds.top : 0;
+        if (wasVisibleRef.current && !doneRef.current && entry.boundingClientRect.bottom <= rootTop) {
+          doneRef.current = true;
+          onScrolledPast(photo.id);
+        }
+      },
+      { root: scrollRoot, threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [scrollRoot]); // eslint-disable-line
+
+  return (
+    <div ref={ref} className="tile">
+      <img src={photo.image_url} alt="" loading="lazy" />
+      <button className={"heart" + (isFav ? " active" : "")} onClick={() => onToggleFavorite(photo.id)}>
+        {isFav ? "♥" : "♡"}
+      </button>
+    </div>
+  );
+}
+
 function App() {
   const [visitor, setVisitor] = useState(() => {
     try { return localStorage.getItem("pp_visitor_name") || ""; } catch { return ""; }
@@ -211,6 +249,11 @@ function App() {
   const [gridLoading, setGridLoading] = useState(false);
   const gridLastIdRef = useRef(0);
   const gridScrollRef = useRef(null);
+  const [gridScrollEl, setGridScrollEl] = useState(null);
+  const setGridScrollNode = (el) => {
+    gridScrollRef.current = el;
+    setGridScrollEl((prev) => (prev === el ? prev : el));
+  };
 
   // 快選卡片用
   const [queue, setQueue] = useState([]);
@@ -227,6 +270,10 @@ function App() {
   const [uploadMsg, setUploadMsg] = useState("");
   const visitorRef = useRef(visitor);
   useEffect(() => { visitorRef.current = visitor; }, [visitor]);
+  const favIdsRef = useRef(favIds);
+  useEffect(() => { favIdsRef.current = favIds; }, [favIds]);
+  const gridItemsRef = useRef([]);
+  const finalizedIdsRef = useRef(new Set());
 
   useEffect(() => {
     fetch("/api/filters?status=kept").then((r) => r.json()).then(setFilterOptions).catch(() => {});
@@ -248,6 +295,18 @@ function App() {
   const gridLoadingRef = useRef(false);
   const gridHasMoreRef = useRef(true);
 
+  // 看過沒收藏＝當作不喜歡：記一筆「跳過」，之後不會再出現給這個訪客
+  const markSeenIfNotFav = (photoId) => {
+    if (favIdsRef.current.has(photoId)) return;
+    if (finalizedIdsRef.current.has(photoId)) return;
+    finalizedIdsRef.current.add(photoId);
+    recordSkip(photoId);
+  };
+
+  const finalizeSeen = (list) => {
+    (list || []).forEach((p) => markSeenIfNotFav(p.id));
+  };
+
   const loadGrid = useCallback(async (reset) => {
     if (gridLoadingRef.current) return;
     if (!reset && !gridHasMoreRef.current) return;
@@ -258,12 +317,17 @@ function App() {
       const afterId = reset ? 0 : gridLastIdRef.current;
       const params = new URLSearchParams({ status: "kept", limit: String(pageSize) });
       if (afterId) params.set("after_id", String(afterId));
+      if (visitorRef.current) params.set("exclude_seen_by", visitorRef.current);
       for (const k of ["category", "color"]) {
         if (filtersRef.current[k]) params.set(k, filtersRef.current[k]);
       }
       const d = await (await fetch(`/api/photos?${params.toString()}`)).json();
       const got = d.photos || [];
-      setGridItems((prev) => (reset ? got : [...prev, ...got]));
+      setGridItems((prev) => {
+        const next = reset ? got : [...prev, ...got];
+        gridItemsRef.current = next;
+        return next;
+      });
       if (got.length) gridLastIdRef.current = got[got.length - 1].id;
       gridHasMoreRef.current = got.length === pageSize;
       setGridHasMore(gridHasMoreRef.current);
@@ -313,6 +377,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    finalizeSeen(gridItemsRef.current); // 離開這批格狀畫面前，沒收藏的都算看過不喜歡
     filtersRef.current = filters;
     modeRef.current = mode;
     if (tab !== "all") return;
@@ -340,6 +405,30 @@ function App() {
   const changeMode = (m) => {
     setMode(m);
     try { localStorage.setItem("pp_catalog_mode", m); } catch {}
+  };
+
+  const resetSeen = async () => {
+    if (!visitor) return;
+    if (!window.confirm("重置後，之前看過但沒收藏的款式會重新出現，確定要重置嗎？（已收藏的不會受影響）")) return;
+    try {
+      await fetch("/api/skips/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: visitor }),
+      });
+    } catch {}
+    finalizedIdsRef.current = new Set();
+    if (mode === "card") {
+      cardLastIdRef.current = 0;
+      cardHasMoreRef.current = true;
+      setQueue([]);
+      fetchCardBatch(true);
+    } else {
+      gridLastIdRef.current = 0;
+      gridHasMoreRef.current = true;
+      setGridItems([]);
+      loadGrid(true);
+    }
   };
 
   const addFavorite = async (photoId) => {
@@ -495,6 +584,7 @@ function App() {
                 <button key={m.key} className={mode === m.key ? "active" : ""} onClick={() => changeMode(m.key)}>{m.label}</button>
               ))}
             </div>
+            <button className="reset-btn" onClick={resetSeen}>重置</button>
           </div>
         </div>
       )}
@@ -526,7 +616,7 @@ function App() {
       )}
 
       {tab === "all" && mode !== "card" && (
-        <div className="content" ref={gridScrollRef} onScroll={handleGridScroll}>
+        <div className="content" ref={setGridScrollNode} onScroll={handleGridScroll}>
           <div className="grid" style={{ gridTemplateColumns: `repeat(${curMode.cols}, 1fr)` }}>
             {gridItems.length === 0 && !gridLoading && (
               <div className="empty">
@@ -534,17 +624,10 @@ function App() {
                 <div>沒有符合條件的款式</div>
               </div>
             )}
-            {gridItems.map((p) => {
-              const isFav = favIds.has(p.id);
-              return (
-                <div key={p.id} className="tile">
-                  <img src={p.image_url} alt="" loading="lazy" />
-                  <button className={"heart" + (isFav ? " active" : "")} onClick={() => toggleFavorite(p.id)}>
-                    {isFav ? "♥" : "♡"}
-                  </button>
-                </div>
-              );
-            })}
+            {gridItems.map((p) => (
+              <GridTile key={p.id} photo={p} isFav={favIds.has(p.id)}
+                onToggleFavorite={toggleFavorite} onScrolledPast={markSeenIfNotFav} scrollRoot={gridScrollEl} />
+            ))}
           </div>
           {gridLoading && gridItems.length > 0 && <div className="scroll-loading">載入中…</div>}
         </div>

@@ -98,6 +98,15 @@ export default {
         return json({ ok: true });
       }
 
+      // ── 重置：清掉這個訪客的「跳過」紀錄，之前看過沒收藏的款式會重新出現（收藏不受影響）──
+      if (pathname === "/api/skips/reset" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const name = String(body.name || "").trim().slice(0, 40);
+        if (!name) return json({ error: "缺少 name" }, 400);
+        const r = await env.DB.prepare(`DELETE FROM skips WHERE visitor_name = ?`).bind(name).run();
+        return json({ ok: true, deleted: r.meta.changes });
+      }
+
       // ── 客人瀏覽頁用：目前「已留」照片裡實際出現過哪些分類/顏色/寶石/形狀可選 ──
       if (pathname === "/api/filters" && request.method === "GET") {
         const status = url.searchParams.get("status") || "kept";
